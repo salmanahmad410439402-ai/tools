@@ -4,6 +4,7 @@ import { CATEGORIES } from "@/data/site";
 import { tools } from "@/data/tools";
 import { Logo } from "./Logo";
 import { ShieldCheck } from "lucide-react";
+import { CookieSettingsButton } from "./CookieSettingsButton";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -11,7 +12,7 @@ export function Footer() {
   const popular = tools.filter((tool) => tool.popular).slice(0, 6);
 
   return (
-    <footer className="mt-20 border-t border-line bg-surface">
+    <footer className="mt-20 border-t border-line bg-surface/60">
       <div className="container-page py-12">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
@@ -20,7 +21,7 @@ export function Footer() {
               Free PDF and image tools that open, change and save your files on your own device.
               No account, no watermark, no upload.
             </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-raised px-3 py-2 text-[12.5px] font-medium text-body">
+            <p className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-[12.5px] font-medium text-body">
               <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
               Files are processed in your browser
             </p>
@@ -87,11 +88,16 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                {/* Re-opens the consent panel; analytics and ads stay off until
+                    the visitor allows them. */}
+                <CookieSettingsButton className="text-left text-body transition-colors hover:text-brand-600" />
+              </li>
             </ul>
           </nav>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-line pt-6 text-[13px] text-subtle sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-line pt-6 text-[13px] text-minimal sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {currentYear} {SITE_NAME}. Built and maintained by one developer.
           </p>

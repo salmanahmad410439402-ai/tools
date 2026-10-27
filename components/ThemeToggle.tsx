@@ -26,7 +26,7 @@ function applyTheme(theme: Theme) {
  * mount because the server cannot know the visitor's preference.
  */
 export function ThemeToggle({ className, size = "md" }: { className?: string; size?: "sm" | "md" }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -53,13 +53,14 @@ export function ThemeToggle({ className, size = "md" }: { className?: string; si
       aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       className={cn(
-        "grid place-items-center rounded-xl border border-line bg-raised text-body transition-colors hover:border-brand-300 hover:text-ink",
+        "grid place-items-center rounded-xl border border-line bg-raised text-body transition-colors hover:border-primary/50 hover:text-ink",
         size === "sm" ? "h-9 w-9" : "h-10 w-10",
         className,
       )}
     >
-      <Sun className="hidden h-[18px] w-[18px] dark:block" aria-hidden="true" />
-      <Moon className="h-[18px] w-[18px] dark:hidden" aria-hidden="true" />
+      {/* Icons follow the theme in CSS, so the right one shows before hydration. */}
+      <Sun className="theme-icon-sun h-[18px] w-[18px]" aria-hidden="true" />
+      <Moon className="theme-icon-moon h-[18px] w-[18px]" aria-hidden="true" />
       <span className="sr-only">Toggle colour theme</span>
     </button>
   );
@@ -68,5 +69,12 @@ export function ThemeToggle({ className, size = "md" }: { className?: string; si
 /**
  * Runs before paint, inside <head>. Kept as a string so it ships inline in the
  * static HTML and cannot flash the wrong theme.
+ *
+ * The site is dark-first by design: midnight navy is the product's signature,
+ * so the dark theme is what an unvisited browser gets. Only an explicit choice
+ * of Light is honoured, and it persists in localStorage. (To fall back to the
+ * visitor's OS preference instead, read
+ * `window.matchMedia("(prefers-color-scheme: light)").matches` when `s` is
+ * null.)
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;var r=document.documentElement;r.classList.toggle("dark",d);r.classList.toggle("light",!d);r.style.colorScheme=d?"dark":"light";r.classList.add("js");}catch(e){document.documentElement.classList.add("js");}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var light=s==="light";var r=document.documentElement;r.classList.toggle("light",light);r.classList.toggle("dark",!light);r.style.colorScheme=light?"light":"dark";r.classList.add("js");}catch(e){document.documentElement.classList.add("js");}})();`;

@@ -123,11 +123,13 @@ export default function HomePage() {
       <StructuredData data={[websiteJsonLd(), organizationJsonLd(), faqJsonLd(HOME_FAQ)]} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-line bg-gradient-to-b from-brand-50/70 via-page to-page">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-32 h-[380px] w-[380px] rounded-full bg-brand-100/60 blur-3xl"
-        />
+      <section className="relative overflow-hidden border-b border-line bg-page">
+        {/* Ambient layer: indigo grid, two drifting orbs, and a soft top wash. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-glow" />
+        <div aria-hidden="true" className="grid-bg pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="orb orb-1 -left-40 -top-64" />
+        <div aria-hidden="true" className="orb orb-2 -right-32 top-16" />
+
         <div className="container-page relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
           <div>
             <p className="eyebrow">
@@ -136,18 +138,7 @@ export default function HomePage() {
             </p>
             <h1 className="mt-4 max-w-2xl text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-ink sm:text-[46px] lg:text-[52px]">
               Free PDF &amp; image tools that run{" "}
-              <span className="relative whitespace-nowrap text-brand-600">
-                privately
-                <svg
-                  className="absolute -bottom-1 left-0 h-[8px] w-full text-brand-200"
-                  viewBox="0 0 200 8"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path d="M2 6c40-4 90-5 196-2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              </span>{" "}
-              in your browser
+              <span className="text-gradient-flow whitespace-nowrap">privately</span> in your browser
             </h1>
             <p className="mt-5 max-w-xl text-[16.5px] leading-relaxed text-body sm:text-[17.5px]">
               Compress, merge and convert PDFs, and change image formats or sizes — all on your own device.
@@ -156,9 +147,11 @@ export default function HomePage() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href="/compress-pdf/" className="btn-primary h-12 px-6 text-[15px]">
-                Compress a PDF free
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <Link href="/compress-pdf/" className="btn-gradient-flow h-12 px-6 text-[15px]">
+                <span className="inline-flex items-center gap-2">
+                  Compress a PDF free
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </span>
               </Link>
               <Link href="/tools/" className="btn-secondary h-12 px-6 text-[15px]">
                 Browse all {toolCount} tools
@@ -179,12 +172,10 @@ export default function HomePage() {
 
           {/* CSS-only product mock: no image request, so the LCP stays fast. */}
           <div className="relative">
-            <div className="rounded-[22px] border border-line bg-raised p-4 shadow-lift sm:p-5">
+            <div className="glass-panel rounded-[22px] p-4 sm:p-5">
               <div className="flex items-center justify-between border-b border-line pb-3">
                 <p className="text-[13px] font-bold text-ink">Compress PDF</p>
-                <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-success">
-                  In browser
-                </span>
+                <span className="pill-emerald uppercase tracking-wide">In browser</span>
               </div>
               <div className="mt-3 rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-6 text-center">
                 <p className="text-[13.5px] font-semibold text-ink">report-2026.pdf</p>
@@ -251,7 +242,7 @@ export default function HomePage() {
         <div className="mt-6">
           <Link
             href="/tools/"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-primary/5"
           >
             See all {toolCount} tools
             <ArrowRight className="h-4 w-4 text-brand-600" aria-hidden="true" />
@@ -266,7 +257,7 @@ export default function HomePage() {
               <Link
                 key={category.slug}
                 href={`/${category.slug}/`}
-                className="group flex items-center gap-3 rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+                className="group flex items-center gap-3 rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
               >
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-surface text-brand-600 ring-1 ring-line">
                   <ToolIcon name={category.icon} className="h-4 w-4" />
@@ -303,7 +294,7 @@ export default function HomePage() {
           </div>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li key={step.title} className="rounded-card border border-line bg-raised p-5">
+              <li key={step.title} className="glass-panel p-5">
                 <span className="inline-grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-[14px] font-bold text-brand-600">
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -340,7 +331,7 @@ export default function HomePage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {HIGHLIGHTS.map((highlight) => (
-              <div key={highlight.title} className="rounded-card border border-line bg-raised p-5">
+              <div key={highlight.title} className="glass-panel p-5">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-600">
                   <highlight.icon className="h-4 w-4" aria-hidden="true" />
                 </span>
@@ -372,7 +363,7 @@ export default function HomePage() {
             <Link
               key={`${conversion.from}-${conversion.to}`}
               href={conversion.href}
-              className="group rounded-card border border-line bg-raised p-4 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+              className="group glass-panel p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
             >
               <p className="flex items-center gap-1.5 text-[14.5px] font-bold text-ink">
                 {conversion.from}
@@ -408,7 +399,7 @@ export default function HomePage() {
               <Link
                 key={guide.slug}
                 href={`/blog/${guide.slug}/`}
-                className="rounded-card border border-line bg-raised p-5 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+                className="glass-panel p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
               >
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read
@@ -429,10 +420,10 @@ export default function HomePage() {
             <h2 className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
               Recently added tools
             </h2>
-            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
+            <ul className="mt-4 divide-y divide-line overflow-hidden glass-panel">
               {newestTools.map((tool) => (
                 <li key={tool.slug}>
-                  <Link href={`/${tool.slug}/`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-brand-50/50">
+                  <Link href={`/${tool.slug}/`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.07]">
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
                       <ToolIcon name={tool.icon} className="h-4 w-4" />
                     </span>
@@ -455,7 +446,7 @@ export default function HomePage() {
             <h2 id="faq-home" className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
               Questions people ask first
             </h2>
-            <div className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
+            <div className="mt-4 divide-y divide-line overflow-hidden glass-panel">
               {HOME_FAQ.slice(0, 4).map((item) => (
                 <details key={item.q} className="group">
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-[15px] font-semibold text-ink marker:hidden [&::-webkit-details-marker]:hidden">
@@ -476,17 +467,18 @@ export default function HomePage() {
 
       {/* ── Closing links ────────────────────────────────────────────────── */}
       <section className="container-page py-14">
-        <div className="rounded-[22px] border border-brand-100 bg-brand-50/60 p-6 sm:p-10">
-          <div className="max-w-2xl">
+        <div className="glass-panel relative overflow-hidden rounded-[22px] p-6 sm:p-10">
+          <div aria-hidden="true" className="orb orb-2 -right-40 -top-40 opacity-40" />
+          <div className="relative max-w-2xl">
             <h2 className="text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
-              Pick a tool and finish the job
+              Pick a tool and <span className="text-gradient-flow">finish the job</span>
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed text-body">
               No account, no upload, no watermark. If something does not work on your file, tell us — the
               contact form reaches a real inbox.
             </p>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { href: "/tools/", label: "All tools", detail: "Search and filter everything" },
               { href: "/pdf-tools/", label: "PDF tools", detail: "Compress, merge, split, edit" },
@@ -496,7 +488,7 @@ export default function HomePage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-brand-300"
+                className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-primary/50"
               >
                 <span className="flex items-center justify-between text-[14px] font-semibold text-ink">
                   {link.label}

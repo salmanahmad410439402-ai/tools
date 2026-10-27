@@ -119,7 +119,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
                   <Link
                     key={slug}
                     href={`/${slug}/`}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body transition-colors hover:border-primary/40 hover:text-brand-600"
                   >
                     <ToolIcon name={other.icon} className="h-4 w-4" />
                     {other.name}

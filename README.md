@@ -140,15 +140,35 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 | Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
 
-Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
+Analytics is opt-in and cookie-free. Two options, both off unless configured:
 
 ```bash
+# 1. Vercel Web Analytics — only works on Vercel hosting, because the script is
+#    served by the deployment at /_vercel/insights/script.js
+NEXT_PUBLIC_VERCEL_ANALYTICS=true
+
+# 2. Any Plausible/Umami-compatible script, for every other static host
 NEXT_PUBLIC_ANALYTICS_SCRIPT_URL=https://plausible.io/js/script.js
 NEXT_PUBLIC_ANALYTICS_DOMAIN=yourdomain.com
 ```
 
-Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content,
-only a coarse size bucket.
+On Vercel, add the first variable under Project → Settings → Environment Variables and redeploy.
+The flag is public (`NEXT_PUBLIC_`) on purpose: the server render and the client bundle must agree
+on whether the script exists. When it is off, the Vercel client code is not even bundled — it is a
+lazy chunk behind `next/dynamic`.
+
+**Consent comes first.** Even when a provider is enabled, nothing loads until the visitor presses
+"Allow analytics" in the cookie panel (`lib/consent.ts` stores `filecraft-consent` in localStorage
+and broadcasts changes; `CookieNotice`, `Analytics`, `AdSlot` and `AdSenseScript` all subscribe).
+Declining or closing the panel means no measurement request and no ad request. The panel is not
+modal — no overlay, no scroll lock, no focus trap — and the tools never depend on it. The footer's
+"Cookie settings" button clears the record and reopens the panel. Set
+`NEXT_PUBLIC_ADSENSE_SCRIPT=on` if Google's review needs the AdSense snippet present before consent.
+
+Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content, only a
+coarse size bucket. `lib/analytics.ts` is the single place that emits them; `components/Analytics.tsx`
+is the single place that loads a provider. The Privacy Policy and Cookie Policy branch on the same
+flags, so the legal copy cannot claim something the build does not do.
 
 ---
 
@@ -243,22 +263,45 @@ Two failure modes are handled explicitly:
   limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
   the result note reports the scaled dimensions.
 
-## Theme (light + dark)
+## Design system (dark-first midnight navy)
 
-`app/globals.css` declares one palette twice — `:root` and `html.dark` — and every colour token
-(`ink`, `body`, `subtle`, `line`, `surface`, `page`, `raised`, the `brand` ramp, `success`,
-`warning`, `danger`) points at a CSS variable. That is why components use `bg-raised`,
-`text-ink`, `border-line` and never `dark:` variants at each call site.
+`app/globals.css` is the single source of truth. `:root` is the **default** theme — deep midnight
+navy canvas (`#070B13`), ice-white type, frosted navy panels; `html.light` overrides the same
+variables with the cool-alabaster theme. `components/ThemeToggle.tsx` holds the button, the storage
+key (`filecraft-theme`) and the inline head script that picks the theme before first paint (stored
+choice, else an explicit light system preference; dark otherwise, so the site is complete with no
+JavaScript at all).
 
-- `components/ThemeToggle.tsx` holds the button, the storage key (`filecraft-theme`) and the
-  inline script that decides the theme **before first paint** (stored choice, else
-  `prefers-color-scheme`). No flash, and the site still renders correctly with JavaScript off.
-- `html` carries `class="light"` or `class="dark"`, so third-party CSS and `color-scheme` follow.
-- Overlays over document previews use `.bg-scrim*` (a scrim variable), not `bg-ink/70`, because
-  `ink` flips to near-white in dark mode and would swallow the white labels drawn on top.
-- Filled buttons keep a deep indigo in dark mode (`html.dark .btn-primary`) so white text stays
-  above 4.5:1; links use the lighter `--brand-400`.
-- The toggle writes to `localStorage`, which is listed in the Cookie Policy.
+Colour variables are shadcn-style HSL triplets (`222 47% 5%`) and every Tailwind token wraps them
+as `hsl(var(--token) / <alpha-value>)`, which is what makes `bg-primary/10`, `border-primary/25` and
+`text-emerald-500` work as translucent tints:
+
+| Purpose | Tokens |
+| --- | --- |
+| Surfaces | `background`, `card`, `popover`, `secondary`, `muted` |
+| Text | `foreground`, `text-secondary`, `text-tertiary`, `text-minimal` (via `ink` / `body` / `subtle` / `minimal`) |
+| Brand | `primary` `#645CFF` dark / `#4F46E5` light, `accent` mint `#12D393` |
+| Feedback | `destructive`, `success`, `warning` |
+| Chrome | `border`, `input`, `ring`, `--radius: 1rem` |
+
+The older names the components use (`page`, `raised`, `surface`, `line`, `ink`, `body`, `subtle`,
+`brand-50…900`) are aliases of those tokens, so ~60 files did not have to change and nothing can
+drift.
+
+**Utilities** (all in `globals.css`): `.text-gradient-flow` and `.bg-gradient-flow` (emerald →
+indigo → blue, 4s linear loop), `.text-gradient` (2-stop 135°), `.glass-panel` (frosted, blurred),
+`.card` (glass look without the blur — a grid of blurred cards is a scroll cost on phones),
+`.grid-bg` (40px indigo grid with a radial fade), `.orb` / `.orb-1` / `.orb-2` (drifting blurred
+radials), `.card-hover` (4px lift + indigo border + coloured shadow) and the translucent pill set
+`.pill-indigo` / `.pill-emerald` / `.pill-amber` / `.pill-sky` / `.pill-rose`.
+
+**Two deliberate deviations, both for legibility:** filled buttons use `--primary-strong` (a
+slightly deeper indigo) so white labels stay above 4.5:1, and the light theme deepens the flow
+gradient's emerald stop (`#059669`), because `#10B981` is only 2.4:1 on alabaster. Gradient text
+also falls back to `currentColor` under `forced-colors`.
+
+**Type:** Outfit (headings, 800, tracking `-0.03em`), Inter (body/UI), JetBrains Mono (counts,
+code, `kbd`, file sizes), all self-hosted through `@fontsource-variable/*`.
 
 ## Tests and what they do not cover
 

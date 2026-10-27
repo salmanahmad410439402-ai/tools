@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "@fontsource-variable/inter";
+import "@fontsource-variable/outfit";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import {
   ADSENSE_PUBLISHER_ID,
-  ADSENSE_SCRIPT_ENABLED,
   BING_SITE_VERIFICATION,
   GOOGLE_SITE_VERIFICATION,
   SITE_DESCRIPTION,
@@ -18,6 +18,7 @@ import { CookieNotice } from "@/components/CookieNotice";
 import { Analytics } from "@/components/Analytics";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 import { THEME_INIT_SCRIPT } from "@/components/ThemeToggle";
+import { AdSenseScript } from "@/components/AdSenseScript";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -65,8 +66,8 @@ export const viewport: Viewport = {
   // Matches the header/background of each theme so mobile browser chrome does
   // not clash with the page.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A0E17" },
+    { media: "(prefers-color-scheme: dark)", color: "#070B13" },
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -77,22 +78,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Theme is decided before first paint: stored choice, otherwise the
-            operating-system preference. No flash of the wrong palette, and the
-            site still works with JavaScript disabled (light theme, no toggle). */}
+        {/* Theme is decided before first paint. The site is dark-first: the
+            midnight navy palette is what renders with no JavaScript at all, and
+            `html.light` is the opt-in alabaster theme chosen from the header
+            toggle. Only that stored choice switches the palette. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* AdSense verification + manual ad units. The library is only fetched
-            when ads are enabled, so a site without ads makes no Google
-            requests. Auto ads must stay OFF in the AdSense dashboard; every ad
-            here is placed by AdSlot. */}
-        {ADSENSE_SCRIPT_ENABLED && (
-          <Script
-            async
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUBLISHER_ID}`}
-          />
-        )}
+        {/* The AdSense library is mounted by <AdSenseScript /> below, because it
+            must not load until the visitor allows advertising. Auto ads stay OFF
+            in the AdSense dashboard; every unit is placed by AdSlot. */}
       </head>
       <body className="flex min-h-screen flex-col">
         <a
@@ -108,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <CookieNotice />
         <Analytics />
+        <AdSenseScript />
       </body>
     </html>
   );

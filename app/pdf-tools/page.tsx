@@ -107,7 +107,7 @@ export default function PdfToolsPage() {
             <a
               key={group.key}
               href={`#${group.key}`}
-              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-line bg-raised px-3 text-[12.5px] font-semibold text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-line bg-raised px-3 text-[12.5px] font-semibold text-body transition-colors hover:border-primary/40 hover:text-brand-600"
             >
               {group.label}
               <span className="rounded-full bg-surface px-1.5 text-[10.5px] text-subtle">
@@ -205,7 +205,7 @@ export default function PdfToolsPage() {
               <Link
                 key={tool.slug}
                 href={`/${tool.slug}/`}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body hover:border-brand-200"
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body hover:border-primary/40"
               >
                 {tool.name}
               </Link>

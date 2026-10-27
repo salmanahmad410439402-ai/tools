@@ -8,23 +8,19 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col rounded-card border border-line bg-raised p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift",
+        "card card-hover group relative flex h-full flex-col p-5",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-100">
+        <span className="grid h-11 w-11 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-brand-600 transition-colors group-hover:border-primary/40 group-hover:bg-primary/15">
           <ToolIcon name={tool.icon} className="h-5 w-5" />
         </span>
         <span className="flex items-center gap-1.5">
           {tool.isNew && (
-            <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-success">
-              New
-            </span>
+            <span className="pill-emerald uppercase tracking-wide">New</span>
           )}
-          <span className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-subtle ring-1 ring-line">
-            Free
-          </span>
+          <span className="pill-sky uppercase tracking-wide">Free</span>
         </span>
       </div>
 

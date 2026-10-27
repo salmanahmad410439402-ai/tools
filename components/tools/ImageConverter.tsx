@@ -380,7 +380,7 @@ export function ImageConverter({ presetFormat, conversionLabel, toolSlug = "imag
                               "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/25",
                               active
                                 ? "border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500"
-                                : "border-line text-body hover:border-brand-200",
+                                : "border-line text-body hover:border-primary/40",
                               unavailable && "cursor-not-allowed opacity-40",
                             )}
                           >

@@ -13,42 +13,83 @@ const config: Config = {
     extend: {
       colors: {
         /*
-         * Every colour that changes between themes points at a CSS variable
-         * declared in app/globals.css (html.light and html.dark). Brand tints,
-         * surfaces and text labels are redefined there, so `text-ink`,
-         * `bg-surface`, `border-line` and friends work in both themes without a
-         * `dark:` variant at every call site. Functional colours keep their
-         * identity in both themes, only softened for dark contrast.
-         *
-         * The variables hold space-separated channels ("15 23 42") and the
-         * tokens wrap them in rgb(… / <alpha-value>), which is what makes
-         * opacity modifiers such as `bg-page/85` and `border-line/90` work.
-         * A plain `var(--x)` colour silently drops those classes.
+         * Dark-first palette. `:root` in app/globals.css is the deep midnight
+         * navy theme; `html.light` overrides the same variables with the cool
+         * alabaster theme. Tokens are HSL triplets, wrapped here with
+         * <alpha-value> so `bg-primary/10`, `border-primary/25` and friends
+         * generate proper translucent colours.
+         */
+        background: "hsl(var(--background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
+        card: "hsl(var(--card) / <alpha-value>)",
+        "card-foreground": "hsl(var(--card-foreground) / <alpha-value>)",
+        popover: "hsl(var(--popover) / <alpha-value>)",
+        "popover-foreground": "hsl(var(--popover-foreground) / <alpha-value>)",
+        primary: {
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+          foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent) / <alpha-value>)",
+          foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+        },
+        border: "hsl(var(--border) / <alpha-value>)",
+        input: "hsl(var(--input) / <alpha-value>)",
+        ring: "hsl(var(--ring) / <alpha-value>)",
+
+        /*
+         * Legacy semantic aliases used across the components. They point at the
+         * same variables, so there is one palette, not two.
          */
         brand: {
-          50: "rgb(var(--brand-50) / <alpha-value>)",
-          100: "rgb(var(--brand-100) / <alpha-value>)",
-          200: "rgb(var(--brand-200) / <alpha-value>)",
-          300: "rgb(var(--brand-300) / <alpha-value>)",
-          400: "rgb(var(--brand-400) / <alpha-value>)",
-          500: "rgb(var(--brand-500) / <alpha-value>)",
-          600: "rgb(var(--brand-600) / <alpha-value>)",
-          700: "rgb(var(--brand-700) / <alpha-value>)",
-          800: "rgb(var(--brand-800) / <alpha-value>)",
-          900: "rgb(var(--brand-900) / <alpha-value>)",
+          /* 50–300 are solid equivalents of the translucent pill tints, so
+             classes like `bg-brand-50/40` keep working. */
+          50: "hsl(var(--brand-50) / <alpha-value>)",
+          100: "hsl(var(--brand-100) / <alpha-value>)",
+          200: "hsl(var(--brand-200) / <alpha-value>)",
+          300: "hsl(var(--brand-300) / <alpha-value>)",
+          400: "hsl(var(--brand-400) / <alpha-value>)",
+          500: "hsl(var(--brand-500) / <alpha-value>)",
+          600: "hsl(var(--brand-600) / <alpha-value>)",
+          700: "hsl(var(--brand-700) / <alpha-value>)",
+          800: "hsl(var(--brand-800) / <alpha-value>)",
+          900: "hsl(var(--brand-900) / <alpha-value>)",
         },
-        ink: "rgb(var(--ink) / <alpha-value>)",
-        body: "rgb(var(--body) / <alpha-value>)",
-        subtle: "rgb(var(--subtle) / <alpha-value>)",
-        line: "rgb(var(--line) / <alpha-value>)",
-        surface: "rgb(var(--surface) / <alpha-value>)",
-        page: "rgb(var(--page) / <alpha-value>)",
-        raised: "rgb(var(--raised) / <alpha-value>)",
-        success: "rgb(var(--success) / <alpha-value>)",
-        warning: "rgb(var(--warning) / <alpha-value>)",
-        danger: "rgb(var(--danger) / <alpha-value>)",
+        ink: "hsl(var(--ink) / <alpha-value>)",
+        minimal: "hsl(var(--text-minimal) / <alpha-value>)",
+        body: "hsl(var(--body) / <alpha-value>)",
+        subtle: "hsl(var(--subtle) / <alpha-value>)",
+        line: "hsl(var(--line) / <alpha-value>)",
+        surface: "hsl(var(--surface) / <alpha-value>)",
+        page: "hsl(var(--page) / <alpha-value>)",
+        raised: "hsl(var(--raised) / <alpha-value>)",
+        success: "hsl(var(--success) / <alpha-value>)",
+        warning: "hsl(var(--warning) / <alpha-value>)",
+        danger: "hsl(var(--danger) / <alpha-value>)",
       },
       fontFamily: {
+        heading: [
+          "Outfit Variable",
+          "Outfit",
+          "Inter Variable",
+          "Inter",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "sans-serif",
+        ],
         sans: [
           "Inter Variable",
           "Inter",
@@ -60,14 +101,23 @@ const config: Config = {
           "Arial",
           "sans-serif",
         ],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+        mono: [
+          "JetBrains Mono Variable",
+          "JetBrains Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace",
+        ],
       },
       maxWidth: {
         content: "1160px",
         prose: "760px",
       },
       borderRadius: {
-        card: "18px",
+        /* --radius is 1rem: cards use rounded-2xl per the design system. */
+        card: "1rem",
       },
       boxShadow: {
         card: "rgb(var(--shadow-card) / <alpha-value>)",

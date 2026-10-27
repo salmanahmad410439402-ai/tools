@@ -129,7 +129,7 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/90 bg-page/85 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-line/80 bg-page/75 backdrop-blur-xl">
       <div className="container-page flex h-[68px] items-center gap-3">
         <Logo />
 
@@ -138,7 +138,7 @@ export function Header() {
             <button
               type="button"
               className={cn(
-                "flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-[14.5px] font-semibold text-body transition-colors hover:bg-surface hover:text-ink",
+                "flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-[14.5px] font-semibold text-body transition-colors hover:bg-primary/10 hover:text-ink",
                 menuOpen && "bg-surface text-ink",
               )}
               aria-expanded={menuOpen}
@@ -175,7 +175,7 @@ export function Header() {
                                 <li key={tool.slug}>
                                   <Link
                                     href={`/${tool.slug}/`}
-                                    className="block rounded-lg px-2 py-1.5 text-[13.5px] font-medium text-body transition-colors hover:bg-brand-50 hover:text-brand-700"
+                                    className="block rounded-lg px-2 py-1.5 text-[13.5px] font-medium text-body transition-colors hover:bg-primary/10 hover:text-brand-700"
                                   >
                                     {tool.name}
                                   </Link>
@@ -201,7 +201,7 @@ export function Header() {
                             <li key={tool.slug}>
                               <Link
                                 href={`/${tool.slug}/`}
-                                className="block rounded-lg px-2 py-2 text-[13.5px] font-medium text-body transition-colors hover:bg-brand-50 hover:text-brand-700"
+                                className="block rounded-lg px-2 py-2 text-[13.5px] font-medium text-body transition-colors hover:bg-primary/10 hover:text-brand-700"
                               >
                                 {tool.name}
                               </Link>
@@ -234,7 +234,7 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-h-[40px] items-center rounded-lg px-3 text-[14.5px] font-semibold transition-colors hover:bg-surface hover:text-ink",
+                "flex min-h-[40px] items-center rounded-lg px-3 text-[14.5px] font-semibold transition-colors hover:bg-primary/10 hover:text-ink",
                 pathname.startsWith(item.href) ? "text-ink" : "text-body",
               )}
             >
@@ -248,7 +248,7 @@ export function Header() {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[14px] text-subtle transition-colors hover:border-brand-200 hover:text-ink"
+            className="flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[14px] text-subtle transition-colors hover:border-primary/40 hover:text-ink"
             aria-label="Search tools"
           >
             <Search className="h-4 w-4" aria-hidden="true" />

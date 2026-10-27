@@ -30,7 +30,7 @@ export default function BlogIndexPage() {
         <Breadcrumbs crumbs={crumbs} />
         <header className="max-w-3xl">
           <h1 className="text-[30px] font-extrabold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
-            Guides to files, formats and size limits
+            Guides to files, <span className="text-gradient-flow">formats and size limits</span>
           </h1>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">
             Long-form, hand-written explanations of the things tool pages only have room to summarise: how
@@ -52,7 +52,7 @@ export default function BlogIndexPage() {
                 <Link
                   key={tool.slug}
                   href={`/${tool.slug}/`}
-                  className="group flex items-center justify-between rounded-xl border border-line bg-raised px-4 py-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200"
+                  className="group flex items-center justify-between rounded-xl border border-line bg-raised px-4 py-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-primary/40"
                 >
                   {tool.name}
                   <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -63,7 +63,7 @@ export default function BlogIndexPage() {
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {guides.map((guide) => (
-              <article key={guide.slug} className="rounded-card border border-line bg-raised p-5 shadow-card">
+              <article key={guide.slug} className="glass-panel p-5 shadow-card">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read ·{" "}
                   {new Date(guide.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}

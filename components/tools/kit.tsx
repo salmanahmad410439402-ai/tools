@@ -32,7 +32,7 @@ export function ToolFrame({
     <section
       aria-labelledby={labelledBy}
       className={cn(
-        "rounded-[22px] border border-line bg-raised p-4 shadow-card sm:p-6",
+        "glass-panel rounded-[22px] p-4 shadow-card sm:p-6",
         className,
       )}
     >
@@ -184,7 +184,7 @@ export function Dropzone({
           compact ? "py-6" : "py-10 sm:py-12",
           dragging
             ? "border-brand-500 bg-brand-50"
-            : "border-line bg-surface hover:border-brand-300 hover:bg-brand-50/50",
+            : "border-line bg-surface hover:border-primary/50 hover:bg-primary/[0.07]",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
@@ -500,7 +500,7 @@ export function Segmented<T extends string>({
                 "flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 transition-colors",
                 active
                   ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
-                  : "border-line bg-raised hover:border-brand-200",
+                  : "border-line bg-raised hover:border-primary/40",
               )}
             >
               <span className="flex items-center gap-2">

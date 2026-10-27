@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADS_ENABLED, ADSENSE_PUBLISHER_ID, CONTACT_EMAIL, SITE_NAME } from "@/data/site";
+import {
+  ADS_ENABLED,
+  ADSENSE_PUBLISHER_ID,
+  ANALYTICS_SCRIPT_URL,
+  CONTACT_EMAIL,
+  SITE_NAME,
+  VERCEL_ANALYTICS_ENABLED,
+} from "@/data/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 
@@ -41,9 +48,12 @@ export default function CookiePolicyPage() {
         </thead>
         <tbody>
           <tr>
-            <td><code>filecraft-cookie-notice</code></td>
+            <td><code>filecraft-consent</code></td>
             <td>localStorage (not a cookie)</td>
-            <td>Remembers that you dismissed the small cookie notice. Never transmitted.</td>
+            <td>
+              Your answer to the consent panel: whether analytics and advertising are allowed. Nothing loads
+              until this record exists and says yes. Never transmitted; readable only by this site.
+            </td>
             <td>Until you clear site data</td>
           </tr>
           <tr>
@@ -61,6 +71,12 @@ export default function CookiePolicyPage() {
         That is the complete list of storage the site itself creates. There is no login cookie, no session cookie,
         no analytics cookie and no preference profile. No cookie is used to make a tool work, because the tools do
         their work in memory on your device.
+
+      </p>
+      <p>
+        You can change the consent decision at any time with{" "}
+        <strong>Cookie settings</strong> in the footer, which reopens the same panel. Choosing “Essential cookies
+        only”, or closing the panel, means no measurement request and no ad request is made from this browser.
       </p>
 
       <h2>3. Advertising cookies (Google AdSense)</h2>
@@ -125,9 +141,29 @@ export default function CookiePolicyPage() {
 
       <h2>5. Analytics</h2>
       <p>
-        {ADS_ENABLED
-          ? "Any analytics in use is cookie-free and aggregate. No cookies are set for measurement."
-          : "This build ships with no analytics at all. If cookie-free analytics (Plausible or Umami) are enabled later, no cookies would be set and no personal data would be collected."}
+        Measurement only starts after you press “Allow” in the consent panel. Nothing is pre-selected, and
+        declining changes nothing about how the site works.
+      </p>
+      <p>
+        {VERCEL_ANALYTICS_ENABLED ? (
+          <>
+            When allowed, page views are counted with Vercel Web Analytics. It is cookieless: it sets no cookie and
+            writes nothing to your device beyond the record of your choice, and it does not fingerprint your
+            browser or track you across sites. See the <Link href="/privacy-policy/">Privacy Policy</Link> for
+            exactly which events are recorded.
+          </>
+        ) : ANALYTICS_SCRIPT_URL ? (
+          <>
+            When allowed, the site loads a cookie-free analytics script. It sets no cookie and stores nothing on
+            your device; measurement is aggregated from the request itself.
+          </>
+        ) : (
+          <>
+            This build loads no analytics at all, so no measurement cookie or identifier can exist even if a
+            choice is stored. If cookie-free analytics are enabled later (Vercel Web Analytics or
+            Plausible/Umami), they still load only after consent and this page is updated in the same release.
+          </>
+        )}
       </p>
 
       <h2>6. How to control cookies</h2>

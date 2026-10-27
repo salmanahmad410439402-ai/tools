@@ -147,7 +147,7 @@ export default function FaqPage() {
               <a
                 key={group.heading}
                 href={`#${group.heading.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-                className="inline-flex min-h-[36px] items-center rounded-full border border-line bg-raised px-3 text-[12.5px] font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+                className="inline-flex min-h-[36px] items-center rounded-full border border-line bg-raised px-3 text-[12.5px] font-medium text-body transition-colors hover:border-primary/40 hover:text-brand-600"
               >
                 {group.heading}
               </a>
