@@ -8,6 +8,7 @@ import { pdfPageTools } from "./tool-defs/pdf-pages.ts";
 import { pdfConvertTools } from "./tool-defs/pdf-convert.ts";
 import { pdfAnnotateTools } from "./tool-defs/pdf-annotate.ts";
 import { imageTools } from "./tool-defs/images.ts";
+import { utilityTools } from "./tool-defs/utilities.ts";
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ export const tools: Tool[] = [
   ...pdfAnnotateTools,
   ...pdfExtractTools,
   ...imageTools,
+  ...utilityTools,
 ];
 
 /** Display order and copy for the PDF sub-groups used by the menu and /pdf-tools. */

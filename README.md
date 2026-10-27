@@ -139,6 +139,7 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 | Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
+| QR encoding | `qrcode-generator` 2.0.4 (MIT, no runtime deps) | only on the QR page |
 
 Analytics is opt-in and cookie-free. Two options, both off unless configured:
 
@@ -392,10 +393,32 @@ in Step 2, because they belong in the same PDF menu.
   detection). 24 new assertions in `npm test` cover EXIF parsing and stripping, PNG/WebP chunk
   removal, refusal of unsupported containers, base64 round-trips and the quality search.
 
+**Step 5 (utilities) — done**
+
+- Four utilities, `/utilities` switched from `noindex` to a live, indexed category page:
+  - **QR Code Generator** (`/qr-code-generator/`) — real ISO/IEC 18004 symbols from
+    `qrcode-generator` (MIT, no runtime dependencies), levels L/M/Q/H, quiet-zone control, a
+    contrast check with an inverted-colour warning, and both a **vector SVG** (one rect per
+    module) and a **PNG at an exact pixel size**. No redirect, no short link, no scan counting.
+  - **Word Counter** (`/word-counter/`) — words, characters with and without spaces,
+    sentences, paragraphs, lines, reading time at 225 wpm, speaking time at 130 wpm, a live
+    eight-destination limit panel (X, meta description, SEO title, email subject, SMS,
+    YouTube, Instagram, LinkedIn) and a stop-word-filtered repetition list.
+  - **Case Converter** (`/case-converter/`) — 13 conversions: sentence, Title (with the
+    small-word rule and acronym preservation), UPPER, lower, camelCase, PascalCase,
+    snake_case, kebab-case, CONSTANT_CASE, dot.case, URL slug, alternating and inverted.
+  - **Lorem Ipsum Generator** (`/lorem-ipsum-generator/`) — 1–20 paragraphs × 1–12 sentences,
+    optional classical opening, plain text / HTML `<p>` / Markdown output, copy and download.
+- Engines: `lib/qr.ts` (matrix encoding, SVG serialiser, canvas painter, contrast maths) and
+  `lib/text/tools.ts` (counts, frequency, casing, filler with an injectable RNG), both pure and
+  covered by 30 new assertions in `npm test`.
+- The content validator learned one exception: the lorem-ipsum page is *about* placeholder text,
+  so its own copy is not flagged as unfinished placeholder copy (TODO/TBD/“coming soon” still are).
+
 **Not built yet (next steps)**
 
 - Step 4 remainder: more conversion landing pages (e.g. PNG → WebP, WebP → JPG).
-- Step 5: four utilities + the first guides (the `/blog/[slug]` route is switched on then).
+- Step 5 remainder: the guide library (three are published; the plan called for more).
 - Step 6: protect/unlock, OCR, PDF→Word/Excel, PowerPoint to PDF, and the rest.
 
 ---
@@ -452,6 +475,15 @@ in Step 2, because they belong in the same PDF menu.
   labelled as such.
 - **Crop Image** is rectangular only — no ellipse, lasso or perspective correction — and works on
   one image at a time.
+- **QR codes are static**: no redirect, so they cannot be repointed and scans cannot be counted
+  without handing every visitor to a third-party redirector. No logo overlay or rounded modules.
+- **Word Counter** splits on whitespace, which is right for English and wrong for Chinese,
+  Japanese and Thai (their character counts stay accurate, their word counts do not); characters
+  are Unicode code points, so a skin-toned emoji counts as two.
+- **Case Converter** applies English casing rules — German nouns and French title conventions
+  need a manual pass, and scripts without letter case pass through untouched.
+- **Lorem Ipsum Generator** produces paragraphs only (no lists or tables) from classical filler
+  vocabulary, not grammatical Latin. It is for judging layout, never for publishing.
 - **EXIF Remover** parses JPEG, PNG and WebP only. HEIC, TIFF and RAW are refused rather than
   silently returned unchanged. It removes tags, not pixels: metadata removal is not redaction.
 
@@ -486,8 +518,14 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    (warning shown), the cleaned copy opens normally and still looks identical, and a PNG
    screenshot reports nothing to remove. Base64: encode a PNG, copy the data URI into a browser
    address bar (it should render), then paste it back and decode.
-6. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+6. **Utilities (step 5)** — QR: encode a URL, scan it with two phones from the screen and from
+   a print; confirm the SVG opens in a browser and scales sharply; set a near-identical
+   background and confirm the contrast warning appears. Word counter: paste 500 words and compare
+   with Word/Google Docs, then check a 300-character post against the X bar. Case converter: run
+   each of the 13 buttons on text with existing capitals, and confirm “Use as input” chains. Lorem:
+   change paragraph counts, switch to HTML and confirm the tags appear verbatim.
+7. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll; the crop handles must be draggable with a finger.
-7. **Network tab** — run any tool and confirm no request carries file data. Note that the
+8. **Network tab** — run any tool and confirm no request carries file data. Note that the
    analytics script only loads after **Allow** in the consent panel.
-8. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+9. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

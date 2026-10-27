@@ -48,6 +48,22 @@ const Base64Tool = dynamic(() => import("./Base64Tool").then((mod) => mod.Base64
   loading: () => <WidgetSkeleton />,
 });
 
+const QrCodeTool = dynamic(() => import("./QrCodeTool").then((mod) => mod.QrCodeTool), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const WordCounter = dynamic(() => import("./WordCounter").then((mod) => mod.WordCounter), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const CaseConverter = dynamic(() => import("./CaseConverter").then((mod) => mod.CaseConverter), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const LoremIpsum = dynamic(() => import("./LoremIpsum").then((mod) => mod.LoremIpsum), {
+  loading: () => <WidgetSkeleton />,
+});
+
 const MergePdf = dynamic(() => import("./pdf/MergePdf").then((mod) => mod.MergePdf), { loading: () => <WidgetSkeleton /> });
 const SplitPdf = dynamic(() => import("./pdf/SplitPdf").then((mod) => mod.SplitPdf), { loading: () => <WidgetSkeleton /> });
 const OrganizePdf = dynamic(() => import("./pdf/OrganizePdf").then((mod) => mod.OrganizePdf), { loading: () => <WidgetSkeleton /> });
@@ -100,6 +116,14 @@ export function ToolWidget({
       return <ExifTool toolSlug={toolSlug} />;
     case "base64":
       return <Base64Tool toolSlug={toolSlug} />;
+    case "qr-code":
+      return <QrCodeTool toolSlug={toolSlug} />;
+    case "word-counter":
+      return <WordCounter toolSlug={toolSlug} />;
+    case "case-converter":
+      return <CaseConverter toolSlug={toolSlug} />;
+    case "lorem-ipsum":
+      return <LoremIpsum toolSlug={toolSlug} />;
     case "merge-pdf":
       return <MergePdf />;
     case "split-pdf":

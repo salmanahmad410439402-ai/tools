@@ -12,10 +12,6 @@ export interface RoadmapItem {
 
 export const roadmap: RoadmapItem[] = [
   { name: "More image conversion landing pages", category: "image-tools", phase: 4 },
-  { name: "QR code generator", category: "utilities", phase: 5 },
-  { name: "Word and character counter", category: "utilities", phase: 5 },
-  { name: "Case converter", category: "utilities", phase: 5 },
-  { name: "Lorem ipsum generator", category: "utilities", phase: 5 },
   { name: "Protect and unlock PDF", category: "pdf-tools", phase: 6, note: "Unlock only with the correct password" },
   { name: "OCR: image and scan to text", category: "pdf-tools", phase: 6 },
   { name: "PDF to Word and Excel", category: "pdf-tools", phase: 6 },

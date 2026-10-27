@@ -4,6 +4,7 @@ import {
   Crop,
   Eye,
   Maximize2,
+  QrCode,
   FileCode2,
   FileSpreadsheet,
   FileType2,

@@ -726,6 +726,92 @@ console.log("\nCompression quality search");
   check("compress: no attempts is not a crash", pickBestAttempt([], 100) === null);
 }
 
+/* ───────────────────────── text utilities ───────────────────────── */
+
+console.log("\nText utilities");
+{
+  const { countText, formatDuration, topWords, sentenceCase, titleCase, toCamelCase, toSnakeCase, toSlug, toConstantCase, invertCase, generateLorem } =
+    await import("../lib/text/tools.ts");
+
+  const sample = "Hello world. This is the second sentence!\n\nA new paragraph here. And another one? Yes.";
+  const stats = countText(sample);
+  check("counter: words", stats.words === 15, String(stats.words));
+  check("counter: sentences", stats.sentences === 5, String(stats.sentences));
+  check("counter: paragraphs split on the blank line", stats.paragraphs === 2, String(stats.paragraphs));
+  check("counter: characters include spaces and newlines", stats.characters === sample.length, `${stats.characters} vs ${sample.length}`);
+  check("counter: characters without spaces differ", stats.charactersNoSpaces < stats.characters);
+  check("counter: reading time is derived, not zero", stats.readingMinutes > 0 && stats.readingMinutes < 1);
+  check("counter: empty text is all zeroes", countText("").words === 0 && countText("").sentences === 0);
+  check("counter: emoji count as code points, not bytes", countText("👍🏽").characters === 2, String(countText("👍🏽").characters));
+  check("duration: seconds below a minute", formatDuration(0.75) === "45 sec", formatDuration(0.75));
+  check("duration: minutes and seconds", formatDuration(2.5) === "2 min 30 sec", formatDuration(2.5));
+
+  const frequent = topWords("The report is ready. The report covers design. Design and research.", 3);
+  check("frequency: stop words are removed", frequent.every((entry) => entry.word !== "the" && entry.word !== "and"));
+  check("frequency: most repeated word first", frequent[0].word === "design" && frequent[0].count === 2, JSON.stringify(frequent[0]));
+
+  check("case: sentence case lowers then capitalises", sentenceCase("hELLO wORLD. this IS a TEST!") === "Hello world. This is a test!");
+  check("case: title case keeps small words down", titleCase("the state of the art") === "The State of the Art", titleCase("the state of the art"));
+  check(
+    "case: title case leaves existing acronyms alone",
+    titleCase("PDF and SEO tools") === "PDF and SEO Tools",
+    titleCase("PDF and SEO tools"),
+  );
+  check("case: camel from a sentence", toCamelCase("user account settings") === "userAccountSettings", toCamelCase("user account settings"));
+  check("case: snake from camel", toSnakeCase("userAccountSettings") === "user_account_settings");
+  check("case: constant case", toConstantCase("api base url") === "API_BASE_URL", toConstantCase("api base url"));
+  check("case: slug strips accents and punctuation", toSlug("Crème Brûlée & 100% Good!") === "creme-brulee-100-good", toSlug("Crème Brûlée & 100% Good!"));
+  check("case: invert swaps every letter", invertCase("hELLO") === "Hello");
+
+  let seed = 42;
+  const random = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const lorem = generateLorem({ paragraphs: 2, sentencesPerParagraph: 3, random });
+  check("lorem: requested paragraphs", lorem.split("\n\n").length === 2);
+  check("lorem: opens with the classical line", lorem.startsWith("Lorem ipsum dolor sit amet"));
+  check("lorem: html wraps each paragraph", generateLorem({ paragraphs: 2, sentencesPerParagraph: 1, format: "html", random }).split("\n").every((line) => line.startsWith("<p>") && line.endsWith("</p>")));
+  check("lorem: the opening can be turned off", !generateLorem({ paragraphs: 1, sentencesPerParagraph: 1, startWithLorem: false, random }).startsWith("Lorem ipsum dolor sit amet"));
+}
+
+/* ─────────────────────────── QR generation ────────────────────────── */
+
+console.log("\nQR codes");
+{
+  const { encodeQr, qrToSvg, contrastRatio } = await import("../lib/qr.ts");
+
+  const matrix = encodeQr("https://example.com/filecraft", { level: "M" });
+  check("qr: a realistic URL fits", matrix.modules >= 21 && matrix.modules % 4 === 1, String(matrix.modules));
+  check("qr: version is derived from the module count", matrix.version === (matrix.modules - 17) / 4);
+  check("qr: quiet zone is included in the size", matrix.size === matrix.modules + matrix.margin * 2);
+  check("qr: finder pattern corners are dark", matrix.isDark(0, 0) && matrix.isDark(6, 0) && matrix.isDark(0, 6));
+  check("qr: finder pattern interiors are light", !matrix.isDark(1, 1) && !matrix.isDark(5, 5));
+
+  const svg = qrToSvg(matrix, { foreground: "#111111", background: "#FFFFFF" });
+  check("qr: svg declares a square viewBox", /viewBox="0 0 (\d+) \1"/.test(svg), svg.slice(0, 60));
+  check("qr: svg contains one rect per dark module plus the background", (svg.match(/<rect/g) || []).length > matrix.modules);
+  check("qr: svg uses the requested colours", svg.includes('fill="#111111"') && svg.includes('fill="#FFFFFF"'));
+
+  check("qr: contrast of black on white is maximal", Math.round(contrastRatio("#000000", "#FFFFFF")) === 21);
+  check("qr: identical colours score 1:1", contrastRatio("#0B1020", "#0B1020") === 1);
+
+  let rejected = false;
+  try {
+    encodeQr("x".repeat(6000), { level: "H" });
+  } catch {
+    rejected = true;
+  }
+  check("qr: oversized payloads are refused with an error", rejected);
+  let emptyRejected = false;
+  try {
+    encodeQr("   ");
+  } catch {
+    emptyRejected = true;
+  }
+  check("qr: empty input is refused", emptyRejected);
+}
+
 /* ─────────────────────── registry counts stay honest ───────────────────── */
 
 console.log("\nRegistry counts");
@@ -735,8 +821,14 @@ console.log("\nRegistry counts");
 
   const pdf = toolsByCategory("pdf-tools").length;
   const images = toolsByCategory("image-tools").length;
+  const utilities = toolsByCategory("utilities").length;
   check("every tool has a category that exists", tools.every((tool) => CATEGORIES.some((c) => c.slug === tool.category)));
-  check("PDF + image tools add up to the total", pdf + images === toolCount, `${pdf} + ${images} = ${toolCount}`);
+  check(
+    "the categories add up to the total",
+    pdf + images + utilities === toolCount,
+    `${pdf} + ${images} + ${utilities} = ${toolCount}`,
+  );
+  check("the utilities category is live", utilities >= 4, String(utilities));
 
   const create = toolsForCategory("convert-to-pdf");
   const createGroup = tools.filter((tool) => tool.group === "create").length;

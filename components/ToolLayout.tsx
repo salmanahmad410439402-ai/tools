@@ -125,16 +125,20 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                     <table>
                       <thead>
                         <tr>
-                          <th scope="col">Accepted input</th>
-                          <th scope="col">Output</th>
-                          <th scope="col">Batch</th>
+                          <th scope="col">{tool.category === "utilities" ? "You provide" : "Accepted input"}</th>
+                          <th scope="col">What you get</th>
+                          <th scope="col">{tool.category === "utilities" ? "Delivery" : "Batch"}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td>{tool.inputFormats.join(", ")}</td>
                           <td>{tool.outputFormats.join(", ")}</td>
-                          <td>Multiple files, individual or ZIP download</td>
+                          <td>
+                            {tool.category === "utilities"
+                              ? "Copy to the clipboard, or download where it makes sense"
+                              : "Multiple files, individual or ZIP download"}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
