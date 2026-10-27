@@ -11,7 +11,8 @@ import {
   Zap,
 } from "lucide-react";
 import { CATEGORIES, SITE_NAME, SITE_URL, TAGLINE } from "@/data/site";
-import { popularTools, toolCount, tools, toolsByCategory } from "@/data/tools";
+import { toolsForCategory, popularTools, toolCount, tools } from "@/data/tools";
+import { roadmap } from "@/data/roadmap";
 import { guides } from "@/data/guides";
 import { buildMetadata } from "@/lib/seo";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/jsonld";
@@ -34,6 +35,13 @@ const FACTS = [
   { value: "0", label: "accounts needed", detail: "No email, no login, no paywall" },
   { value: "100%", label: "browser-based", detail: "Works offline after the page loads" },
 ];
+
+/**
+ * The home page shows a curated set, not all of them: the point of the section
+ * is to get someone to the right tool quickly, and 33 cards is a wall.
+ */
+const featuredTools = popularTools.slice(0, 8);
+const newestTools = tools.filter((tool) => tool.isNew).slice(0, 5);
 
 const STEPS = [
   {
@@ -229,20 +237,31 @@ export default function HomePage() {
             Which tool do you need?
           </h2>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">
-            Four tools are live today, each documented with its real limits. More arrive in clear steps —
-            no “coming soon” pages that waste a click.
+            {toolCount} tools are live today, each documented with its real limits. These cover the everyday
+            jobs — combine, shrink, convert, sign — and the full list is one click away.
           </p>
         </div>
 
         <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool) => (
+          {featuredTools.map((tool) => (
             <ToolCard key={tool.slug} tool={tool} />
           ))}
         </div>
 
+        <div className="mt-6">
+          <Link
+            href="/tools/"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-white px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+          >
+            See all {toolCount} tools
+            <ArrowRight className="h-4 w-4 text-brand-600" aria-hidden="true" />
+          </Link>
+        </div>
+
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {CATEGORIES.map((category) => {
-            const count = toolsByCategory(category.slug).length;
+            const count = toolsForCategory(category.slug).length;
+            const planned = roadmap.filter((item) => item.category === category.slug).length;
             return (
               <Link
                 key={category.slug}
@@ -255,7 +274,11 @@ export default function HomePage() {
                 <span className="min-w-0">
                   <span className="block text-[14px] font-semibold text-ink">{category.name}</span>
                   <span className="text-[11.5px] text-subtle">
-                    {count} tool{count === 1 ? "" : "s"}
+                    {count > 0
+                      ? `${count} tool${count === 1 ? "" : "s"}`
+                      : planned > 0
+                        ? `${planned} planned`
+                        : "Coming later"}
                   </span>
                 </span>
                 <ChevronRight className="ml-auto h-4 w-4 text-subtle transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -402,12 +425,12 @@ export default function HomePage() {
       <section className="border-t border-line bg-surface" aria-labelledby="faq-home">
         <div className="container-page grid gap-10 py-14 sm:py-16 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <p className="eyebrow">Popular right now</p>
+            <p className="eyebrow">New in this release</p>
             <h2 className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
-              Popular tools to start with
+              Recently added tools
             </h2>
             <ul className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
-              {popularTools.slice(0, 5).map((tool) => (
+              {newestTools.map((tool) => (
                 <li key={tool.slug}>
                   <Link href={`/${tool.slug}/`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-brand-50/50">
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
@@ -423,7 +446,7 @@ export default function HomePage() {
               ))}
             </ul>
             <p className="mt-3 text-[12px] text-subtle">
-              Ordered from the tool list, not from invented statistics.
+              Straight from the tool registry in shipping order — no invented popularity numbers.
             </p>
           </div>
 

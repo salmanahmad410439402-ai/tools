@@ -67,7 +67,9 @@ export function CategoryPage({ category, intro, faqs }: Props) {
         </header>
 
         <h2 className="mt-10 text-[20px] font-bold tracking-tight text-ink">
-          {items.length} {items.length === 1 ? "tool" : "tools"} available now
+          {items.length > 0
+            ? `${items.length} ${items.length === 1 ? "tool" : "tools"} available now`
+            : "Not live yet — here is what is planned"}
         </h2>
         {items.length > 0 ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

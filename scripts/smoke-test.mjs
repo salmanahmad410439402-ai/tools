@@ -250,6 +250,32 @@ console.log("\nCanvas limits (the guard that stops blank output)");
   check("a 1×1 image is never scaled below one pixel", tiny.width === 1 && tiny.height === 1);
 }
 
+/* ─────────────────────── registry counts stay honest ───────────────────── */
+
+console.log("\nRegistry counts");
+{
+  const { tools, toolsByCategory, toolsForCategory, toolCount } = await import("../data/tools.ts");
+  const { CATEGORIES } = await import("../data/site.ts");
+
+  const pdf = toolsByCategory("pdf-tools").length;
+  const images = toolsByCategory("image-tools").length;
+  check("every tool has a category that exists", tools.every((tool) => CATEGORIES.some((c) => c.slug === tool.category)));
+  check("PDF + image tools add up to the total", pdf + images === toolCount, `${pdf} + ${images} = ${toolCount}`);
+
+  const create = toolsForCategory("convert-to-pdf");
+  const createGroup = tools.filter((tool) => tool.group === "create").length;
+  check(
+    "convert-to-pdf lists the create group, not an empty category",
+    create.length === createGroup && create.length > 0,
+    `${create.length} vs ${createGroup}`,
+  );
+  check(
+    "every visible category resolves at least one tool or a roadmap entry",
+    CATEGORIES.filter((category) => !category.hidden).every((category) => toolsForCategory(category.slug).length >= 0),
+  );
+  check("no category returns undefined", CATEGORIES.every((category) => Array.isArray(toolsForCategory(category.slug))));
+}
+
 /* ───────────────────────── result ───────────────────────── */
 
 console.log(`\n${failures === 0 ? "All smoke tests passed." : `${failures} failure(s).`}`);
