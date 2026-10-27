@@ -1,1 +1,229 @@
-# tools
+# Filecraft — free PDF & image tools that run in the browser
+
+A static, SEO-first website of file tools. Every tool processes files **on the user's device**:
+there is no upload endpoint, no backend, no database and no account system.
+
+- **Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · static export (`out/`)
+- **Deploy target:** any static host (Netlify, Cloudflare Pages, Vercel, S3 + CDN, GitHub Pages, nginx)
+- **Ads:** Google AdSense wired up but switched **off** until approval (`ADS_ENABLED=false`)
+
+---
+
+## Quick start
+
+```bash
+npm install          # also copies the pdf.js worker into /public via predev/prebuild
+npm run dev          # http://localhost:3000
+```
+
+Production build and local preview of the exported site:
+
+```bash
+npm run build        # writes static HTML + JS to ./out
+npm start            # zero-dependency static server on :3000 (PORT=… to change)
+```
+
+Checks that run in CI or before a deploy:
+
+```bash
+npm run typecheck    # tsc --noEmit
+npm run validate     # content + registry rules (title lengths, FAQs, word counts, links)
+npm test             # Node smoke tests for the PDF/image engines
+npm run check        # all three
+```
+
+---
+
+## Where to change things
+
+| What | File |
+| --- | --- |
+| Site name, domain, contact email, tagline | `data/site.ts` (top block) |
+| AdSense publisher ID, ads on/off, ad slot IDs | `data/site.ts` |
+| Tool registry (single source of truth) | `data/tools.ts` |
+| Planned-but-not-built tools list | `data/roadmap.ts` |
+| Guides | `data/guides.ts` |
+| Design tokens (colors, radius, shadows, fonts) | `tailwind.config.ts`, `app/globals.css` |
+| Header / footer / logo | `components/Header.tsx`, `components/Footer.tsx`, `components/Logo.tsx` |
+| Tool page template | `components/ToolLayout.tsx` |
+| Tool widgets | `components/tools/*` |
+
+`data/site.ts` currently ships with placeholders — **replace these three values before launch**:
+
+```ts
+export const SITE_NAME = "Filecraft";
+export const SITE_URL = "https://example.com";      // no trailing slash
+export const CONTACT_EMAIL = "hello@example.com";
+```
+
+Canonical URLs, Open Graph tags, structured data, `sitemap.xml`, `robots.txt` and the footer
+email are all generated from those constants.
+
+---
+
+## Advertising (AdSense)
+
+The publisher ID `ca-pub-3078074422458018` is already in:
+
+- the async AdSense script in `<head>` (`app/layout.tsx`)
+- `<meta name="google-adsense-account">` on every page
+- `public/ads.txt`
+
+Ad **units** are disabled by default. `components/AdSlot.tsx` renders `null` and makes no ad
+request while the flag is off, so ad blockers and reviewers see a clean page.
+
+To switch ads on after approval:
+
+```bash
+NEXT_PUBLIC_ADS_ENABLED=true \
+NEXT_PUBLIC_ADS_SLOT_TOOL_TOP=1234567890 \
+NEXT_PUBLIC_ADS_SLOT_INLINE=1234567891 \
+NEXT_PUBLIC_ADS_SLOT_SIDEBAR=1234567892 \
+npm run build
+```
+
+Rules baked into the layout (see `AdSlot.tsx` and `ToolLayout.tsx`):
+
+- max 3 units per page: below the tool, mid-article, desktop sidebar;
+- fixed reserved height to avoid CLS, “Advertisement” label, lazy loading below the fold;
+- never inside the dropzone, never between options and the primary button, never next to a
+  download button; ≥ 40 px clear space around every unit;
+- no ads on 404, error or empty pages, no interstitials, no mobile anchors.
+
+**Before switching on:** in AdSense → Privacy & messaging, publish Google's certified consent
+message for the EEA/UK/Switzerland. Our own cookie notice is informational only and never blocks
+content. Keep Auto ads **off** — all units are placed manually.
+
+---
+
+## Privacy architecture
+
+No file ever leaves the tab. Libraries are loaded lazily so the first paint stays small:
+
+| Work | Library | Loaded |
+| --- | --- | --- |
+| Reading/writing PDFs | `pdf-lib` (MIT) | on demand, per tool page |
+| Rendering PDF pages | `pdfjs-dist` 4.10.38 (Apache-2.0) + `public/pdf.worker.min.mjs` | only when a tool rasterises |
+| ZIP downloads | `jszip` (MIT) | on first ZIP download |
+| HEIC photos | `heic2any` (MIT) | only when a HEIC file is selected |
+| BMP / TIFF / GIF / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
+
+Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
+
+```bash
+NEXT_PUBLIC_ANALYTICS_SCRIPT_URL=https://plausible.io/js/script.js
+NEXT_PUBLIC_ANALYTICS_DOMAIN=yourdomain.com
+```
+
+Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content,
+only a coarse size bucket.
+
+---
+
+## Adding a tool (the one-entry workflow)
+
+1. Add an entry to `data/tools.ts` — slug, name, category, tagline, “best used when”, SEO title
+   (**≤ 50 chars**, the layout appends `" | Filecraft"`), meta description (≤ 155), H1, intro,
+   4–6 feature bullets, steps, limits, tips, 5–8 FAQs, related slugs, formats, phase, date.
+2. Map its `widget` key to a client component in `components/tools/ToolWidgets.tsx`
+   (add the lazy `dynamic()` import — never import a PDF library at module scope).
+3. Run `npm run validate` — it fails on thin content, long titles, missing FAQs or broken
+   related links.
+4. Remove the tool from `data/roadmap.ts` if it was listed as planned.
+
+Navigation, home cards, category pages, search, sitemap, breadcrumbs, JSON-LD and related-tool
+links all update automatically.
+
+**Note on `/blog/[slug]`:** the article template is finished
+(`components/guides/GuideArticle.tsx`), but Next's static export refuses a dynamic route whose
+`generateStaticParams()` is empty. The route file is created in the same commit as the first
+guide — copy-paste instructions are in the template's header comment. Until then `/blog/` is
+`noindex` and left out of the sitemap, so nothing thin gets indexed.
+
+---
+
+## Deployment
+
+The build output is a plain folder of HTML, JS and assets — no server runtime.
+
+```bash
+npm run build     # → out/
+```
+
+- **Netlify:** build `npm run build`, publish dir `out`
+- **Cloudflare Pages:** build `npm run build`, output `out`
+- **Vercel:** framework preset Next.js, output is detected automatically
+- **GitHub Pages / S3 / nginx:** upload `out/`; serve `/foo/` as `/foo/index.html`
+  (the site uses `trailingSlash: true`, so every URL ends with `/`)
+
+Set `SITE_URL` in `data/site.ts` to the live domain **before** the final build so canonicals,
+the sitemap and structured data use the real host.
+
+`public/og-default.png` is generated by `scripts/generate-og.py`
+(`python3 -m venv .venv && .venv/bin/pip install pillow && .venv/bin/python scripts/generate-og.py`)
+and committed, so the build itself needs no Python.
+
+---
+
+## Build status
+
+**Step 1 (foundation) — done**
+
+- Design system matched to the reference brand: `#4F46E5` indigo, Inter variable, 18 px cards,
+  soft shadows, light theme, sticky header with mega-menu + ⌘K search, 4-column footer.
+- Pages: `/`, `/tools` (search + category filter), `/pdf-tools`, `/convert-to-pdf`,
+  `/image-tools`, `/utilities`, 4 tool pages, `/blog`, `/about`, `/contact`, `/faq`,
+  `/privacy-policy`, `/terms`, `/disclaimer`, `/cookie-policy`, 404, `sitemap.xml`,
+  `robots.txt`, `ads.txt`.
+- SEO: per-page titles/descriptions/canonicals, Open Graph + Twitter cards, one H1 per page,
+  BreadcrumbList + WebApplication + FAQPage JSON-LD, sitemap generated from the registry.
+- Tools live: **Image to PDF**, **Compress PDF**, **Image Converter**, **JPG to PNG**
+  (same engine, different page).
+- Content: 856–1027 words of hand-written copy per tool page, 8 FAQs each.
+
+**Not built yet (next steps)**
+
+- Step 2: merge, split, rotate, page organiser, page numbers, watermark, signature, basic
+  editor, PDF→JPG/PNG, metadata editor.
+- Step 3: TXT, DOCX, CSV/Excel, Markdown/HTML → PDF.
+- Step 4: image compressor, resizer, crop/rotate, EXIF, Base64, extra conversion landing pages.
+- Step 5: four utilities + the first 15 guides (the `/blog/[slug]` route is switched on then).
+- Step 6: protect/unlock, OCR, PDF→Word/Excel, and the rest.
+
+---
+
+## Known limitations (documented on the pages themselves)
+
+- **Compress PDF, Light/Recommended** rewrite the file structure, strip metadata and recompress
+  oversized embedded JPEG images. They do **not** re-encode every image: a browser has no safe
+  way to do that without risking broken pages. Savings are modest (2–10%) on already-optimised
+  PDFs, large on scans.
+- **Compress PDF, Strong** rasterises pages at 150 DPI or lower → text is no longer selectable.
+  This is stated in the UI before the user starts.
+- **AVIF output** depends on the browser; Safari reads AVIF but cannot write it. The converter
+  detects this at runtime and disables the option instead of producing broken files.
+- **TIFF output** is uncompressed RGB (browsers have no TIFF encoder); files are larger than the
+  source. **GIF output** is single-frame with a 216-colour palette.
+- **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
+  browser, but very large HEIC batches are slow on older phones.
+
+---
+
+## Manual QA checklist (browser-only paths)
+
+The sandbox this was built in has no browser, so canvas/Web Worker paths were verified by code
+review plus `npm test` for the DOM-free engine parts. Please run this on a real device before
+launch (Chrome, Safari iOS, Firefox, Edge):
+
+1. **Image to PDF** — 1 photo, 10 photos, a HEIC photo, a transparent PNG, a 20 MB JPEG.
+   Check page count, order, A4/Letter/fit, 0/10/40 mm margins, and that the PDF opens in
+   Acrobat + Preview + iOS Files.
+2. **Compress PDF** — 1-page PDF, 100-page PDF, 20 MB scan, password-protected PDF (should warn),
+   corrupt file (should explain, not crash). Verify Light keeps text selectable, Strong does not,
+   and that the before/after sizes are honest.
+3. **Image Converter / JPG to PNG** — JPG → PNG, PNG → JPG (transparent background → white),
+   → WebP, → AVIF (Chrome), → BMP/TIFF/GIF/ICO, batch of 5 with ZIP download.
+4. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+   scroll.
+5. **Network tab** — run any tool and confirm no request carries file data.
+6. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

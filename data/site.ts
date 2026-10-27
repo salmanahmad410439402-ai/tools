@@ -1,0 +1,142 @@
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  SITE CONFIG — change these three lines once your name, domain and inbox
+ *  are final. Everything else on the site (canonical URLs, sitemap, robots.txt,
+ *  structured data, footer, contact page, legal pages) is generated from here.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+export const SITE_NAME = "Filecraft";
+export const SITE_URL = "https://example.com"; // no trailing slash
+export const CONTACT_EMAIL = "hello@example.com";
+/** ─────────────────────────────────────────────────────────────────────────── */
+
+/** AdSense publisher ID (same account as tagyfy.com). */
+export const ADSENSE_PUBLISHER_ID = "ca-pub-3078074422458018";
+/** ads.txt line that must match the publisher ID above. */
+export const ADS_TXT_LINE = "google.com, pub-3078074422458018, DIRECT, f08c47fec0942fa0";
+
+/**
+ * Ad units stay switched off until AdSense approves the site.
+ * Set NEXT_PUBLIC_ADS_ENABLED=true (and redeploy) when approval arrives.
+ */
+export const ADS_ENABLED = process.env.NEXT_PUBLIC_ADS_ENABLED === "true";
+export const ADS_SLOT_TOOL_TOP = process.env.NEXT_PUBLIC_ADS_SLOT_TOOL_TOP ?? "";
+export const ADS_SLOT_INLINE = process.env.NEXT_PUBLIC_ADS_SLOT_INLINE ?? "";
+export const ADS_SLOT_SIDEBAR = process.env.NEXT_PUBLIC_ADS_SLOT_SIDEBAR ?? "";
+
+/**
+ * Optional, cookie-free analytics. Leave the script URL empty to disable.
+ * Example: https://plausible.io/js/script.js
+ */
+export const ANALYTICS_SCRIPT_URL = process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL ?? "";
+export const ANALYTICS_DOMAIN = process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN ?? "";
+
+export const TAGLINE = "Free PDF & image tools that run privately in your browser";
+export const SITE_DESCRIPTION =
+  "Merge, compress and convert PDFs and images entirely in your browser. No uploads, no sign-up, no watermarks — your files never leave your device.";
+
+export const FOUNDER_NAME = "The Filecraft team";
+export const SITE_LAUNCH_YEAR = 2026;
+
+export type CategorySlug = "pdf-tools" | "convert-to-pdf" | "image-tools" | "utilities";
+
+export interface Category {
+  slug: CategorySlug;
+  name: string;
+  shortName: string;
+  title: string;
+  metaDescription: string;
+  heading: string;
+  intro: string[];
+  /** Shown at the top of the category page, above the tool grid. */
+  facts: { label: string; value: string }[];
+  icon: string;
+}
+
+export const CATEGORIES: Category[] = [
+  {
+    slug: "pdf-tools",
+    name: "PDF tools",
+    shortName: "PDF",
+    title: "Free PDF Tools That Run in Your Browser",
+    metaDescription:
+      "Merge, split, compress, rotate and edit PDF files for free in your browser. No uploads, no sign-up and no watermarks.",
+    heading: "Free PDF tools — no upload, no sign-up",
+    intro: [
+      "These PDF tools open your file straight from your device, change it in the browser and hand it back as a download. Nothing is uploaded to a server, so there is no queue, no daily limit and no copy of your document sitting in someone else's storage.",
+      "Start with the job you actually need: shrink a PDF before emailing it, combine scans into one file, or pull a few pages out of a report. Each tool page explains what it can and cannot do before you pick a file.",
+    ],
+    facts: [
+      { label: "Upload", value: "None" },
+      { label: "Account", value: "Not needed" },
+      { label: "Watermark", value: "Never" },
+    ],
+    icon: "FileText",
+  },
+  {
+    slug: "convert-to-pdf",
+    name: "Convert to PDF",
+    shortName: "To PDF",
+    title: "Free Convert to PDF Tools — Images, Text, Word, CSV",
+    metaDescription:
+      "Turn images, text files, Word documents, spreadsheets and Markdown into PDF in your browser. Free, private and watermark-free.",
+    heading: "Convert almost anything to PDF, in the browser",
+    intro: [
+      "Photos, plain text, Word documents, spreadsheets and Markdown all make sense as a PDF once they need to be sent, printed or archived. These converters do that work locally in your browser, so contracts, payslips and holiday photos never leave your device.",
+      "Format conversion is rarely pixel-perfect. Each page states the fidelity you can expect — for example, Word conversion keeps your text selectable but does not reproduce complex layouts exactly.",
+    ],
+    facts: [
+      { label: "Formats", value: "JPG, PNG, HEIC, DOCX, TXT, CSV" },
+      { label: "Output", value: "Real PDF (selectable text where possible)" },
+      { label: "Batch", value: "Yes, many files at once" },
+    ],
+    icon: "FilePlus2",
+  },
+  {
+    slug: "image-tools",
+    name: "Image tools",
+    shortName: "Images",
+    title: "Free Image Converters & Compressors",
+    metaDescription:
+      "Convert JPG, PNG, WebP, HEIC and more, compress photos to a target size, resize and crop — free, in your browser, with no upload.",
+    heading: "Image tools that never upload your photos",
+    intro: [
+      "Convert between JPG, PNG and WebP, shrink a photo to an exact file-size target, resize for a social platform or crop a screenshot — all using the image engine already built into your browser.",
+      "Because the work happens on your device, large batches are limited by your phone or laptop rather than by our server capacity. A 20 MB photo is fine; a folder of 500 RAW files is not what these tools are for.",
+    ],
+    facts: [
+      { label: "Privacy", value: "Images never uploaded" },
+      { label: "Batch", value: "Multi-file + ZIP download" },
+      { label: "Metadata", value: "Stripped on export" },
+    ],
+    icon: "Image",
+  },
+  {
+    slug: "utilities",
+    name: "Utilities",
+    shortName: "Utilities",
+    title: "Free Browser Utilities — QR Codes, Word Count, Case Converter",
+    metaDescription:
+      "Small, fast, free browser utilities: QR code generator, word and character counter, case converter and lorem ipsum generator.",
+    heading: "Small utilities that do one job well",
+    intro: [
+      "Everyday jobs that should not need an account, an app install or a page full of adverts. Everything here runs offline in the browser tab, works on a phone and copies its result to your clipboard in one tap.",
+      "These tools are deliberately small. If a utility grows big enough to need its own settings and explanation, it gets its own page with proper documentation.",
+    ],
+    facts: [
+      { label: "Speed", value: "Instant" },
+      { label: "Offline", value: "Works after first load" },
+      { label: "Sign-up", value: "None" },
+    ],
+    icon: "Wrench",
+  },
+];
+
+export const categoryBySlug = (slug: string) => CATEGORIES.find((c) => c.slug === slug);
+
+export const LEGAL_LINKS = [
+  { href: "/privacy-policy/", label: "Privacy Policy" },
+  { href: "/terms/", label: "Terms of Use" },
+  { href: "/disclaimer/", label: "Disclaimer" },
+  { href: "/cookie-policy/", label: "Cookie Policy" },
+];
