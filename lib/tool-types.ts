@@ -39,6 +39,9 @@ export interface ToolPoint {
   text: string;
 }
 
+/** Sub-group used to organise the PDF mega-menu and the /pdf-tools page. */
+export type ToolGroup = "organize" | "edit" | "create" | "extract" | "optimize";
+
 export interface Tool {
   slug: string;
   name: string;
@@ -48,6 +51,8 @@ export interface Tool {
   widget: WidgetKey;
   /** Lucide icon name, resolved in components/ToolIcon.tsx. */
   icon: string;
+  /** Menu grouping inside the PDF category. */
+  group?: ToolGroup;
   /** One sentence for cards. */
   tagline: string;
   /** "Best used when..." line under the card description. */

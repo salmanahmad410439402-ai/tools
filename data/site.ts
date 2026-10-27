@@ -51,6 +51,8 @@ export interface Category {
   /** Shown at the top of the category page, above the tool grid. */
   facts: { label: string; value: string }[];
   icon: string;
+  /** Hidden categories keep their page (SEO hub) but leave the menu. */
+  hidden?: boolean;
 }
 
 export const CATEGORIES: Category[] = [
@@ -58,9 +60,9 @@ export const CATEGORIES: Category[] = [
     slug: "pdf-tools",
     name: "PDF tools",
     shortName: "PDF",
-    title: "Free PDF Tools That Run in Your Browser",
+    title: "Free PDF Tools — Edit, Convert, Merge, Compress",
     metaDescription:
-      "Merge, split, compress, rotate and edit PDF files for free in your browser. No uploads, no sign-up and no watermarks.",
+      "Merge, split, compress, edit, sign and convert PDFs for free in your browser. Plus Word, text and spreadsheet to PDF. No upload, no sign-up.",
     heading: "Free PDF tools — no upload, no sign-up",
     intro: [
       "These PDF tools open your file straight from your device, change it in the browser and hand it back as a download. Nothing is uploaded to a server, so there is no queue, no daily limit and no copy of your document sitting in someone else's storage.",
@@ -77,20 +79,21 @@ export const CATEGORIES: Category[] = [
     slug: "convert-to-pdf",
     name: "Convert to PDF",
     shortName: "To PDF",
-    title: "Free Convert to PDF Tools — Images, Text, Word, CSV",
+    title: "Convert to PDF — Images, Word, Text and CSV",
     metaDescription:
-      "Turn images, text files, Word documents, spreadsheets and Markdown into PDF in your browser. Free, private and watermark-free.",
+      "Turn images, Word documents, text files, spreadsheets or Markdown into a PDF in your browser. Free, private and watermark-free.",
     heading: "Convert almost anything to PDF, in the browser",
     intro: [
       "Photos, plain text, Word documents, spreadsheets and Markdown all make sense as a PDF once they need to be sent, printed or archived. These converters do that work locally in your browser, so contracts, payslips and holiday photos never leave your device.",
       "Format conversion is rarely pixel-perfect. Each page states the fidelity you can expect — for example, Word conversion keeps your text selectable but does not reproduce complex layouts exactly.",
     ],
     facts: [
-      { label: "Formats", value: "JPG, PNG, HEIC, DOCX, TXT, CSV" },
+      { label: "Formats", value: "JPG, PNG, HEIC, DOCX, TXT, CSV, MD" },
       { label: "Output", value: "Real PDF (selectable text where possible)" },
       { label: "Batch", value: "Yes, many files at once" },
     ],
     icon: "FilePlus2",
+    hidden: true,
   },
   {
     slug: "image-tools",

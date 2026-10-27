@@ -40,7 +40,7 @@ npm run check        # all three
 | --- | --- |
 | Site name, domain, contact email, tagline | `data/site.ts` (top block) |
 | AdSense publisher ID, ads on/off, ad slot IDs | `data/site.ts` |
-| Tool registry (single source of truth) | `data/tools.ts` |
+| Tool registry (single source of truth) | `data/tool-defs/*.ts` (aggregated by `data/tools.ts`) |
 | Planned-but-not-built tools list | `data/roadmap.ts` |
 | Guides | `data/guides.ts` |
 | Design tokens (colors, radius, shadows, fonts) | `tailwind.config.ts`, `app/globals.css` |
@@ -106,6 +106,9 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Rendering PDF pages | `pdfjs-dist` 4.10.38 (Apache-2.0) + `public/pdf.worker.min.mjs` | only when a tool rasterises |
 | ZIP downloads | `jszip` (MIT) | on first ZIP download |
 | HEIC photos | `heic2any` (MIT) | only when a HEIC file is selected |
+| Word `.docx` parsing | `mammoth` 1.13.0 (BSD-2-Clause) | only on the Word to PDF page |
+| Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
+| Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
 | BMP / TIFF / GIF / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 
 Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
@@ -122,7 +125,8 @@ only a coarse size bucket.
 
 ## Adding a tool (the one-entry workflow)
 
-1. Add an entry to `data/tools.ts` — slug, name, category, tagline, “best used when”, SEO title
+1. Add an entry to the matching file in `data/tool-defs/` (organise / optimise / edit / create /
+   extract / images) — slug, name, category, tagline, “best used when”, SEO title
    (**≤ 50 chars**, the layout appends `" | Filecraft"`), meta description (≤ 155), H1, intro,
    4–6 feature bullets, steps, limits, tips, 5–8 FAQs, related slugs, formats, phase, date.
 2. Map its `widget` key to a client component in `components/tools/ToolWidgets.tsx`
@@ -167,6 +171,26 @@ and committed, so the build itself needs no Python.
 
 ## Build status
 
+**Step 2 (all PDF tools) — done**
+
+- 18 tools, 14 of them new. Everything that touches a PDF now lives behind one “PDF tools”
+  mega-menu entry, grouped by task: Organise (merge, split, page organiser, rotate), Optimise
+  (compress), Edit & sign (page numbers, watermark, signature, editor, metadata), Create
+  (image / Word / text / spreadsheet / Markdown → PDF) and Extract (PDF → JPG or PNG).
+- `/convert-to-pdf` keeps its own page for the creation tools (the menu no longer shows it
+  separately) and `/pdf-tools` renders the same grouping with jump links.
+- New engines, all client-side: `lib/pdf/ops.ts` (merge, extract, split, rotate, rebuild, page
+  numbers, text/image watermark, signature placement, annotations, metadata), `lib/pdf/render.ts`
+  (pdf.js page rasterisation), `lib/pdf/text-pdf.ts` (a small layout engine that writes real,
+  selectable text with pdf-lib) and `lib/convert/*` (text, Markdown, HTML, CSV/TSV/XLSX and DOCX
+  → blocks, DOCX via `mammoth`).
+- Unicode: Latin, Greek, Cyrillic, Hebrew and Arabic text needs a font with those glyphs, so
+  `public/fonts/DejaVuSans(-Bold).ttf` (Bitstream Vera / public-domain licence, file included)
+  is embedded only when a document actually uses characters outside WinAnsi. Indic scripts, CJK
+  and emoji are not covered — the UI says so before conversion.
+- Every tool page carries 800–1027 words of original copy and 7–8 FAQs; `npm run validate`
+  fails the build if any of that regresses.
+
 **Step 1 (foundation) — done**
 
 - Design system matched to the reference brand: `#4F46E5` indigo, Inter variable, 18 px cards,
@@ -181,11 +205,11 @@ and committed, so the build itself needs no Python.
   (same engine, different page).
 - Content: 856–1027 words of hand-written copy per tool page, 8 FAQs each.
 
+**Correction:** the TXT/DOCX/CSV/Markdown converters originally planned for Step 3 shipped
+in Step 2, because they belong in the same PDF menu.
+
 **Not built yet (next steps)**
 
-- Step 2: merge, split, rotate, page organiser, page numbers, watermark, signature, basic
-  editor, PDF→JPG/PNG, metadata editor.
-- Step 3: TXT, DOCX, CSV/Excel, Markdown/HTML → PDF.
 - Step 4: image compressor, resizer, crop/rotate, EXIF, Base64, extra conversion landing pages.
 - Step 5: four utilities + the first 15 guides (the `/blog/[slug]` route is switched on then).
 - Step 6: protect/unlock, OCR, PDF→Word/Excel, and the rest.
@@ -200,6 +224,18 @@ and committed, so the build itself needs no Python.
   PDFs, large on scans.
 - **Compress PDF, Strong** rasterises pages at 150 DPI or lower → text is no longer selectable.
   This is stated in the UI before the user starts.
+- **PDF editor** annotates pages (text boxes, highlights, boxes, white-out, pen, images). It cannot
+  rewrite existing body text — a PDF has no paragraphs to reflow. White-out covers text visually
+  but leaves the original characters in the file, so it is explicitly *not* redaction.
+- **Word to PDF** rebuilds the document from its structure (headings, paragraphs, bold/italic,
+  lists, tables). Layout is re-created, not copied: columns, text boxes, charts, footnotes and
+  floating images are dropped, and `.doc` (pre-2007) is not supported at all.
+- **Watermarks** are page content, not access control: anyone who can open the PDF can cover or
+  remove them. They are not encryption and the UI says so.
+- **Sign PDF** places a drawn, typed or uploaded signature image and flattens it into the page. It
+  is not a certified digital signature (no certificate, no tamper evidence).
+- **Text → PDF** wraps and paginates, but wide tables still have to fit the page; the CSV route
+  repeats the header row and suggests landscape for wide sheets.
 - **AVIF output** depends on the browser; Safari reads AVIF but cannot write it. The converter
   detects this at runtime and disables the option instead of producing broken files.
 - **TIFF output** is uncompressed RGB (browsers have no TIFF encoder); files are larger than the

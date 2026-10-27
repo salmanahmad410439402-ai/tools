@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, X } from "lucide-react";
 import { CATEGORIES, SITE_NAME } from "@/data/site";
-import { tools } from "@/data/tools";
+import { TOOL_GROUPS, tools } from "@/data/tools";
 import { searchAll, type SearchEntry } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
@@ -108,9 +108,19 @@ export function Header() {
     }
   };
 
-  const grouped = useMemo(
+  /** The menu shows every PDF tool in one column, grouped by task. */
+  const pdfGroups = useMemo(
     () =>
-      CATEGORIES.map((category) => ({
+      TOOL_GROUPS.map((group) => ({
+        group,
+        items: tools.filter((tool) => tool.category === "pdf-tools" && tool.group === group.key),
+      })).filter((entry) => entry.items.length > 0),
+    [],
+  );
+
+  const otherCategories = useMemo(
+    () =>
+      CATEGORIES.filter((category) => category.slug !== "pdf-tools" && !category.hidden).map((category) => ({
         category,
         items: tools.filter((tool) => tool.category === category.slug),
       })),
@@ -138,34 +148,71 @@ export function Header() {
               <ChevronDown className={cn("h-4 w-4 transition-transform", menuOpen && "rotate-180")} aria-hidden="true" />
             </button>
             {menuOpen && (
-              <div className="fixed inset-x-0 top-[68px] z-40 border-b border-line bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
-                <div className="container-page grid gap-8 py-8 md:grid-cols-2 lg:grid-cols-4">
-                  {grouped.map(({ category, items }) => (
-                    <div key={category.slug}>
+              <div className="fixed inset-x-0 top-[68px] z-40 max-h-[calc(100vh-68px)] overflow-y-auto border-b border-line bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
+                <div className="container-page py-7">
+                  <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 lg:grid-cols-4">
+                    {/* PDF tools: one complete column, grouped by task */}
+                    <div className="lg:col-span-2">
                       <Link
-                        href={`/${category.slug}/`}
+                        href="/pdf-tools/"
                         className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-brand-600 hover:text-brand-700"
                       >
-                        <ToolIcon name={category.icon} className="h-4 w-4" />
-                        {category.name}
+                        <ToolIcon name="FileText" className="h-4 w-4" />
+                        PDF tools
+                        <span className="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
+                          {pdfGroups.reduce((total, entry) => total + entry.items.length, 0)}
+                        </span>
                       </Link>
-                      <ul className="mt-3 space-y-1">
-                        {items.map((tool) => (
-                          <li key={tool.slug}>
-                            <Link
-                              href={`/${tool.slug}/`}
-                              className="block rounded-lg px-2 py-2 text-[14px] font-medium text-body transition-colors hover:bg-brand-50 hover:text-brand-700"
-                            >
-                              {tool.name}
-                            </Link>
-                          </li>
+                      <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                        {pdfGroups.map(({ group, items }) => (
+                          <div key={group.key}>
+                            <p className="px-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">
+                              {group.label}
+                            </p>
+                            <ul className="mt-1">
+                              {items.map((tool) => (
+                                <li key={tool.slug}>
+                                  <Link
+                                    href={`/${tool.slug}/`}
+                                    className="block rounded-lg px-2 py-1.5 text-[13.5px] font-medium text-body transition-colors hover:bg-brand-50 hover:text-brand-700"
+                                  >
+                                    {tool.name}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         ))}
-                        {items.length === 0 && (
-                          <li className="px-2 py-2 text-[13.5px] text-subtle">More tools are on the way.</li>
-                        )}
-                      </ul>
+                      </div>
                     </div>
-                  ))}
+
+                    {otherCategories.map(({ category, items }) => (
+                      <div key={category.slug}>
+                        <Link
+                          href={`/${category.slug}/`}
+                          className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-brand-600 hover:text-brand-700"
+                        >
+                          <ToolIcon name={category.icon} className="h-4 w-4" />
+                          {category.name}
+                        </Link>
+                        <ul className="mt-3 space-y-1">
+                          {items.map((tool) => (
+                            <li key={tool.slug}>
+                              <Link
+                                href={`/${tool.slug}/`}
+                                className="block rounded-lg px-2 py-2 text-[13.5px] font-medium text-body transition-colors hover:bg-brand-50 hover:text-brand-700"
+                              >
+                                {tool.name}
+                              </Link>
+                            </li>
+                          ))}
+                          {items.length === 0 && (
+                            <li className="px-2 py-2 text-[13px] text-subtle">More tools are on the way.</li>
+                          )}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="border-t border-line bg-surface">
                   <div className="container-page flex flex-wrap items-center justify-between gap-3 py-3 text-[13.5px]">
@@ -241,7 +288,23 @@ export function Header() {
               ))}
             </nav>
             <div className="mt-4 space-y-5 border-t border-line pt-4">
-              {grouped.map(({ category, items }) => (
+              {pdfGroups.map(({ group, items }) => (
+                <div key={group.key}>
+                  <p className="px-3 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600">
+                    PDF · {group.label}
+                  </p>
+                  <ul className="mt-1 grid gap-0.5">
+                    {items.map((tool) => (
+                      <li key={tool.slug}>
+                        <Link href={`/${tool.slug}/`} className="block rounded-lg px-3 py-2.5 text-[14.5px] text-body hover:bg-surface">
+                          {tool.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              {otherCategories.map(({ category, items }) => (
                 <div key={category.slug}>
                   <p className="px-3 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600">
                     {category.name}
@@ -254,6 +317,9 @@ export function Header() {
                         </Link>
                       </li>
                     ))}
+                    {items.length === 0 && (
+                      <li className="px-3 py-2 text-[13px] text-subtle">More tools are on the way.</li>
+                    )}
                   </ul>
                 </div>
               ))}

@@ -24,7 +24,9 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tools.filter((tool) => {
-      const matchesCategory = category === "all" || tool.category === category;
+      const matchesCategory =
+        category === "all" ||
+        (category === "convert-to-pdf" ? tool.group === "create" : tool.category === category);
       if (!matchesCategory) return false;
       if (!q) return true;
       const haystack = [
@@ -44,7 +46,10 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: tools.length };
     for (const entry of CATEGORIES) {
-      map[entry.slug] = tools.filter((tool) => tool.category === entry.slug).length;
+      map[entry.slug] =
+        entry.slug === "convert-to-pdf"
+          ? tools.filter((tool) => tool.group === "create").length
+          : tools.filter((tool) => tool.category === entry.slug).length;
     }
     return map;
   }, [tools]);
@@ -86,7 +91,7 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
-          {[{ slug: "all", name: "All tools" }, ...CATEGORIES].map((entry) => {
+          {[{ slug: "all", name: "All tools" }, ...CATEGORIES.filter((entry) => !entry.hidden)].map((entry) => {
             const active = category === entry.slug;
             return (
               <button
