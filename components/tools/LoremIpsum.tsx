@@ -43,8 +43,10 @@ export function LoremIpsum({ toolSlug = "lorem-ipsum-generator" }: Props) {
   const output = useMemo(
     () =>
       generateLorem({
-        paragraphs: Number(paragraphs),
-        sentencesPerParagraph: Number(sentences),
+        // A cleared number input yields "" and an out-of-range paste yields NaN;
+        // fall back to the defaults rather than rendering an empty box.
+        paragraphs: Number(paragraphs) || 3,
+        sentencesPerParagraph: Number(sentences) || 4,
         startWithLorem,
         format,
         random: mulberry32(seed),
