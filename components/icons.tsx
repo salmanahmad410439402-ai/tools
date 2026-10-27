@@ -1,0 +1,51 @@
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileImage,
+  FilePlus2,
+  FileText,
+  Image as ImageIcon,
+  Images,
+  Info,
+  Loader2,
+  Lock,
+  Minimize2,
+  Repeat2,
+  ShieldCheck,
+  Sparkles,
+  Wrench,
+  X,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+export const iconMap: Record<string, LucideIcon> = {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileImage,
+  FilePlus2,
+  FileText,
+  Image: ImageIcon,
+  Images,
+  Info,
+  Loader2,
+  Lock,
+  Minimize2,
+  Repeat2,
+  ShieldCheck,
+  Sparkles,
+  Wrench,
+  X,
+  Zap,
+};
+
+export function ToolIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = iconMap[name] ?? FileText;
+  return <Icon className={className} strokeWidth={1.9} aria-hidden="true" />;
+}
