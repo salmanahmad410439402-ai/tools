@@ -84,7 +84,11 @@ for (const tool of tools) {
   // eslint-disable-next-line no-console
   console.log(`  ${tool.slug.padEnd(22)} ${String(wordCount).padStart(5)} words · ${tool.faqs.length} FAQs · title ${tool.seoTitle.length}`);
 
-  if (/lorem ipsum|TODO|TBD|placeholder|coming soon/i.test(body)) {
+  // The filler-text utility is *about* lorem ipsum, so the usual "did someone
+  // forget to write the copy" scan would flag every paragraph on that page.
+  const writesPlaceholderCopy = /lorem|placeholder/i.test(`${tool.slug} ${tool.name} ${tool.keywords.join(" ")}`);
+  const placeholderPattern = writesPlaceholderCopy ? /TODO|TBD|coming soon/i : /lorem ipsum|TODO|TBD|placeholder|coming soon/i;
+  if (placeholderPattern.test(body)) {
     problems.push(`${where}: contains placeholder text`);
   }
 }
