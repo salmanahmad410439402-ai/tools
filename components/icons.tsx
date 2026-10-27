@@ -1,6 +1,9 @@
 import {
   ArrowRight,
   Combine,
+  Crop,
+  Eye,
+  Maximize2,
   FileCode2,
   FileSpreadsheet,
   FileType2,
@@ -44,6 +47,9 @@ import {
 export const iconMap: Record<string, LucideIcon> = {
   ArrowRight,
   Combine,
+  Crop,
+  Eye,
+  Maximize2,
   FileCode2,
   FileSpreadsheet,
   FileType2,

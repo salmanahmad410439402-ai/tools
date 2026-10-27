@@ -352,7 +352,7 @@ sentence rather than a blank screen.
   `public/fonts/DejaVuSans(-Bold).ttf` (Bitstream Vera / public-domain licence, file included)
   is embedded only when a document actually uses characters outside WinAnsi. Indic scripts, CJK
   and emoji are not covered — the UI says so before conversion.
-- Every tool page carries 800–1027 words of original copy and 7–8 FAQs; `npm run validate`
+- Every tool page carries 800–1200 words of original copy and 6–8 FAQs; `npm run validate`
   fails the build if any of that regresses.
 
 **Step 1 (foundation) — done**
@@ -367,16 +367,35 @@ sentence rather than a blank screen.
   BreadcrumbList + WebApplication + FAQPage JSON-LD, sitemap generated from the registry.
 - Tools live: **Image to PDF**, **Compress PDF**, **Image Converter**, **JPG to PNG**
   (same engine, different page).
-- Content: 856–1027 words of hand-written copy per tool page, 8 FAQs each.
+- Content: 850–1200 words of hand-written copy per tool page, 6–8 FAQs each.
 
 **Correction:** the TXT/DOCX/CSV/Markdown converters originally planned for Step 3 shipped
 in Step 2, because they belong in the same PDF menu.
 
+**Step 4 (image tools) — done**
+
+- Five new tools, each with its own page, engine and Node smoke tests:
+  - **Compress Image** (`/compress-image/`) — target-size compression. It encodes at 0.92,
+    then binary-searches the quality until the file fits, and keeps the highest quality that
+    does. When the target is impossible it says so and offers the smallest result it reached.
+  - **Resize Image** (`/resize-image/`) — exact pixels, fit-inside-a-box or percentage, with a
+    ratio lock, six presets, JPG/PNG/WebP output and upscaling labelled as upscaling.
+  - **Crop Image** (`/crop-image/`) — draggable crop box with four corner handles, aspect
+    presets, 90° rotation, horizontal and vertical flips, a live result preview, and export
+    from the full-resolution original.
+  - **EXIF Remover** (`/exif-remover/`) — reads EXIF, GPS, XMP and text metadata from JPEG,
+    PNG and WebP, then removes it **without re-encoding the pixels**.
+  - **Image to Base64** (`/image-to-base64/`) — encode to a data URI, raw base64, CSS or HTML
+    snippet, and decode base64 back into a real file with the type sniffed from the bytes.
+- Engines: `lib/images/transform.ts` (target-size search, crop, resize), `lib/images/exif.ts`
+  (EXIF/TIFF parsing, PNG/WebP chunk surgery), `lib/base64.ts` (encode, decode, signature
+  detection). 24 new assertions in `npm test` cover EXIF parsing and stripping, PNG/WebP chunk
+  removal, refusal of unsupported containers, base64 round-trips and the quality search.
+
 **Not built yet (next steps)**
 
-- Step 4: image compressor with a target size, resizer, crop/rotate/flip, EXIF viewer + remover,
-  Base64 encoder/decoder, extra conversion landing pages.
-- Step 5: four utilities + the first 15 guides (the `/blog/[slug]` route is switched on then).
+- Step 4 remainder: more conversion landing pages (e.g. PNG → WebP, WebP → JPG).
+- Step 5: four utilities + the first guides (the `/blog/[slug]` route is switched on then).
 - Step 6: protect/unlock, OCR, PDF→Word/Excel, PowerPoint to PDF, and the rest.
 
 ---
@@ -425,6 +444,16 @@ in Step 2, because they belong in the same PDF menu.
   content, and an office suite that re-saves the file may stamp its own fields back in.
 - **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
   browser, but very large HEIC batches are slow on older phones.
+- **Compress Image** writes JPG or WebP only: PNG compression is lossless, so it cannot be
+  steered to a byte target. The search optimises bytes, not perceived quality, and a file that
+  would grow is skipped with a note rather than handed back bigger.
+- **Resize Image** changes dimensions, not shape. Stretching only happens when the ratio lock is
+  off; cropping to a different shape belongs to the crop tool. Upscaling interpolates and is
+  labelled as such.
+- **Crop Image** is rectangular only — no ellipse, lasso or perspective correction — and works on
+  one image at a time.
+- **EXIF Remover** parses JPEG, PNG and WebP only. HEIC, TIFF and RAW are refused rather than
+  silently returned unchanged. It removes tags, not pixels: metadata removal is not redaction.
 
 ---
 
@@ -449,7 +478,16 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    Repair (a good file should report "nothing to fix" and a truncated file should fail loudly),
    PDF to TXT (a text PDF vs a scan), PDF to WebP, Scan to PDF on a phone over https, and each of
    the four annotation pages opening with the right tool preselected.
-5. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
-   scroll.
-6. **Network tab** — run any tool and confirm no request carries file data.
-7. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+5. **Image tools (step 4)** — Compress Image: a 4 MB photo to 100 KB (should hit the target),
+   then to 5 KB (should report that it could not); try a 12 KB file that is already tiny (should
+   tell you to keep the original). Resize: exact 1200 × 630, fit-inside 800, 50%, and confirm
+   no distortion with the lock on. Crop: drag the box, pull each corner, try 1:1 and 9:16, rotate
+   90°, flip both ways, and confirm the export is full resolution. EXIF: a phone photo with GPS
+   (warning shown), the cleaned copy opens normally and still looks identical, and a PNG
+   screenshot reports nothing to remove. Base64: encode a PNG, copy the data URI into a browser
+   address bar (it should render), then paste it back and decode.
+6. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+   scroll; the crop handles must be draggable with a finger.
+7. **Network tab** — run any tool and confirm no request carries file data. Note that the
+   analytics script only loads after **Allow** in the consent panel.
+8. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
