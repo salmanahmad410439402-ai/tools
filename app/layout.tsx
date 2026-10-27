@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "@fontsource-variable/inter";
+import "@fontsource-variable/outfit";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import {
   ADSENSE_PUBLISHER_ID,
@@ -65,8 +67,8 @@ export const viewport: Viewport = {
   // Matches the header/background of each theme so mobile browser chrome does
   // not clash with the page.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A0E17" },
+    { media: "(prefers-color-scheme: dark)", color: "#070B13" },
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -77,9 +79,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Theme is decided before first paint: stored choice, otherwise the
-            operating-system preference. No flash of the wrong palette, and the
-            site still works with JavaScript disabled (light theme, no toggle). */}
+        {/* Theme is decided before first paint. The site is dark-first: the
+            midnight navy palette is what renders with no JavaScript at all, and
+            `html.light` is the opt-in alabaster theme chosen from the header
+            toggle. Only that stored choice switches the palette. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* AdSense verification + manual ad units. The library is only fetched
             when ads are enabled, so a site without ads makes no Google

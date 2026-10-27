@@ -243,22 +243,45 @@ Two failure modes are handled explicitly:
   limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
   the result note reports the scaled dimensions.
 
-## Theme (light + dark)
+## Design system (dark-first midnight navy)
 
-`app/globals.css` declares one palette twice — `:root` and `html.dark` — and every colour token
-(`ink`, `body`, `subtle`, `line`, `surface`, `page`, `raised`, the `brand` ramp, `success`,
-`warning`, `danger`) points at a CSS variable. That is why components use `bg-raised`,
-`text-ink`, `border-line` and never `dark:` variants at each call site.
+`app/globals.css` is the single source of truth. `:root` is the **default** theme — deep midnight
+navy canvas (`#070B13`), ice-white type, frosted navy panels; `html.light` overrides the same
+variables with the cool-alabaster theme. `components/ThemeToggle.tsx` holds the button, the storage
+key (`filecraft-theme`) and the inline head script that picks the theme before first paint (stored
+choice, else an explicit light system preference; dark otherwise, so the site is complete with no
+JavaScript at all).
 
-- `components/ThemeToggle.tsx` holds the button, the storage key (`filecraft-theme`) and the
-  inline script that decides the theme **before first paint** (stored choice, else
-  `prefers-color-scheme`). No flash, and the site still renders correctly with JavaScript off.
-- `html` carries `class="light"` or `class="dark"`, so third-party CSS and `color-scheme` follow.
-- Overlays over document previews use `.bg-scrim*` (a scrim variable), not `bg-ink/70`, because
-  `ink` flips to near-white in dark mode and would swallow the white labels drawn on top.
-- Filled buttons keep a deep indigo in dark mode (`html.dark .btn-primary`) so white text stays
-  above 4.5:1; links use the lighter `--brand-400`.
-- The toggle writes to `localStorage`, which is listed in the Cookie Policy.
+Colour variables are shadcn-style HSL triplets (`222 47% 5%`) and every Tailwind token wraps them
+as `hsl(var(--token) / <alpha-value>)`, which is what makes `bg-primary/10`, `border-primary/25` and
+`text-emerald-500` work as translucent tints:
+
+| Purpose | Tokens |
+| --- | --- |
+| Surfaces | `background`, `card`, `popover`, `secondary`, `muted` |
+| Text | `foreground`, `text-secondary`, `text-tertiary`, `text-minimal` (via `ink` / `body` / `subtle` / `minimal`) |
+| Brand | `primary` `#645CFF` dark / `#4F46E5` light, `accent` mint `#12D393` |
+| Feedback | `destructive`, `success`, `warning` |
+| Chrome | `border`, `input`, `ring`, `--radius: 1rem` |
+
+The older names the components use (`page`, `raised`, `surface`, `line`, `ink`, `body`, `subtle`,
+`brand-50…900`) are aliases of those tokens, so ~60 files did not have to change and nothing can
+drift.
+
+**Utilities** (all in `globals.css`): `.text-gradient-flow` and `.bg-gradient-flow` (emerald →
+indigo → blue, 4s linear loop), `.text-gradient` (2-stop 135°), `.glass-panel` (frosted, blurred),
+`.card` (glass look without the blur — a grid of blurred cards is a scroll cost on phones),
+`.grid-bg` (40px indigo grid with a radial fade), `.orb` / `.orb-1` / `.orb-2` (drifting blurred
+radials), `.card-hover` (4px lift + indigo border + coloured shadow) and the translucent pill set
+`.pill-indigo` / `.pill-emerald` / `.pill-amber` / `.pill-sky` / `.pill-rose`.
+
+**Two deliberate deviations, both for legibility:** filled buttons use `--primary-strong` (a
+slightly deeper indigo) so white labels stay above 4.5:1, and the light theme deepens the flow
+gradient's emerald stop (`#059669`), because `#10B981` is only 2.4:1 on alabaster. Gradient text
+also falls back to `currentColor` under `forced-colors`.
+
+**Type:** Outfit (headings, 800, tracking `-0.03em`), Inter (body/UI), JetBrains Mono (counts,
+code, `kbd`, file sizes), all self-hosted through `@fontsource-variable/*`.
 
 ## Tests and what they do not cover
 

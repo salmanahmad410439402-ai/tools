@@ -58,7 +58,7 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
 
   return (
     <div>
-      <div className="rounded-card border border-line bg-raised p-4 shadow-card sm:p-5">
+      <div className="glass-panel p-4 shadow-card sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" aria-hidden="true" />
@@ -103,7 +103,7 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
                   "inline-flex min-h-[38px] items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold transition-colors",
                   active
                     ? "border-brand-500 bg-brand-500 text-white"
-                    : "border-line bg-raised text-body hover:border-brand-200 hover:text-ink",
+                    : "border-line bg-raised text-body hover:border-primary/40 hover:text-ink",
                 )}
               >
                 {entry.name}

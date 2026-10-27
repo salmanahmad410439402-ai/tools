@@ -5,7 +5,7 @@ import type { Tool, WidgetKey } from "@/lib/tool-types";
 
 function WidgetSkeleton() {
   return (
-    <div className="rounded-[22px] border border-line bg-raised p-4 shadow-card sm:p-6" aria-busy="true">
+    <div className="glass-panel rounded-[22px] p-4 shadow-card sm:p-6" aria-busy="true">
       <div className="h-[168px] animate-pulse rounded-2xl border-2 border-dashed border-line bg-surface sm:h-[196px]" />
       <div className="mt-4 flex items-center justify-between">
         <div className="h-4 w-40 animate-pulse rounded bg-surface" />

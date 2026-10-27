@@ -2,91 +2,191 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Filecraft design system — dark-first midnight navy
+ * ─────────────────────────────────────────────────────────────────────────────
+ * `:root` is the DEFAULT theme: deep midnight obsidian navy with ice-white text,
+ * frosted navy glass and an electric indigo accent. `html.light` switches to the
+ * crisp cool-alabaster theme. The toggle in the header only flips that class.
+ *
+ * Colour format is the shadcn HSL triplet ("222 47% 5%") so Tailwind can do
+ * `hsl(var(--token) / <alpha-value>)` — that is what makes `bg-primary/10`,
+ * `border-primary/25` and `text-emerald-500` pills work as specified.
+ *
+ * The older semantic names the components use (page/raised/surface/line, and
+ * ink/body/subtle, plus the brand ramp) are kept as aliases of the new tokens
+ * so ~60 files did not have to change and nothing can drift out of sync.
+ */
 @layer base {
-  /*
-   * One palette, two themes. Tailwind's ink/body/subtle/line/surface/brand and
-   * page/raised tokens read these variables (see tailwind.config.ts), so the
-   * theme toggle only has to flip `.dark` on <html>.
-   *
-   * Light values are the original brand palette. Dark values are deliberately
-   * not pure black and not pure white: #0B0F1A page, #111726 panels, softer
-   * indigo tints, and text at #E9EDF5 / #A8B3C5 so long articles stay readable.
-   */
   :root {
-    color-scheme: light;
     --header-h: 68px;
+    color-scheme: dark;
 
-    --page: 255 255 255;
-    --raised: 255 255 255;
-    --surface: 248 250 252;
-    --line: 226 232 240;
-    --ink: 15 23 42;
-    --body: 71 85 105;
-    --subtle: 100 116 139;
+    /* ── shadcn core tokens (dark = default) ───────────────────────────── */
+    --background: 222 47% 5%; /* #070B13 deep midnight navy */
+    --foreground: 210 40% 98%; /* #F8FAFC ice white */
+    --card: 222 47% 8%; /* #0B111E dark slate navy */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 243 75% 65%; /* #645CFF electric indigo-violet */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 47% 12%; /* #101A2D elevated navy */
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 47% 12%;
+    --muted-foreground: 215 20% 65%; /* #93A2B7 readable cool slate */
+    --accent: 160 84% 45%; /* #12D393 mint emerald */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%; /* #EF4444 coral crimson */
+    --destructive-foreground: 210 30% 96%;
+    --border: 215 27% 16%; /* #1E2836 */
+    --input: 215 27% 16%;
+    --ring: 243 75% 65%;
+    --radius: 1rem;
 
-    --brand-50: 238 242 255;
-    --brand-100: 224 231 255;
-    --brand-200: 199 210 254;
-    --brand-300: 165 180 252;
-    --brand-400: 129 140 248;
-    --brand-500: 79 70 229;
-    --brand-600: 67 56 202;
-    --brand-700: 55 48 163;
-    --brand-800: 49 46 129;
-    --brand-900: 30 27 75;
+    /* ── text hierarchy ────────────────────────────────────────────────── */
+    --text-primary: 243 75% 75%;
+    --text-secondary: 210 40% 85%;
+    --text-tertiary: 210 40% 70%;
+    --text-minimal: 210 40% 50%;
 
-    --success: 22 163 74;
-    --warning: 217 119 6;
-    --danger: 220 38 38;
+    /* Filled-button indigo, deepened from --primary so white text clears AA
+       (white on #4F46E5 ≈ 6.3:1; on the lighter #645CFF it would be ≈ 3.7:1).
+       Link/accent text uses the lighter --text-primary instead. */
+    --primary-strong: 243 75% 59%;
 
-    --focus-ring: rgba(79, 70, 229, 0.22);
-    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -18px rgba(15, 23, 42, 0.25);
-    --shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -20px rgba(79, 70, 229, 0.35);
-    --selection-bg: #e0e7ff;
-    --selection-fg: #1e1b4b;
-    /* Overlays over document previews and photos (labels, modal backdrop). */
+    /* ── legacy aliases used by the components ─────────────────────────── */
+    --page: var(--background);
+    --raised: var(--card);
+    --surface: var(--muted);
+    --line: var(--border);
+    --ink: var(--foreground);
+    --body: var(--text-secondary);
+    --subtle: var(--text-tertiary);
+
+    /* Brand ramp: 50–300 are the solid equivalents of indigo at 10/16/28/45%
+       over the card surface (so `bg-brand-50/40` still works), 500 is the solid
+       brand and 600/700 are the readable indigo *text* tones. */
+    --brand-50: 232 44% 14%;
+    --brand-100: 234 45% 18%;
+    --brand-200: 238 44% 25%;
+    --brand-300: 241 45% 42%;
+    --brand-400: var(--text-primary);
+    --brand-500: var(--primary);
+    --brand-600: var(--text-primary);
+    --brand-700: 243 75% 82%;
+    --brand-800: 243 75% 88%;
+    --brand-900: 243 75% 93%;
+
+    --success: 160 84% 45%;
+    --warning: 38 92% 50%;
+    --danger: var(--destructive);
+
+    /* ── surfaces, shadows, effects ────────────────────────────────────── */
+    --focus-ring: hsl(var(--ring) / 0.35);
+    --shadow-card:
+      0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(215 27% 28% / 0.3),
+      inset 0 1px 0 hsl(215 27% 28% / 0.5);
+    --shadow-lift:
+      0 18px 48px -12px rgba(0, 0, 0, 0.8), 0 8px 32px hsl(243 75% 59% / 0.16),
+      inset 0 1px 0 hsl(215 27% 32% / 0.55);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.4);
+    --shadow-glow-hover: 0 0 60px hsl(var(--primary) / 0.6);
+
+    --glass-bg: hsl(222 47% 12% / 0.9);
+    --glass-border: hsl(215 27% 24%);
+    --glass-shadow:
+      0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(215 27% 28% / 0.3),
+      inset 0 1px 0 hsl(215 27% 28% / 0.5);
+
+    --selection-bg: hsl(var(--primary) / 0.45);
+    --selection-fg: #ffffff;
+
+    /* Overlays over document previews, photos and the search modal. */
+    --scrim-soft: rgba(3, 6, 12, 0.62);
+    --scrim: rgba(3, 6, 12, 0.84);
+    --scrim-strong: rgba(2, 4, 9, 0.97);
+
+    /* Ambient page wash: indigo at the top, fading into the canvas. */
+    --glow: radial-gradient(60% 80% at 50% 0%, hsl(var(--primary) / 0.18), transparent 70%);
+
+    /* Signature three-stop flow: emerald → royal indigo → electric blue. */
+    --gradient-flow: linear-gradient(to right, #10b981, #4f46e5, #3b82f6);
+    --gradient-accent: linear-gradient(135deg, hsl(243 75% 65%) 0%, #10b981 100%);
+    --grid-line: rgba(79, 70, 229, 0.04);
+  }
+
+  /* ── Optional light theme ────────────────────────────────────────────── */
+  html.light {
+    color-scheme: light;
+
+    --background: 210 40% 98%; /* #F8FAFC cool alabaster */
+    --foreground: 222 47% 11%; /* #0F172A deep slate ink */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 243 75% 59%; /* #4F46E5 rich royal indigo */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 20% 40%;
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%;
+
+    --text-primary: 243 75% 45%;
+    --text-secondary: 222 47% 30%;
+    --text-tertiary: 222 47% 40%;
+    --text-minimal: 222 47% 60%;
+
+    --primary-strong: 243 75% 55%;
+
+    --brand-50: 244 73% 96%;
+    --brand-100: 245 76% 93%;
+    --brand-200: 244 76% 88%;
+    --brand-300: 243 75% 81%;
+    --brand-400: 243 75% 55%;
+    --brand-500: var(--primary);
+    --brand-600: var(--text-primary);
+    --brand-700: 243 75% 42%;
+    --brand-800: 243 75% 34%;
+    --brand-900: 243 75% 26%;
+
+    --success: 160 84% 39%;
+    --warning: 32 95% 44%;
+    --danger: var(--destructive);
+
+    --focus-ring: hsl(var(--ring) / 0.28);
+    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+    --shadow-lift: 0 18px 40px -18px hsl(243 75% 59% / 0.35), 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0 0 32px hsl(var(--primary) / 0.28);
+    --shadow-glow-hover: 0 0 48px hsl(var(--primary) / 0.42);
+
+    --glass-bg: #ffffff;
+    --glass-border: hsl(214 32% 86%);
+    --glass-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+
+    --selection-bg: hsl(var(--primary) / 0.22);
+    --selection-fg: hsl(243 75% 25%);
+
     --scrim-soft: rgba(15, 23, 42, 0.4);
     --scrim: rgba(15, 23, 42, 0.78);
     --scrim-strong: rgba(15, 23, 42, 0.96);
-    /* Soft brand glow used behind the header and hero. */
-    --glow: radial-gradient(60% 80% at 50% 0%, rgba(79, 70, 229, 0.1), transparent 70%);
-  }
 
-  html.dark {
-    color-scheme: dark;
-
-    --page: 10 14 23;
-    --raised: 17 23 38;
-    --surface: 15 21 34;
-    --line: 34 44 63;
-    --ink: 238 242 249;
-    --body: 169 180 199;
-    --subtle: 133 146 168;
-
-    --brand-50: 25 29 51;
-    --brand-100: 33 38 66;
-    --brand-200: 47 55 104;
-    --brand-300: 90 99 201;
-    --brand-400: 129 140 248;
-    --brand-500: 91 94 232;
-    --brand-600: 129 140 248;
-    --brand-700: 165 180 252;
-    --brand-800: 199 210 254;
-    --brand-900: 224 231 255;
-
-    --success: 52 211 153;
-    --warning: 251 191 36;
-    --danger: 248 113 113;
-
-    --focus-ring: rgba(129, 140, 248, 0.35);
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 14px 34px -22px rgba(0, 0, 0, 0.9);
-    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.55), 0 22px 48px -24px rgba(99, 102, 241, 0.5);
-    --selection-bg: #312e81;
-    --selection-fg: #e0e7ff;
-    --scrim-soft: rgba(0, 0, 0, 0.6);
-    --scrim: rgba(2, 6, 23, 0.82);
-    --scrim-strong: rgba(2, 6, 23, 0.97);
-    --glow: radial-gradient(60% 80% at 50% 0%, rgba(99, 102, 241, 0.22), transparent 70%);
+    --glow: radial-gradient(60% 80% at 50% 0%, hsl(var(--primary) / 0.1), transparent 70%);
+    --gradient-accent: linear-gradient(135deg, hsl(243 75% 59%) 0%, hsl(160 84% 39%) 100%);
+    --grid-line: rgba(79, 70, 229, 0.06);
+    /* Same hue order, one step deeper: emerald at #10B981 is only 2.4:1 on an
+       alabaster page, so display text would disappear. Dark mode keeps the
+       brighter stops, where they read at 7.8:1. */
+    --gradient-flow: linear-gradient(to right, #059669, #4338ca, #2563eb);
   }
 
   html {
@@ -104,13 +204,28 @@
   h1,
   h2,
   h3,
-  h4 {
+  h4,
+  h5,
+  h6 {
     @apply text-ink;
+    font-family: theme("fontFamily.heading");
+    font-weight: 800;
+    letter-spacing: -0.03em;
     text-wrap: balance;
   }
 
   p {
     text-wrap: pretty;
+  }
+
+  /* Counts, sizes, file names and anything technical. */
+  code,
+  kbd,
+  samp,
+  pre,
+  .tabular {
+    font-family: theme("fontFamily.mono");
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
@@ -119,7 +234,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--brand-500));
+    outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -129,7 +244,6 @@
   textarea {
     color-scheme: inherit;
   }
-
 
   /* Respect users who ask for less motion. */
   @media (prefers-reduced-motion: reduce) {
@@ -152,62 +266,131 @@
     @apply mx-auto w-full max-w-content px-4 sm:px-6 lg:px-8;
   }
 
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .btn-primary {
-    @apply btn bg-brand-500 text-white shadow-[0_1px_2px_rgba(15,23,42,0.08)] hover:bg-brand-600 active:bg-brand-700;
+    @apply btn relative overflow-hidden text-white;
+    background-color: hsl(var(--primary-strong));
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* 105° white shimmer sweeping across the primary button on hover. */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.12) 45%,
+      rgba(255, 255, 255, 0.12) 55%,
+      transparent 70%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(var(--primary));
+    box-shadow: var(--shadow-glow-hover);
+  }
+
+  .btn-primary:hover::after {
+    transform: translateX(120%);
+  }
+
+  .btn-primary:active {
+    background-color: hsl(var(--primary-strong));
   }
 
   .btn-secondary {
-    @apply btn border border-line bg-raised text-ink hover:border-brand-300 hover:bg-brand-50;
+    @apply btn border text-ink;
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--card) / 0.72);
   }
 
-  /* Filled buttons keep a deep indigo in dark mode: white on a pale accent
-     would drop under 3:1, so hover darkens instead of lightening. */
-  html.dark .btn-primary {
-    background-color: rgb(var(--brand-500));
-  }
-
-  html.dark .btn-primary:hover {
-    background-color: #4f46e5;
-  }
-
-  html.dark .btn-primary:active {
-    background-color: #4338ca;
-  }
-
-  /* Text links need a lighter indigo than the button surface in dark mode. */
-  html.dark .link,
-  html.dark .article a {
-    color: rgb(var(--brand-400));
-    text-decoration-color: rgb(var(--brand-300));
-  }
-
-  html.dark .link:hover,
-  html.dark .article a:hover {
-    color: rgb(var(--brand-700));
-    text-decoration-color: rgb(var(--brand-400));
+  .btn-secondary:hover {
+    border-color: hsl(var(--primary) / 0.45);
+    background-color: hsl(var(--primary) / 0.08);
   }
 
   .btn-ghost {
     @apply btn text-body hover:bg-surface hover:text-ink;
   }
 
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  /*
+   * Frosted navy glass in dark mode, crisp white card in light mode.
+   * `.glass-panel` adds the real backdrop blur and is used on the few large
+   * surfaces (hero mock, CTA band, cookie notice, tool frame). `.card` is the
+   * same look without the blur, because a grid of thirty blurred cards is a
+   * measurable scroll cost on a phone.
+   */
+  .glass-panel,
   .card {
-    @apply rounded-card border border-line bg-raised shadow-card;
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-panel {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .card {
+    @apply rounded-card;
+  }
+
+  html.light .glass-panel,
+  html.light .card {
+    background: #ffffff;
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* ── Pills: translucent fill + border + saturated label ──────────────── */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold;
+  }
+
+  .pill-indigo {
+    @apply pill border-primary/25 bg-primary/10 text-primary;
+  }
+
+  .pill-emerald {
+    @apply pill border-emerald-500/30 bg-emerald-500/15 text-emerald-500;
+  }
+
+  .pill-amber {
+    @apply pill border-amber-500/30 bg-amber-500/15 text-amber-500;
+  }
+
+  .pill-sky {
+    @apply pill border-sky-500/25 bg-sky-500/[0.12] text-sky-500;
+  }
+
+  .pill-rose {
+    @apply pill border-rose-500/40 bg-rose-500/10 text-rose-500;
   }
 
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-600;
+    @apply inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600;
   }
 
   .link {
-    @apply font-medium text-brand-500 underline decoration-brand-200 underline-offset-4 transition-colors hover:text-brand-600 hover:decoration-brand-500;
+    @apply font-medium text-brand-600 underline decoration-primary/30 underline-offset-4 transition-colors hover:text-brand-700 hover:decoration-primary/60;
   }
 
-  /* Long-form article styling used by tool pages, guides and legal pages. */
+  /* ── Long-form article styling ───────────────────────────────────────── */
   .article {
     @apply text-[16.5px] leading-[1.75] text-body;
   }
@@ -253,11 +436,11 @@
   }
 
   .article code {
-    @apply rounded bg-surface px-1.5 py-0.5 font-mono text-[0.9em] text-ink;
+    @apply rounded bg-surface px-1.5 py-0.5 text-[0.9em] text-ink;
   }
 
   .article blockquote {
-    @apply rounded-r-xl border-l-4 border-brand-200 bg-surface px-5 py-4 text-[15.5px] text-body;
+    @apply rounded-r-xl border-l-4 border-primary/40 bg-surface px-5 py-4 text-[15.5px] text-body;
   }
 
   .article hr {
@@ -267,17 +450,171 @@
   .scrollbar-thin {
     scrollbar-width: thin;
   }
+
+  /* Theme toggle icons: moon in the dark theme, sun in the light one. Driven by
+     the class on <html> rather than JS state, so they are correct before
+     hydration and with scripting disabled. */
+  .theme-icon-sun {
+    display: none;
+  }
+
+  html.light .theme-icon-sun {
+    display: block;
+  }
+
+  html.light .theme-icon-moon {
+    display: none;
+  }
 }
 
 @layer utilities {
-  /* Hero/header ambience. Uses the theme glow so dark mode is not a white haze. */
+  /* Ambient wash behind the hero and section headers. */
   .bg-glow {
     background-image: var(--glow);
   }
 
+  /* ── Signature gradients ─────────────────────────────────────────────── */
+  .text-gradient-flow,
+  .bg-gradient-flow {
+    background-image: var(--gradient-flow);
+    background-size: 200% auto;
+    animation: gradient-flow 4s linear infinite;
+  }
+
+  .text-gradient-flow {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* Transparent fill hides the selection, so keep a visible highlight. */
+    -webkit-text-stroke: 0;
+  }
+
+  .text-gradient-flow::selection {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    color: hsl(var(--foreground));
+    background: hsl(var(--primary) / 0.35);
+  }
+
+  .text-gradient {
+    background-image: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Flagship hero CTA: flowing gradient, white label, deep glow. */
+  .btn-gradient-flow {
+    @apply btn relative overflow-hidden font-bold text-white;
+    isolation: isolate;
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
+  }
+
+  .btn-gradient-flow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--gradient-flow);
+    background-size: 200% auto;
+    animation: gradient-flow 4s linear infinite;
+    z-index: -1;
+  }
+
+  /* Deepen the gradient slightly under the label so white text keeps its
+     contrast (emerald is far too light for white on its own). */
+  .btn-gradient-flow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, rgba(7, 11, 19, 0.3), rgba(7, 11, 19, 0.18));
+    pointer-events: none;
+  }
+
+  .btn-gradient-flow > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-gradient-flow:hover {
+    box-shadow: 0 0 60px hsl(var(--primary) / 0.6);
+    transform: translateY(-1px);
+  }
+
+  /* ── Hero background: indigo grid + floating ambient orbs ────────────── */
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    /* Fade the grid out so it never competes with the headline. */
+    mask-image: radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%);
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%);
+  }
+
+  .orb {
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    filter: blur(120px);
+  }
+
+  .orb-1 {
+    width: 800px;
+    height: 800px;
+    background: hsl(var(--primary) / 0.2);
+    opacity: 0.6;
+    animation: orb-drift 22s ease-in-out infinite alternate;
+  }
+
+  .orb-2 {
+    width: 600px;
+    height: 600px;
+    background: rgba(99, 102, 241, 0.15);
+    filter: blur(100px);
+    opacity: 0.5;
+    animation: orb-drift 28s ease-in-out infinite alternate-reverse;
+  }
+
+  /* Screen blending bleaches a light page; light mode uses a soft tint instead. */
+  html.light .orb {
+    mix-blend-mode: normal;
+    opacity: 0.5;
+    filter: blur(90px);
+  }
+
+  html.light .orb-1 {
+    background: hsl(var(--primary) / 0.12);
+  }
+
+  html.light .orb-2 {
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  /* ── Card interaction: indigo border, coloured shadow, small lift ────── */
+  .card-hover {
+    transition:
+      transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow:
+      0 8px 32px hsl(243 75% 59% / 0.18),
+      inset 0 1px 0 hsl(215 27% 32% / 0.5);
+  }
+
+  html.light .card-hover:hover {
+    box-shadow: 0 8px 32px hsl(243 75% 59% / 0.12);
+  }
+
   /*
-   * Neutral overlays. These were `bg-ink/75`, which inverts in dark mode
-   * (ink becomes near-white) and swallowed the white labels drawn on top.
+   * Neutral overlays. These were `bg-ink/75`, which inverts with the theme
+   * (ink becomes near-white in dark mode) and swallowed white labels.
    */
   .bg-scrim-soft {
     background-color: var(--scrim-soft);
@@ -292,13 +629,45 @@
   }
 }
 
+/* Windows high-contrast / forced colours: gradient text would vanish, so fall
+   back to the plain foreground colour. */
+@media (forced-colors: active) {
+  .text-gradient-flow,
+  .text-gradient {
+    -webkit-text-fill-color: currentColor;
+    color: CanvasText;
+    background-image: none;
+  }
+
+  .btn-gradient-flow::before,
+  .btn-gradient-flow::after {
+    display: none;
+  }
+}
+
+@keyframes gradient-flow {
+  from {
+    background-position: 0% center;
+  }
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes orb-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-4%, 6%, 0) scale(1.08);
+  }
+}
+
 /*
- * Progressive enhancement: colours are defined without JavaScript. <html> gets
- * `.js` from the inline head script in app/layout.tsx; only then do we animate
- * theme changes, so a no-JS visitor never sees a transition flash.
+ * Progressive enhancement: colours exist without JavaScript. <html> gets `.js`
+ * from the inline head script in app/layout.tsx; only then do we animate theme
+ * changes, so a no-JS visitor never sees a transition flash.
  */
-/* Only animate when the visitor has not asked for reduced motion (the block
-   further up already neutralises durations for those users). */
 .js body,
 .js .card,
 .js .btn {

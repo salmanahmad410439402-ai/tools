@@ -195,7 +195,7 @@ export function PagePicker({ mode, toolSlug }: { mode: PageMode; toolSlug: strin
                             ? removing
                               ? "border-danger shadow-sm"
                               : "border-brand-500 shadow-sm"
-                            : "border-transparent hover:border-brand-300",
+                            : "border-transparent hover:border-primary/50",
                         )}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
