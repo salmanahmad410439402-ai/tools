@@ -151,8 +151,8 @@ export function Header() {
               <div className="fixed inset-x-0 top-[68px] z-40 max-h-[calc(100vh-68px)] overflow-y-auto border-b border-line bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
                 <div className="container-page py-7">
                   <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 lg:grid-cols-4">
-                    {/* PDF tools: one complete column, grouped by task */}
-                    <div className="lg:col-span-2">
+                    {/* PDF tools: the whole menu, grouped by task */}
+                    <div className="min-w-0 lg:col-span-3">
                       <Link
                         href="/pdf-tools/"
                         className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-brand-600 hover:text-brand-700"
@@ -163,7 +163,7 @@ export function Header() {
                           {pdfGroups.reduce((total, entry) => total + entry.items.length, 0)}
                         </span>
                       </Link>
-                      <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                      <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                         {pdfGroups.map(({ group, items }) => (
                           <div key={group.key}>
                             <p className="px-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-subtle">

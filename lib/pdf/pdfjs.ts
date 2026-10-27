@@ -50,6 +50,23 @@ export function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promis
   });
 }
 
+export function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        // Safari before 14 and a few older engines silently return PNG here.
+        if (!blob || blob.type !== "image/webp") {
+          reject(new Error("This browser cannot write WebP images. Choose JPG or PNG instead."));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/webp",
+      quality,
+    );
+  });
+}
+
 export function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(

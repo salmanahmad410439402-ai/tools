@@ -9,11 +9,11 @@ export const imageTools: Tool[] = [
     category: "image-tools",
     widget: "image-converter",
     icon: "Repeat2",
-    tagline: "Convert images between JPG, PNG, WebP, AVIF, BMP, TIFF, ICO and GIF in bulk.",
+    tagline: "Pick any target format — JPG, PNG, WebP, AVIF, ICO, PDF, SVG and more — in bulk.",
     bestFor: "A site rejects your PNG, your CMS wants WebP, or you need an app icon in ICO.",
-    seoTitle: "Free Image Converter — JPG, PNG, WebP, AVIF, ICO",
+    seoTitle: "Image Converter — JPG, PNG, WebP, PDF",
     metaDescription:
-      "Convert images between JPG, PNG, WebP, AVIF, BMP, TIFF, ICO and GIF in your browser. Batch conversion, quality slider, ZIP download. No upload.",
+      "Convert images between JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, PDF, SVG and PPM in your browser. Batch, quality, ZIP. No upload.",
     h1: "Free Image Converter — Change Any Format in Your Browser",
     intro: [
       "Load one image or a hundred, pick a target format, adjust quality and download the results individually or as a ZIP. Transparency is preserved where the format supports it and flattened honestly where it does not.",
@@ -21,8 +21,12 @@ export const imageTools: Tool[] = [
     ],
     bullets: [
       {
-        title: "One tool, eight output formats",
-        text: "JPG, PNG, WebP, AVIF, BMP, TIFF, ICO and GIF from any image your browser can open, including HEIC from iPhones and SVG files.",
+        title: "Eleven output formats, chosen after you upload",
+        text: "JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, PDF, SVG and PPM from any image your browser can open, including HEIC from iPhones and SVG files. Add your images first, then pick the target — each file in the list shows its own conversion, such as JPG → PNG.",
+      },
+      {
+        title: "Every file is checked before you get it",
+        text: "The tool re-opens what it just encoded and compares it against the format you asked for. Browser-decodable formats are decoded back to full pixels; the rest are checked against their file signature. A file that claims to be PNG really is a PNG.",
       },
       {
         title: "Batch conversion",
@@ -34,7 +38,7 @@ export const imageTools: Tool[] = [
       },
       {
         title: "Transparency handled honestly",
-        text: "PNG, WebP, AVIF, TIFF and GIF keep transparency. JPG and BMP cannot, so transparent areas are filled with the background colour you choose — usually white.",
+        text: "PNG, WebP, AVIF, ICO and SVG keep the alpha channel. JPG, BMP, TIFF, GIF and PDF cannot, so transparent areas are filled with a background colour you choose — and the interface says so instead of quietly turning them white.",
       },
       {
         title: "Metadata stripped by default",
@@ -52,7 +56,7 @@ export const imageTools: Tool[] = [
       },
       {
         title: "Pick the output format",
-        text: "Choose the target format for the batch, or leave it on 'keep original' to only resize or re-compress. JPG for photos, PNG for screenshots and logos, WebP for websites.",
+        text: "After the images are in, choose the target for the whole batch from eleven formats grouped by purpose: JPG, PNG, WebP or AVIF for the web, GIF and ICO for icons, TIFF, BMP or PDF for print and documents, SVG and PPM for developer workflows. The hint under the grid explains what the format does and does not keep.",
       },
       {
         title: "Adjust quality and size",
@@ -77,6 +81,10 @@ export const imageTools: Tool[] = [
         text: "Only the first frame of an animated GIF is kept and colours are reduced to a 216-colour palette. Use WebP or MP4 when you need animation.",
       },
       {
+        title: "Huge photos are scaled to fit the canvas",
+        text: "A browser canvas has a hard pixel ceiling, and asking for more than that returns a blank image rather than an error. Output is therefore capped at 40 megapixels on desktop and 16 megapixels on iOS; anything bigger is scaled down and the result says so. Use the resize option when you want a specific size.",
+      },
+      {
         title: "No CMYK or print profiles",
         text: "Canvas conversion is RGB only. For print work requiring CMYK or embedded ICC profiles, use a desktop application.",
       },
@@ -91,8 +99,12 @@ export const imageTools: Tool[] = [
         text: "Text and flat UI compress badly as JPEG and pick up grey fringing. Photographs are the opposite: PNG makes them several times larger for no visual gain.",
       },
       {
-        title: "ICO needs square images",
-        text: "Favicon and app-icon formats expect square sources. Export at 256×256, 128×128, 64×64, 48×48, 32×32 and 16×16 and pick the ICO output for each.",
+        title: "ICO is built from four sizes",
+        text: "The ICO output contains 16, 32, 48 and 256 px frames in one file, which is what Windows and browsers expect from a favicon or app icon. Each frame is centre-cropped to a square, so start from an image whose subject sits in the middle.",
+      },
+      {
+        title: "PDF output is one image per page",
+        text: "Choosing PDF wraps each image in its own single-page PDF sized to the picture, with photos kept as JPEG inside. For several images in one document with A4 pages and margins, use the Image to PDF tool instead.",
       },
       {
         title: "Convert before uploading to a CMS",
@@ -109,6 +121,10 @@ export const imageTools: Tool[] = [
         a: "Anything your browser can decode: JPG, PNG, WebP, GIF, BMP, SVG, AVIF and, with the bundled decoder, HEIC. Unsupported files are reported with a clear reason.",
       },
       {
+        q: "How do I know the conversion actually worked?",
+        a: "Every result is verified before it appears in the download list. Formats the browser can decode — JPG, PNG, WebP, GIF, AVIF and SVG — are opened again and their pixel dimensions compared with the ones requested. BMP, TIFF, ICO, PPM and PDF are checked against their file signature and, for PDF, the end-of-file marker. If a file fails, you get the reason instead of a corrupt download.",
+      },
+      {
         q: "Why does my transparent PNG have a white background as JPG?",
         a: "JPEG has no alpha channel. Flat formats fill transparent pixels with the background colour you select — pick a colour other than white if the design needs it.",
       },
@@ -121,12 +137,8 @@ export const imageTools: Tool[] = [
         a: "Yes. Re-encoding through canvas discards EXIF, GPS location and most other embedded metadata, which is generally what you want before publishing a photo.",
       },
       {
-        q: "Can I convert many files at once?",
-        a: "Yes. Add a batch, set one output format for the group and download all results as a ZIP. Very large batches are limited by your device's memory, not by us.",
-      },
-      {
         q: "Does the conversion reduce image quality?",
-        a: "PNG and BMP output are lossless. JPG, WebP and AVIF are lossy at any quality below 100, so keep those at 85–95 for archival copies and 70–80 for web delivery.",
+        a: "PNG, BMP, TIFF and PPM output are lossless. JPG, WebP, AVIF and the JPEG inside PDF output are lossy at any quality below 100, so keep those at 85–95 for archival copies and 70–80 for web delivery. SVG here embeds a PNG, so it is lossless but not vectorised.",
       },
       {
         q: "Is there a file-size or daily limit?",
@@ -135,8 +147,8 @@ export const imageTools: Tool[] = [
     ],
     related: ["jpg-to-png", "image-to-pdf", "compress-pdf"],
     inputFormats: ["JPG", "PNG", "WebP", "HEIC", "AVIF", "GIF", "BMP", "SVG", "TIFF"],
-    outputFormats: ["JPG", "PNG", "WebP", "AVIF", "GIF", "BMP", "TIFF", "ICO"],
-    keywords: ["image converter", "png to jpg", "webp converter", "heic converter", "avif converter", "ico converter"],
+    outputFormats: ["JPG", "PNG", "WebP", "AVIF", "GIF", "BMP", "TIFF", "ICO", "PDF", "SVG", "PPM"],
+    keywords: ["image converter", "png to jpg", "webp converter", "heic converter", "avif converter", "ico converter", "jpg to pdf", "image to svg"],
     popular: true,
     phase: 1,
     updated: "2026-10-27",

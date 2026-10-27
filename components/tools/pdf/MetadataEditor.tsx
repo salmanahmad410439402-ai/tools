@@ -11,9 +11,10 @@ import { PdfSource, usePdfInfo } from "./PdfSource";
 
 const EMPTY: PdfMetadataFields = { title: "", author: "", subject: "", keywords: "", creator: "" };
 
-export function MetadataEditor() {
+export function MetadataEditor({ clearMode = false, toolSlug = "pdf-metadata" }: { clearMode?: boolean; toolSlug?: string } = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [fields, setFields] = useState<PdfMetadataFields>(EMPTY);
+  const [original, setOriginal] = useState<PdfMetadataFields>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,12 @@ export function MetadataEditor() {
     (async () => {
       try {
         const metadata = await readMetadata(await file.arrayBuffer());
-        if (!cancelled) setFields(metadata);
+        // Remove-metadata mode starts from empty fields so one click wipes them
+        // all; the original values are still shown as a warning list.
+        if (!cancelled) {
+          setOriginal(metadata);
+          setFields(clearMode ? EMPTY : metadata);
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "This PDF could not be read.");
       } finally {
@@ -67,7 +73,7 @@ export function MetadataEditor() {
           note: "Document properties rewritten; pages untouched",
         },
       ]);
-      track("tool_completed", { tool: "pdf-metadata" });
+      track("tool_completed", { tool: toolSlug });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The metadata could not be saved.");
     } finally {
@@ -94,6 +100,38 @@ export function MetadataEditor() {
 
       {file && (
         <>
+          {clearMode && !loading && (
+            <div className="mt-4 rounded-xl border border-line bg-surface p-3.5">
+              <p className="text-[12.5px] font-semibold text-ink">Properties found in this file</p>
+              {(() => {
+                const found = [
+                  ["Title", original.title],
+                  ["Author", original.author],
+                  ["Subject", original.subject],
+                  ["Keywords", original.keywords],
+                  ["Creator", original.creator],
+                ].filter(([, value]) => Boolean(value));
+                if (!found.length) {
+                  return (
+                    <p className="mt-1 text-[12.5px] text-subtle">
+                      None of the usual fields are set. Removing metadata will still normalise the file's dates.
+                    </p>
+                  );
+                }
+                return (
+                  <ul className="mt-1.5 space-y-0.5 text-[12.5px] text-body">
+                    {found.map(([label, value]) => (
+                      <li key={label} className="truncate">
+                        <span className="font-medium text-ink">{label}:</span> {value}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+              <p className="mt-1.5 text-[12px] text-subtle">All of these are cleared in the copy you download.</p>
+            </div>
+          )}
+
           {loading ? (
             <ProgressBar value={0.5} label="Reading document properties" />
           ) : (
@@ -166,7 +204,7 @@ export function MetadataEditor() {
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button type="button" onClick={run} disabled={busy || loading} className="btn-primary w-full sm:w-auto">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Tag className="h-4 w-4" aria-hidden="true" />}
-              {busy ? "Saving…" : "Save metadata"}
+              {busy ? "Saving…" : clearMode ? "Remove metadata and download" : "Save metadata"}
             </button>
             <p className="text-[12.5px] text-subtle">Pages, images and annotations are not re-encoded.</p>
           </div>

@@ -16,6 +16,11 @@ export type WidgetKey =
   | "pdf-metadata"
   | "txt-to-pdf"
   | "docx-to-pdf"
+  | "remove-pages"
+  | "extract-pages"
+  | "repair-pdf"
+  | "pdf-to-text"
+  | "scan-to-pdf"
   | "csv-to-pdf"
   | "markdown-to-pdf"
   | "image-compressor"
@@ -40,7 +45,7 @@ export interface ToolPoint {
 }
 
 /** Sub-group used to organise the PDF mega-menu and the /pdf-tools page. */
-export type ToolGroup = "organize" | "edit" | "create" | "extract" | "optimize";
+export type ToolGroup = "organize" | "optimize" | "edit" | "create" | "extract" | "security";
 
 export interface Tool {
   slug: string;
@@ -79,8 +84,15 @@ export interface Tool {
   updated: string;
   /** Optional preset for shared widgets, e.g. force PNG output. */
   preset?: {
+    /** Landing pages for one output image format (pdf-to-png, pdf-to-webp). */
     outputFormat?: "image/png" | "image/jpeg" | "image/webp";
     conversionLabel?: string;
+    /** Only accept this image type on a create page (jpg-to-pdf, png-to-pdf). */
+    imageInput?: "jpg" | "png" | "webp";
+    /** Open the metadata editor ready to wipe every field. */
+    clearMetadata?: boolean;
+    /** Which annotation tool the PDF editor starts with. */
+    editorTool?: "text" | "highlight" | "rect" | "whiteout" | "draw" | "image";
   };
 }
 

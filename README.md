@@ -41,6 +41,7 @@ npm run check        # all three
 | Site name, domain, contact email, tagline | `data/site.ts` (top block) |
 | AdSense publisher ID, ads on/off, ad slot IDs | `data/site.ts` |
 | Tool registry (single source of truth) | `data/tool-defs/*.ts` (aggregated by `data/tools.ts`) |
+| Tool page layout | `components/ToolLayout.tsx` + `components/Disclosure.tsx` |
 | Planned-but-not-built tools list | `data/roadmap.ts` |
 | Guides | `data/guides.ts` |
 | Design tokens (colors, radius, shadows, fonts) | `tailwind.config.ts`, `app/globals.css` |
@@ -48,12 +49,13 @@ npm run check        # all three
 | Tool page template | `components/ToolLayout.tsx` |
 | Tool widgets | `components/tools/*` |
 
-`data/site.ts` currently ships with placeholders — **replace these three values before launch**:
+`data/site.ts` holds the identity of the site. The contact inbox is set; the **site name and domain
+are still placeholders** and must be replaced before launch:
 
 ```ts
-export const SITE_NAME = "Filecraft";
-export const SITE_URL = "https://example.com";      // no trailing slash
-export const CONTACT_EMAIL = "hello@example.com";
+export const SITE_NAME = "Filecraft";                        // placeholder — confirm before launch
+export const SITE_URL = "https://example.com";               // placeholder, no trailing slash
+export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";    // live
 ```
 
 Canonical URLs, Open Graph tags, structured data, `sitemap.xml`, `robots.txt` and the footer
@@ -106,10 +108,11 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Rendering PDF pages | `pdfjs-dist` 4.10.38 (Apache-2.0) + `public/pdf.worker.min.mjs` | only when a tool rasterises |
 | ZIP downloads | `jszip` (MIT) | on first ZIP download |
 | HEIC photos | `heic2any` (MIT) | only when a HEIC file is selected |
+| PDF text extraction + page rendering | `pdfjs-dist` (Apache-2.0) | only when a tool reads a PDF |
 | Word `.docx` parsing | `mammoth` 1.13.0 (BSD-2-Clause) | only on the Word to PDF page |
 | Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
-| BMP / TIFF / GIF / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
+| BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 
 Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
 
@@ -137,6 +140,18 @@ only a coarse size bucket.
 
 Navigation, home cards, category pages, search, sitemap, breadcrumbs, JSON-LD and related-tool
 links all update automatically.
+
+### Slug rule (enforced)
+
+**The slug is the search phrase, and the same phrase must appear in that page's `<title>` and H1.**
+`/word-to-pdf/`, `/image-to-pdf/`, `/jpg-to-png/`, `/add-page-numbers-to-pdf/` — words separated by
+hyphens, nothing else. `npm run validate` fails if `slug.replace(/-/g, " ")` is missing from either
+the SEO title or the H1, so a rename cannot leave the URL and the visible page disagreeing.
+
+Slugs that are live today: `merge-pdf`, `split-pdf`, `organize-pdf`, `rotate-pdf`, `compress-pdf`,
+`add-page-numbers-to-pdf`, `watermark-pdf`, `sign-pdf`, `pdf-editor`, `pdf-metadata`, `txt-to-pdf`,
+`word-to-pdf`, `csv-to-pdf`, `markdown-to-pdf`, `image-to-pdf`, `pdf-to-jpg`, `image-converter`,
+`jpg-to-png`.
 
 **Note on `/blog/[slug]`:** the article template is finished
 (`components/guides/GuideArticle.tsx`), but Next's static export refuses a dynamic route whose
@@ -169,7 +184,57 @@ and committed, so the build itself needs no Python.
 
 ---
 
+## Image converter: formats and verification
+
+Eleven output formats, chosen **after** the images are added, from any input the browser can decode
+(JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, SVG, and HEIC via the bundled decoder):
+
+| Format | Written by | Transparency | Notes |
+| --- | --- | --- | --- |
+| JPG | browser | flattened | background colour fills transparent pixels |
+| PNG | browser | kept | lossless |
+| WebP | browser | kept | lossy, smallest useful web format |
+| AVIF | browser (Chrome/Edge/Firefox) | kept | disabled with a reason where unsupported |
+| GIF | local encoder | flattened | 216-colour palette, first frame |
+| ICO | local encoder | kept | 16 / 32 / 48 / 256 px frames in one file |
+| TIFF | local encoder | flattened | uncompressed RGB, one strip |
+| BMP | local encoder | flattened | uncompressed 24-bit |
+| PDF | `pdf-lib` | flattened | one page per image, page sized to the image |
+| SVG | local encoder | kept | PNG embedded in an SVG wrapper — **not** vectorised |
+| PPM | local encoder | flattened | binary Netpbm P6 |
+
+**Every result is verified before it is offered.** `verifyEncoded()` re-reads the bytes it just
+produced: JPG, PNG, WebP, GIF, AVIF and SVG are decoded again and their dimensions compared with
+what was requested; BMP, TIFF, ICO and PPM are checked against their file signature; PDF must have
+both a `%PDF-` header and an `%%EOF` trailer. A failure is reported per file instead of handing over
+a corrupt download, and each row in the results list shows what was checked.
+
+Two failure modes are handled explicitly:
+
+- **Format not writable in this browser** (typically AVIF in Safari): the button is disabled with
+  "n/a" and an explanation, and the encoder throws a readable error rather than emitting a file
+  with the wrong MIME type.
+- **Image larger than the canvas ceiling**: a canvas silently returns a *blank* image above its
+  limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
+  the result note reports the scaled dimensions.
+
 ## Build status
+
+**Step 3 (PDF feature parity + calmer tool pages) — done**
+
+- 15 more tools, 33 in total. Added: **Remove Pages From PDF**, **Extract Pages From PDF**,
+  **Repair PDF**, **JPG to PDF**, **PNG to PDF**, **WebP to PDF**, **PDF to PNG**, **PDF to WebP**,
+  **PDF to TXT**, **Scan to PDF** (phone camera), **Add Text to PDF**, **Highlight PDF**,
+  **Draw on PDF**, **Add Shapes to PDF**, **Remove Metadata From PDF**.
+- New engines: `PagePicker` (delete / extract with thumbnails + typed ranges), `RepairPdf`
+  (rebuild, drop thumbnails, verify page count), `PdfToTxt` (pdf.js text layer, rebuilt lines),
+  `ScanToPdf` (getUserMedia capture → PDF), WebP page export.
+- The PDF menu now has six groups — Organise, Optimise, Edit & sign, Create a PDF, Extract,
+  Security & privacy — rendered in three columns, plus jump-link chips on `/pdf-tools`.
+- **Tool pages were rebuilt around the drop zone.** One line of promise, then the tool, then four
+  "how it works" cards, then everything else folded into `<details>` sections (what it does,
+  formats, limits, tips, privacy). Full copy is still in the HTML for crawlers and `npm run
+  validate` still enforces 800+ words per tool.
 
 **Step 2 (all PDF tools) — done**
 
@@ -210,9 +275,10 @@ in Step 2, because they belong in the same PDF menu.
 
 **Not built yet (next steps)**
 
-- Step 4: image compressor, resizer, crop/rotate, EXIF, Base64, extra conversion landing pages.
+- Step 4: image compressor with a target size, resizer, crop/rotate/flip, EXIF viewer + remover,
+  Base64 encoder/decoder, extra conversion landing pages.
 - Step 5: four utilities + the first 15 guides (the `/blog/[slug]` route is switched on then).
-- Step 6: protect/unlock, OCR, PDF→Word/Excel, and the rest.
+- Step 6: protect/unlock, OCR, PDF→Word/Excel, PowerPoint to PDF, and the rest.
 
 ---
 
@@ -240,6 +306,24 @@ in Step 2, because they belong in the same PDF menu.
   detects this at runtime and disables the option instead of producing broken files.
 - **TIFF output** is uncompressed RGB (browsers have no TIFF encoder); files are larger than the
   source. **GIF output** is single-frame with a 216-colour palette.
+- **SVG output** is a valid SVG with the bitmap embedded as a base64 PNG. It is not traced into
+  vectors — the page says so, because "raster to SVG" is usually sold as tracing.
+- **PDF output** from the converter is one image per page, sized to the image. For multi-image
+  documents with A4 pages and margins, use Image to PDF.
+- **ICO output** always contains 16, 32, 48 and 256 px frames, centre-cropped to a square; a frame
+  larger than the source is upscaled.
+- **PDF to TXT** reads the text layer only. Scanned pages contain no characters, and the tool says
+  so instead of writing an empty file. OCR is a separate, later tool.
+- **Repair PDF** rebuilds structure (broken cross-reference tables, duplicate objects, stale edit
+  history, embedded thumbnails). It cannot reconstruct bytes that were never written, and it never
+  removes a password.
+- **Scan to PDF** captures camera frames into the page: no OCR, no auto-crop, no de-skew. Cameras
+  require https and a permission grant, so the file picker is always offered as well.
+- **Add Text / Highlight / Draw / Add Shapes** all open the same editor with a different tool
+  preselected. They draw into the page — they never rewrite existing text, and a highlight or a
+  shape over text is not redaction.
+- **Remove Metadata From PDF** clears the document information fields; it does not touch page
+  content, and an office suite that re-saves the file may stamp its own fields back in.
 - **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
   browser, but very large HEIC batches are slow on older phones.
 
@@ -257,9 +341,16 @@ launch (Chrome, Safari iOS, Firefox, Edge):
 2. **Compress PDF** — 1-page PDF, 100-page PDF, 20 MB scan, password-protected PDF (should warn),
    corrupt file (should explain, not crash). Verify Light keeps text selectable, Strong does not,
    and that the before/after sizes are honest.
-3. **Image Converter / JPG to PNG** — JPG → PNG, PNG → JPG (transparent background → white),
-   → WebP, → AVIF (Chrome), → BMP/TIFF/GIF/ICO, batch of 5 with ZIP download.
-4. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+3. **Image Converter / JPG to PNG** — add a photo and a transparent PNG, then walk every target:
+   → JPG (transparency becomes the chosen background), → PNG/WebP/AVIF (alpha kept), → GIF, → BMP,
+   → TIFF, → ICO (check the file opens as an icon with 4 sizes), → PDF (one page, opens in Acrobat),
+   → SVG (opens in Chrome and shows the image), → PPM. Confirm each row says "Verified: decodes
+   cleanly at W × H px", that Save reopens the file in Preview/Photos, and that a batch of 5 zips.
+4. **New in this step** — Remove/Extract pages (thumbnails, typed range, red/indigo selection),
+   Repair (a good file should report "nothing to fix" and a truncated file should fail loudly),
+   PDF to TXT (a text PDF vs a scan), PDF to WebP, Scan to PDF on a phone over https, and each of
+   the four annotation pages opening with the right tool preselected.
+5. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll.
-5. **Network tab** — run any tool and confirm no request carries file data.
-6. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+6. **Network tab** — run any tool and confirm no request carries file data.
+7. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

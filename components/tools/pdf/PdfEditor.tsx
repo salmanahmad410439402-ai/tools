@@ -27,10 +27,16 @@ interface DraftAnnotation extends Annotation {
   previewUrl?: string;
 }
 
-export function PdfEditor() {
+export function PdfEditor({
+  initialTool = "text",
+  toolSlug = "pdf-editor",
+}: {
+  initialTool?: Tool;
+  toolSlug?: string;
+} = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
-  const [tool, setTool] = useState<Tool>("text");
+  const [tool, setTool] = useState<Tool>(initialTool);
   const [color, setColor] = useState(COLORS[0]);
   const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(14);
@@ -196,7 +202,7 @@ export function PdfEditor() {
           note: `${annotations.length} annotation${annotations.length === 1 ? "" : "s"} written into the pages`,
         },
       ]);
-      track("tool_completed", { tool: "pdf-editor", annotations: annotations.length });
+      track("tool_completed", { tool: toolSlug, annotations: annotations.length });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The document could not be exported.");
     } finally {

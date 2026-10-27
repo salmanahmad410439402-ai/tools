@@ -15,7 +15,7 @@ export const pdfOptimizeTools: Tool[] = [
     seoTitle: "Compress PDF Free — Shrink a PDF in Your Browser",
     metaDescription:
       "Shrink PDF files free in your browser. Keep text selectable or rasterise to hit a target size. No upload, no sign-up, no watermark.",
-    h1: "Free PDF Compressor — Shrink a PDF Without Uploading It",
+    h1: "Compress PDF — Shrink a PDF Without Uploading It",
     intro: [
       "Pick a compression level, see the exact size before and after, and download the smaller file. Text-heavy documents stay sharp on the two lossless-friendly levels; scanned documents can be rasterised to hit a specific size such as 200 KB or 2 MB.",
       "The file is read from your device, compressed on your device and saved back to your device. Nothing is uploaded, so you can use it on payslips, medical letters and client contracts without thinking twice.",

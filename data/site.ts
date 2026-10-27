@@ -7,7 +7,7 @@
  */
 export const SITE_NAME = "Filecraft";
 export const SITE_URL = "https://example.com"; // no trailing slash
-export const CONTACT_EMAIL = "hello@example.com";
+export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";
 /** ─────────────────────────────────────────────────────────────────────────── */
 
 /** AdSense publisher ID (same account as tagyfy.com). */
@@ -82,7 +82,7 @@ export const CATEGORIES: Category[] = [
     title: "Convert to PDF — Images, Word, Text and CSV",
     metaDescription:
       "Turn images, Word documents, text files, spreadsheets or Markdown into a PDF in your browser. Free, private and watermark-free.",
-    heading: "Convert almost anything to PDF, in the browser",
+    heading: "Convert to PDF — from images, Word, text or a spreadsheet",
     intro: [
       "Photos, plain text, Word documents, spreadsheets and Markdown all make sense as a PDF once they need to be sent, printed or archived. These converters do that work locally in your browser, so contracts, payslips and holiday photos never leave your device.",
       "Format conversion is rarely pixel-perfect. Each page states the fidelity you can expect — for example, Word conversion keeps your text selectable but does not reproduce complex layouts exactly.",
@@ -99,7 +99,7 @@ export const CATEGORIES: Category[] = [
     slug: "image-tools",
     name: "Image tools",
     shortName: "Images",
-    title: "Free Image Converters & Compressors",
+    title: "Free Image Tools — Convert, Compress, Resize",
     metaDescription:
       "Convert JPG, PNG, WebP, HEIC and more, compress photos to a target size, resize and crop — free, in your browser, with no upload.",
     heading: "Image tools that never upload your photos",
