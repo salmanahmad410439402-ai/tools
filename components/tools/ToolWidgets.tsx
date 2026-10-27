@@ -28,6 +28,26 @@ const ImageConverter = dynamic(() => import("./ImageConverter").then((mod) => mo
   loading: () => <WidgetSkeleton />,
 });
 
+const ImageCompressor = dynamic(() => import("./ImageCompressor").then((mod) => mod.ImageCompressor), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const ImageResizer = dynamic(() => import("./ImageResizer").then((mod) => mod.ImageResizer), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const ImageCrop = dynamic(() => import("./ImageCrop").then((mod) => mod.ImageCrop), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const ExifTool = dynamic(() => import("./ExifTool").then((mod) => mod.ExifTool), {
+  loading: () => <WidgetSkeleton />,
+});
+
+const Base64Tool = dynamic(() => import("./Base64Tool").then((mod) => mod.Base64Tool), {
+  loading: () => <WidgetSkeleton />,
+});
+
 const MergePdf = dynamic(() => import("./pdf/MergePdf").then((mod) => mod.MergePdf), { loading: () => <WidgetSkeleton /> });
 const SplitPdf = dynamic(() => import("./pdf/SplitPdf").then((mod) => mod.SplitPdf), { loading: () => <WidgetSkeleton /> });
 const OrganizePdf = dynamic(() => import("./pdf/OrganizePdf").then((mod) => mod.OrganizePdf), { loading: () => <WidgetSkeleton /> });
@@ -70,6 +90,16 @@ export function ToolWidget({
           toolSlug={toolSlug}
         />
       );
+    case "image-compressor":
+      return <ImageCompressor toolSlug={toolSlug} />;
+    case "image-resizer":
+      return <ImageResizer toolSlug={toolSlug} />;
+    case "image-crop":
+      return <ImageCrop toolSlug={toolSlug} />;
+    case "exif":
+      return <ExifTool toolSlug={toolSlug} />;
+    case "base64":
+      return <Base64Tool toolSlug={toolSlug} />;
     case "merge-pdf":
       return <MergePdf />;
     case "split-pdf":

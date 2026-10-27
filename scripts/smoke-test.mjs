@@ -567,6 +567,165 @@ console.log("\nCanvas limits (the guard that stops blank output)");
   check("a 1×1 image is never scaled below one pixel", tiny.width === 1 && tiny.height === 1);
 }
 
+/* ─────────────────── metadata: read, strip, stay lossless ───────────────── */
+
+console.log("\nMetadata (EXIF) engine");
+{
+  const { readExif, stripMetadata } = await import("../lib/images/exif.ts");
+
+  // A synthetic JPEG with a real APP1/EXIF block (orientation 6 + a GPS IFD)
+  // and a COM comment. The entropy-coded "scan" is four arbitrary bytes; the
+  // point is the container, not a decodable picture.
+  const buildJpeg = ({ gps }) => {
+    const ifd0 = Buffer.alloc(2);
+    const entries = gps ? 2 : 1;
+    ifd0.writeUInt16LE(entries, 0);
+    const parts = [ifd0];
+    const orientation = Buffer.alloc(12);
+    orientation.writeUInt16LE(0x0112, 0);
+    orientation.writeUInt16LE(3, 2);
+    orientation.writeUInt32LE(1, 4);
+    orientation.writeUInt16LE(6, 8);
+    parts.push(orientation);
+    const gpsEntry = Buffer.alloc(12);
+    if (gps) {
+      gpsEntry.writeUInt16LE(0x8825, 0);
+      gpsEntry.writeUInt16LE(4, 2);
+      gpsEntry.writeUInt32LE(1, 4);
+    }
+    parts.push(gpsEntry);
+    parts.push(Buffer.alloc(4)); // next IFD
+    // The GPS pointer has to be written before the buffer is built, otherwise
+    // the bytes on disk still say "no GPS IFD".
+    const gpsOffset = 8 + parts.reduce((sum, part) => sum + part.length, 0);
+    if (gps) gpsEntry.writeUInt32LE(gpsOffset, 8);
+    const ifd0Bytes = Buffer.concat(parts);
+
+    const gpsIfd = Buffer.alloc(2 + 12 + 4 + 8);
+    gpsIfd.writeUInt16LE(1, 0);
+    gpsIfd.writeUInt16LE(0x0002, 2);
+    gpsIfd.writeUInt16LE(5, 4);
+    gpsIfd.writeUInt32LE(1, 6);
+    gpsIfd.writeUInt32LE(gpsOffset + 18, 10);
+    gpsIfd.writeUInt32LE(51, 18);
+    gpsIfd.writeUInt32LE(1, 22);
+
+    const tiff = Buffer.concat([Buffer.from("II", "latin1"), Buffer.from([42, 0]), Buffer.from([8, 0, 0, 0]), ifd0Bytes, gps ? gpsIfd : Buffer.alloc(0)]);
+    const payload = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), tiff]);
+    const app1 = Buffer.concat([Buffer.from([0xff, 0xe1]), Buffer.from([0, 0]), payload]);
+    app1.writeUInt16BE(payload.length + 2, 2);
+    const comment = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from([0, 14]), Buffer.from("private note", "latin1")]);
+    const sos = Buffer.concat([Buffer.from([0xff, 0xda]), Buffer.from([0, 8]), Buffer.from([1, 1, 0, 0, 63, 0])]);
+    return Buffer.concat([Buffer.from([0xff, 0xd8]), app1, comment, sos, Buffer.from([1, 2, 3, 4]), Buffer.from([0xff, 0xd9])]);
+  };
+
+  const withGps = buildJpeg({ gps: true });
+  const file = new File([withGps], "photo.jpg", { type: "image/jpeg" });
+  const report = await readExif(file);
+  check("EXIF: container recognised as JPEG", report.container === "JPEG");
+  check("EXIF: orientation 6 is decoded", report.orientation === 6, String(report.orientation));
+  check("EXIF: GPS block is detected", report.hasGps);
+  check(
+    "EXIF: readable fields are listed",
+    report.tags.some((tag) => tag.name === "Orientation") && report.tags.some((tag) => tag.name === "Latitude"),
+    report.tags.map((tag) => tag.name).join(","),
+  );
+
+  const stripped = await stripMetadata(file);
+  const out = Buffer.from(await stripped.blob.arrayBuffer());
+  check("EXIF: strip reports what it removed", stripped.changed && stripped.removed.length === 2, stripped.removed.join(","));
+  check("EXIF: no APP1 block survives", !out.toString("latin1").includes("Exif"));
+  check("EXIF: pixel payload is byte-identical", out.toString("latin1").includes("\x01\x02\x03\x04"));
+  check("EXIF: file still starts with SOI and ends with EOI", out[0] === 0xff && out[1] === 0xd8 && out[out.length - 2] === 0xff && out[out.length - 1] === 0xd9);
+  const reread = await readExif(stripped.blob);
+  check("EXIF: a cleaned file reads back with no tags", reread.tags.length === 0 && !reread.hasGps);
+
+  const noGps = await readExif(new File([buildJpeg({ gps: false })], "b.jpg", { type: "image/jpeg" }));
+  check("EXIF: GPS is not invented when absent", noGps.hasGps === false);
+
+  // PNG chunk stripping
+  const pngChunk = (type, data) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length, 0);
+    head.write(type, 4, "latin1");
+    return Buffer.concat([head, data, Buffer.alloc(4)]);
+  };
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0])),
+    pngChunk("tEXt", Buffer.from("Author\0Alice", "latin1")),
+    pngChunk("IDAT", Buffer.from([9, 9, 9])),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+  const pngStripped = await stripMetadata(new File([png], "x.png", { type: "image/png" }));
+  const pngOut = Buffer.from(await pngStripped.blob.arrayBuffer());
+  check("EXIF: PNG text chunk is removed", !pngOut.toString("latin1").includes("Alice"));
+  check("EXIF: PNG image data survives", pngOut.toString("latin1").includes("IDAT") && pngOut.toString("latin1").includes("IEND"));
+
+  // Unsupported containers must refuse rather than pretend.
+  let refused = false;
+  try {
+    await stripMetadata(new File([Buffer.from("not an image")], "x.bin", { type: "application/octet-stream" }));
+  } catch {
+    refused = true;
+  }
+  check("EXIF: unknown containers are refused, not silently returned", refused);
+}
+
+/* ───────────────────────── base64 encode/decode ─────────────────────────── */
+
+console.log("\nBase64 engine");
+{
+  const { detectMime, parseBase64Input, bytesToBase64, toDataUri, base64SizeEstimate } = await import("../lib/base64.ts");
+  const jpegBytes = readFileSync(join(work, "encode.bmp"));
+  const jpgHeader = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46]);
+  check("base64: JPEG detected from its signature", detectMime(jpgHeader) === "image/jpeg");
+  check("base64: BMP detected from its signature", detectMime(new Uint8Array(jpegBytes)) === "image/bmp");
+  check("base64: random bytes are not claimed to be an image", detectMime(new Uint8Array([1, 2, 3, 4])) === null);
+
+  const sample = new Uint8Array(100).map((_, index) => index);
+  const uri = toDataUri(sample, "image/png");
+  const parsed = parseBase64Input(uri);
+  check("base64: data URI round-trips byte for byte", Buffer.from(parsed.bytes).equals(Buffer.from(sample)));
+  const pngSignature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const sniffed = parseBase64Input(toDataUri(pngSignature, "image/jpeg"));
+  check(
+    "base64: the bytes win over a wrong declared type",
+    sniffed.declaredMime === "image/jpeg" && sniffed.detectedMime === "image/png",
+    `${sniffed.declaredMime} vs ${sniffed.detectedMime}`,
+  );
+  check("base64: 100 bytes encode to 136 characters", bytesToBase64(sample).length === 136);
+  check("base64: output overhead is reported as a third", base64SizeEstimate(3000) === 4000);
+
+  const raw = bytesToBase64(sample);
+  check("base64: missing padding is tolerated", Buffer.from(parseBase64Input(raw.replace(/=+$/, "")).bytes).equals(Buffer.from(sample)));
+  check("base64: line breaks are tolerated", Buffer.from(parseBase64Input(`  ${raw.slice(0, 40)}\n${raw.slice(40)}\n`).bytes).equals(Buffer.from(sample)));
+  check("base64: URL-safe alphabet is tolerated", Buffer.from(parseBase64Input(raw.replace(/\+/g, "-").replace(/\//g, "_")).bytes).equals(Buffer.from(sample)));
+  let rejected = false;
+  try {
+    parseBase64Input("definitely not base64!!!");
+  } catch {
+    rejected = true;
+  }
+  check("base64: junk input is rejected with a reason", rejected);
+}
+
+/* ──────────────────── target-size quality search ────────────────────────── */
+
+console.log("\nCompression quality search");
+{
+  const { pickBestAttempt } = await import("../lib/images/transform.ts");
+  const attempts = [
+    { quality: 0.92, size: 5000, blob: null },
+    { quality: 0.7, size: 2000, blob: null },
+    { quality: 0.5, size: 900, blob: null },
+  ];
+  check("compress: the highest quality that fits wins", pickBestAttempt(attempts, 2000).best.quality === 0.7);
+  check("compress: a fit is reported as reached", pickBestAttempt(attempts, 2000).fits === true);
+  check("compress: impossible targets fall back to the smallest file", pickBestAttempt(attempts, 100).best.size === 900 && pickBestAttempt(attempts, 100).fits === false);
+  check("compress: no attempts is not a crash", pickBestAttempt([], 100) === null);
+}
+
 /* ─────────────────────── registry counts stay honest ───────────────────── */
 
 console.log("\nRegistry counts");

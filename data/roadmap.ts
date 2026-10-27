@@ -11,11 +11,6 @@ export interface RoadmapItem {
 }
 
 export const roadmap: RoadmapItem[] = [
-  { name: "Image compressor with a target file size", category: "image-tools", phase: 4 },
-  { name: "Image resizer", category: "image-tools", phase: 4 },
-  { name: "Crop, rotate and flip images", category: "image-tools", phase: 4 },
-  { name: "EXIF viewer and remover", category: "image-tools", phase: 4 },
-  { name: "Image to Base64 and back", category: "image-tools", phase: 4 },
   { name: "More image conversion landing pages", category: "image-tools", phase: 4 },
   { name: "QR code generator", category: "utilities", phase: 5 },
   { name: "Word and character counter", category: "utilities", phase: 5 },
@@ -25,5 +20,4 @@ export const roadmap: RoadmapItem[] = [
   { name: "OCR: image and scan to text", category: "pdf-tools", phase: 6 },
   { name: "PDF to Word and Excel", category: "pdf-tools", phase: 6 },
   { name: "PowerPoint to PDF", category: "convert-to-pdf", phase: 6 },
-  { name: "Compress image to an exact KB size", category: "image-tools", phase: 6 },
 ];
