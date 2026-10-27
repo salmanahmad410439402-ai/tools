@@ -152,7 +152,7 @@ export const pdfEditTools: Tool[] = [
     slug: "watermark-pdf",
     name: "Watermark PDF",
     category: "pdf-tools",
-    group: "edit",
+    group: "security",
     widget: "watermark-pdf",
     icon: "Stamp",
     tagline: "Stamp text or a logo across your PDF with control over opacity, angle and position.",

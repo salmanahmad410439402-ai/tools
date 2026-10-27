@@ -41,6 +41,7 @@ npm run check        # all three
 | Site name, domain, contact email, tagline | `data/site.ts` (top block) |
 | AdSense publisher ID, ads on/off, ad slot IDs | `data/site.ts` |
 | Tool registry (single source of truth) | `data/tool-defs/*.ts` (aggregated by `data/tools.ts`) |
+| Tool page layout | `components/ToolLayout.tsx` + `components/Disclosure.tsx` |
 | Planned-but-not-built tools list | `data/roadmap.ts` |
 | Guides | `data/guides.ts` |
 | Design tokens (colors, radius, shadows, fonts) | `tailwind.config.ts`, `app/globals.css` |
@@ -107,6 +108,7 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Rendering PDF pages | `pdfjs-dist` 4.10.38 (Apache-2.0) + `public/pdf.worker.min.mjs` | only when a tool rasterises |
 | ZIP downloads | `jszip` (MIT) | on first ZIP download |
 | HEIC photos | `heic2any` (MIT) | only when a HEIC file is selected |
+| PDF text extraction + page rendering | `pdfjs-dist` (Apache-2.0) | only when a tool reads a PDF |
 | Word `.docx` parsing | `mammoth` 1.13.0 (BSD-2-Clause) | only on the Word to PDF page |
 | Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
@@ -218,6 +220,22 @@ Two failure modes are handled explicitly:
 
 ## Build status
 
+**Step 3 (PDF feature parity + calmer tool pages) — done**
+
+- 15 more tools, 33 in total. Added: **Remove Pages From PDF**, **Extract Pages From PDF**,
+  **Repair PDF**, **JPG to PDF**, **PNG to PDF**, **WebP to PDF**, **PDF to PNG**, **PDF to WebP**,
+  **PDF to TXT**, **Scan to PDF** (phone camera), **Add Text to PDF**, **Highlight PDF**,
+  **Draw on PDF**, **Add Shapes to PDF**, **Remove Metadata From PDF**.
+- New engines: `PagePicker` (delete / extract with thumbnails + typed ranges), `RepairPdf`
+  (rebuild, drop thumbnails, verify page count), `PdfToTxt` (pdf.js text layer, rebuilt lines),
+  `ScanToPdf` (getUserMedia capture → PDF), WebP page export.
+- The PDF menu now has six groups — Organise, Optimise, Edit & sign, Create a PDF, Extract,
+  Security & privacy — rendered in three columns, plus jump-link chips on `/pdf-tools`.
+- **Tool pages were rebuilt around the drop zone.** One line of promise, then the tool, then four
+  "how it works" cards, then everything else folded into `<details>` sections (what it does,
+  formats, limits, tips, privacy). Full copy is still in the HTML for crawlers and `npm run
+  validate` still enforces 800+ words per tool.
+
 **Step 2 (all PDF tools) — done**
 
 - 18 tools, 14 of them new. Everything that touches a PDF now lives behind one “PDF tools”
@@ -257,9 +275,10 @@ in Step 2, because they belong in the same PDF menu.
 
 **Not built yet (next steps)**
 
-- Step 4: image compressor, resizer, crop/rotate, EXIF, Base64, extra conversion landing pages.
+- Step 4: image compressor with a target size, resizer, crop/rotate/flip, EXIF viewer + remover,
+  Base64 encoder/decoder, extra conversion landing pages.
 - Step 5: four utilities + the first 15 guides (the `/blog/[slug]` route is switched on then).
-- Step 6: protect/unlock, OCR, PDF→Word/Excel, and the rest.
+- Step 6: protect/unlock, OCR, PDF→Word/Excel, PowerPoint to PDF, and the rest.
 
 ---
 
@@ -293,6 +312,18 @@ in Step 2, because they belong in the same PDF menu.
   documents with A4 pages and margins, use Image to PDF.
 - **ICO output** always contains 16, 32, 48 and 256 px frames, centre-cropped to a square; a frame
   larger than the source is upscaled.
+- **PDF to TXT** reads the text layer only. Scanned pages contain no characters, and the tool says
+  so instead of writing an empty file. OCR is a separate, later tool.
+- **Repair PDF** rebuilds structure (broken cross-reference tables, duplicate objects, stale edit
+  history, embedded thumbnails). It cannot reconstruct bytes that were never written, and it never
+  removes a password.
+- **Scan to PDF** captures camera frames into the page: no OCR, no auto-crop, no de-skew. Cameras
+  require https and a permission grant, so the file picker is always offered as well.
+- **Add Text / Highlight / Draw / Add Shapes** all open the same editor with a different tool
+  preselected. They draw into the page — they never rewrite existing text, and a highlight or a
+  shape over text is not redaction.
+- **Remove Metadata From PDF** clears the document information fields; it does not touch page
+  content, and an office suite that re-saves the file may stamp its own fields back in.
 - **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
   browser, but very large HEIC batches are slow on older phones.
 
@@ -315,7 +346,11 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    → TIFF, → ICO (check the file opens as an icon with 4 sizes), → PDF (one page, opens in Acrobat),
    → SVG (opens in Chrome and shows the image), → PPM. Confirm each row says "Verified: decodes
    cleanly at W × H px", that Save reopens the file in Preview/Photos, and that a batch of 5 zips.
-4. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+4. **New in this step** — Remove/Extract pages (thumbnails, typed range, red/indigo selection),
+   Repair (a good file should report "nothing to fix" and a truncated file should fail loudly),
+   PDF to TXT (a text PDF vs a scan), PDF to WebP, Scan to PDF on a phone over https, and each of
+   the four annotation pages opening with the right tool preselected.
+5. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll.
-5. **Network tab** — run any tool and confirm no request carries file data.
-6. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+6. **Network tab** — run any tool and confirm no request carries file data.
+7. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

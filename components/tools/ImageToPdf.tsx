@@ -21,7 +21,14 @@ interface Item {
 
 const MAX_EDGE = 4000;
 
-export function ImageToPdf() {
+const INPUT_PRESETS = {
+  jpg: { accept: ".jpg,.jpeg,image/jpeg", extensions: ["jpg", "jpeg"], label: "JPG" },
+  png: { accept: ".png,image/png", extensions: ["png"], label: "PNG" },
+  webp: { accept: ".webp,image/webp", extensions: ["webp"], label: "WebP" },
+};
+
+export function ImageToPdf({ input }: { input?: "jpg" | "png" | "webp" } = {}) {
+  const inputPreset = input ? INPUT_PRESETS[input] : null;
   const [items, setItems] = useState<Item[]>([]);
   const [pageSize, setPageSize] = useState<PageSize>("a4");
   const [orientation, setOrientation] = useState<Orientation>("auto");
@@ -202,9 +209,9 @@ export function ImageToPdf() {
   return (
     <ToolFrame labelledBy="tool-title">
       <Dropzone
-        accept={ACCEPT_IMAGE}
-        acceptedLabel="JPG, PNG, WebP, HEIC, GIF, BMP"
-        extensions={INPUT_EXTENSIONS}
+        accept={inputPreset?.accept ?? ACCEPT_IMAGE}
+        acceptedLabel={inputPreset ? `${inputPreset.label} only` : "JPG, PNG, WebP, HEIC, GIF, BMP"}
+        extensions={inputPreset ? [...inputPreset.extensions] : INPUT_EXTENSIONS}
         onFiles={addFiles}
         maxSizeMb={150}
         title={items.length ? "Add more images" : "Drop images here or click to choose"}

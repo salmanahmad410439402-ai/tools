@@ -437,8 +437,13 @@ export async function applyAnnotations(bytes: ArrayBuffer, annotations: Annotati
 }
 
 /** Strips the page thumbnails some scanners embed — pure dead weight. */
-export function dropThumbnails(doc: PDFDocument) {
+export function dropThumbnails(doc: PDFDocument): number {
+  let removed = 0;
   for (const page of doc.getPages()) {
-    if (page.node.has(PDFName.of("Thumb"))) page.node.delete(PDFName.of("Thumb"));
+    if (page.node.has(PDFName.of("Thumb"))) {
+      page.node.delete(PDFName.of("Thumb"));
+      removed += 1;
+    }
   }
+  return removed;
 }

@@ -10,11 +10,11 @@ import { fileBaseName, outputName } from "@/lib/utils";
 import { Field, inputClass, Notice, ProgressBar, ResultsPanel, Segmented, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 
-type Format = "jpg" | "png";
+type Format = "jpg" | "png" | "webp";
 
-export function PdfToImage() {
+export function PdfToImage({ presetFormat }: { presetFormat?: "jpg" | "png" | "webp" } = {}) {
   const [file, setFile] = useState<File | null>(null);
-  const [format, setFormat] = useState<Format>("jpg");
+  const [format, setFormat] = useState<Format>(presetFormat ?? "jpg");
   const [dpi, setDpi] = useState("150");
   const [quality, setQuality] = useState(85);
   const [pages, setPages] = useState("");
@@ -64,7 +64,7 @@ export function PdfToImage() {
       setResults(output);
       setProgress({ value: 1, label: "Done" });
       track("tool_completed", {
-        tool: "pdf-to-jpg",
+        tool: format === "png" ? "pdf-to-png" : format === "webp" ? "pdf-to-webp" : "pdf-to-jpg",
         format,
         pages: output.length,
         size: sizeBucket(output.reduce((sum, item) => sum + item.size, 0)),
@@ -109,6 +109,7 @@ export function PdfToImage() {
               options={[
                 { value: "jpg", label: "JPG", hint: "Smallest files, photos and scans" },
                 { value: "png", label: "PNG", hint: "Sharp text, line art, no artefacts" },
+                { value: "webp", label: "WebP", hint: "Smallest page images for a website" },
               ]}
             />
           </div>

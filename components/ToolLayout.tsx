@@ -2,42 +2,53 @@ import Link from "next/link";
 import { Check, ShieldCheck } from "lucide-react";
 import type { Tool } from "@/lib/tool-types";
 import { breadcrumbJsonLd, faqJsonLd, toolJsonLd, type Crumb } from "@/lib/jsonld";
-import { SITE_NAME } from "@/data/site";
+import { SITE_NAME, SITE_URL } from "@/data/site";
+import { toolCount } from "@/data/tools";
 import { AdSlot } from "./AdSlot";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { Disclosure } from "./Disclosure";
 import { Faq } from "./Faq";
 import { RelatedTools } from "./RelatedTools";
 import { StructuredData } from "./StructuredData";
+import { ToolIcon } from "./icons";
 import { ToolWidget } from "./tools/ToolWidgets";
 
-const TRUST_POINTS = ["100% in your browser", "No sign-up", "No watermark", "Free, no limits"];
+const TRUST_POINTS = ["Runs in your browser", "No sign-up", "No watermark", "Free"];
 
+/**
+ * Tool page shell.
+ *
+ * Order is deliberate: one line of promise, then the tool itself, then the
+ * reading material folded away underneath. Someone who came to convert a file
+ * should never have to scroll past an essay to reach the drop zone, and someone
+ * who is deciding whether to trust the tool should still find the detail.
+ */
 export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
   return (
     <>
-      <StructuredData
-        data={[breadcrumbJsonLd(crumbs), toolJsonLd(tool), faqJsonLd(tool.faqs)]}
-      />
+      <StructuredData data={[breadcrumbJsonLd(crumbs), toolJsonLd(tool), faqJsonLd(tool.faqs)]} />
 
-      <div className="container-page pb-6 pt-6 sm:pt-8">
+      <div className="container-page pb-16 pt-5 sm:pt-7">
         <Breadcrumbs crumbs={crumbs} />
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10">
           <div className="min-w-0">
-            <header>
-              <h1 className="max-w-3xl text-[30px] font-extrabold leading-[1.15] tracking-[-0.025em] text-ink sm:text-[38px]">
+            <header className="max-w-2xl">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                  <ToolIcon name={tool.icon} className="h-4.5 w-4.5" />
+                </span>
+                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-brand-600">
+                  Free {tool.category === "image-tools" ? "image" : "PDF"} tool
+                </p>
+              </div>
+
+              <h1 className="mt-3 text-[28px] font-extrabold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[36px]">
                 {tool.h1}
               </h1>
-              <div className="mt-3 max-w-2xl space-y-2.5 text-[15.5px] leading-relaxed text-body">
-                {tool.intro.map((paragraph) => (
-                  <p key={paragraph.slice(0, 24)}>{paragraph}</p>
-                ))}
-              </div>
-              <p className="mt-3 text-[14.5px] font-semibold text-brand-600">
-                Runs 100% in your browser — no login, no upload.
-              </p>
+              <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-body">{tool.tagline}</p>
 
-              <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12.5px] font-medium text-body">
+              <ul className="mt-3.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] font-medium text-body">
                 {TRUST_POINTS.map((point) => (
                   <li key={point} className="inline-flex items-center gap-1.5">
                     <span className="grid h-4 w-4 place-items-center rounded-full bg-success/10 text-success">
@@ -49,103 +60,139 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
               </ul>
             </header>
 
-            <div className="mt-6">
+            <div className="mt-5">
               <ToolWidget
                 widget={tool.widget}
                 presetFormat={tool.preset?.outputFormat}
                 conversionLabel={tool.preset?.conversionLabel}
                 toolSlug={tool.slug}
+                preset={tool.preset}
               />
             </div>
 
-            {/* Ad position 1: directly below the tool, separated by breathing room. */}
+            {/* Ad position 1: after the tool, well clear of the drop zone and the download button. */}
             <AdSlot variant="leaderboard" className="mt-8" />
 
-            <div className="article mt-10 max-w-prose">
-              <h2 id="what-it-does" className="scroll-mt-24">
-                What this free tool does
+            <section aria-labelledby="how-to" className="mt-10 scroll-mt-24">
+              <h2 id="how-to" className="text-[20px] font-bold tracking-tight text-ink">
+                How it works
               </h2>
-              <ul className="!mt-4">
-                {tool.bullets.map((bullet) => (
-                  <li key={bullet.title}>
-                    <strong>{bullet.title}.</strong> {bullet.text}
-                  </li>
-                ))}
-              </ul>
-
-              <h2 id="how-to" className="scroll-mt-24">
-                How to {tool.name.toLowerCase()} step by step
-              </h2>
-              <ol className="!mt-4">
-                {tool.steps.map((step) => (
-                  <li key={step.title}>
-                    <strong>{step.title}.</strong> {step.text}
+              <ol className="mt-4 grid gap-3 sm:grid-cols-2">
+                {tool.steps.map((step, index) => (
+                  <li key={step.title} className="rounded-card border border-line bg-white p-4">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-50 text-[12.5px] font-bold text-brand-700 ring-1 ring-brand-100">
+                      {index + 1}
+                    </span>
+                    <p className="mt-2.5 text-[14px] font-semibold text-ink">{step.title}</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-body">{step.text}</p>
                   </li>
                 ))}
               </ol>
+            </section>
 
-              <h2 id="formats" className="scroll-mt-24">
-                Supported formats and what comes out
-              </h2>
-              <div className="!mt-4 overflow-x-auto">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">Accepted input</th>
-                      <th scope="col">Output</th>
-                      <th scope="col">Batch</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{tool.inputFormats.join(", ")}</td>
-                      <td>{tool.outputFormats.join(", ")}</td>
-                      <td>Yes — multiple files, individual or ZIP download</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <h2 id="limits" className="scroll-mt-24">
-                Limits worth knowing before you start
-              </h2>
-              <ul className="!mt-4">
-                {tool.limits.map((limit) => (
-                  <li key={limit.title}>
-                    <strong>{limit.title}.</strong> {limit.text}
-                  </li>
-                ))}
-              </ul>
-
-              <h2 id="privacy" className="scroll-mt-24">
-                Where your files go (nowhere)
-              </h2>
-              <p>
-                The file picker hands {SITE_NAME} a local reference to your file; it is never copied to a
-                server. All decoding, conversion and writing happens inside this tab using JavaScript and
-                WebAssembly that you downloaded with the page. There is no upload endpoint, no temporary
-                storage bucket and no account that could own a copy.
-              </p>
-              <p>
-                You can check this yourself: open your browser&apos;s developer tools, switch to the Network
-                tab, clear it, then run a conversion. You will see no request carrying your file. Closing the
-                tab deletes the working data from memory, and object URLs created for downloads are revoked
-                when you start over.
+            <div className="mt-10">
+              <h2 className="text-[20px] font-bold tracking-tight text-ink">The details</h2>
+              <p className="mt-1 text-[13.5px] text-subtle">
+                Everything below is optional reading — open what you need.
               </p>
 
-              <AdSlot variant="inline" className="my-10" />
+              <Disclosure
+                id="what-it-does"
+                title="What this tool does"
+                summary={`${tool.bullets.length} things worth knowing before you start`}
+              >
+                <div className="article">
+                  {tool.intro.map((paragraph) => (
+                    <p key={paragraph.slice(0, 24)}>{paragraph}</p>
+                  ))}
+                  <ul>
+                    {tool.bullets.map((bullet) => (
+                      <li key={bullet.title}>
+                        <strong>{bullet.title}.</strong> {bullet.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Disclosure>
 
-              <h2 id="tips" className="scroll-mt-24">
-                Practical tips from real use
-              </h2>
-              <ul className="!mt-4">
-                {tool.tips.map((tip) => (
-                  <li key={tip.title}>
-                    <strong>{tip.title}.</strong> {tip.text}
-                  </li>
-                ))}
-              </ul>
+              <Disclosure
+                id="formats"
+                title="Files it accepts and what comes out"
+                summary={`${tool.inputFormats.slice(0, 3).join(", ")} → ${tool.outputFormats.join(", ")}`}
+              >
+                <div className="article">
+                  <div className="overflow-x-auto">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th scope="col">Accepted input</th>
+                          <th scope="col">Output</th>
+                          <th scope="col">Batch</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{tool.inputFormats.join(", ")}</td>
+                          <td>{tool.outputFormats.join(", ")}</td>
+                          <td>Multiple files, individual or ZIP download</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </Disclosure>
+
+              <Disclosure
+                id="limits"
+                title="Limits worth knowing first"
+                summary="What this tool honestly cannot do"
+              >
+                <div className="article">
+                  <ul>
+                    {tool.limits.map((limit) => (
+                      <li key={limit.title}>
+                        <strong>{limit.title}.</strong> {limit.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Disclosure>
+
+              <Disclosure id="tips" title="Practical tips" summary="Small things that make a visible difference">
+                <div className="article">
+                  <ul>
+                    {tool.tips.map((tip) => (
+                      <li key={tip.title}>
+                        <strong>{tip.title}.</strong> {tip.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Disclosure>
+
+              <Disclosure
+                id="privacy"
+                title="Where your files go (nowhere)"
+                summary="How the in-browser processing actually works"
+              >
+                <div className="article">
+                  <p>
+                    The file picker gives {SITE_NAME} a local reference to your file; it is never copied to a
+                    server. All decoding, conversion and writing happens inside this tab using JavaScript and
+                    WebAssembly that you downloaded with the page. There is no upload endpoint, no temporary
+                    storage bucket and no account that could own a copy.
+                  </p>
+                  <p>
+                    You can check this yourself: open your browser&apos;s developer tools, switch to the Network
+                    tab, clear it, then run a conversion. You will see no request carrying your file. Closing the
+                    tab deletes the working data from memory, and object URLs created for downloads are revoked
+                    when you start over.
+                  </p>
+                </div>
+              </Disclosure>
             </div>
+
+            <AdSlot variant="inline" className="my-10" />
 
             <Faq items={tool.faqs} />
 
@@ -155,7 +202,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
               <p className="text-[13.5px] leading-relaxed text-body">
                 Something not working as described?{" "}
                 <Link href="/contact/" className="link">
-                  Tell us what file type, browser and step failed
+                  Tell us which file type, browser and step failed
                 </Link>{" "}
                 — accurate bug reports are how these tools stay reliable. This page was last reviewed on{" "}
                 {new Date(tool.updated).toLocaleDateString("en-GB", {
@@ -173,25 +220,28 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
               <div className="rounded-card border border-line bg-white p-5 shadow-card">
                 <p className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-ink">
                   <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
-                  Privacy
+                  Private by design
                 </p>
                 <p className="mt-2 text-[13px] leading-relaxed text-body">
-                  Your file stays on your device. No upload, no account, no server-side copy. Works
-                  offline once the page has loaded.
+                  Your file is opened by this tab and never uploaded. No account, no server copy, and it keeps
+                  working with the network switched off.
                 </p>
-                <Link href="/privacy-policy/" className="mt-2 inline-block text-[12.5px] font-semibold text-brand-600 hover:text-brand-700">
+                <Link
+                  href="/privacy-policy/"
+                  className="mt-2 inline-block text-[12.5px] font-semibold text-brand-600 hover:text-brand-700"
+                >
                   Read the privacy policy →
                 </Link>
               </div>
 
               <div className="rounded-card border border-line bg-white p-5">
-                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink">Jump to</p>
+                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink">On this page</p>
                 <ul className="mt-2 space-y-1.5 text-[13px]">
                   {[
-                    { href: "#what-it-does", label: "What this tool does" },
-                    { href: "#how-to", label: "How to use it" },
+                    { href: "#how-to", label: "How it works" },
+                    { href: "#what-it-does", label: "What it does" },
+                    { href: "#formats", label: "Formats" },
                     { href: "#limits", label: "Limits" },
-                    { href: "#privacy", label: "Privacy" },
                     { href: "#faq", label: "FAQ" },
                   ].map((link) => (
                     <li key={link.href}>
@@ -203,7 +253,20 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                 </ul>
               </div>
 
-              {/* Ad position 3: desktop sidebar only, sticky inside the sidebar. */}
+              <div className="rounded-card border border-line bg-white p-5">
+                <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink">All {toolCount} tools</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-body">
+                  Every tool on {SITE_NAME} works the same way: pick a file, do the job, download it.
+                </p>
+                <Link
+                  href="/tools/"
+                  className="mt-2 inline-block text-[12.5px] font-semibold text-brand-600 hover:text-brand-700"
+                >
+                  Browse the full list →
+                </Link>
+              </div>
+
+              {/* Ad position 3: desktop sidebar only. */}
               <AdSlot variant="sidebar" />
             </div>
           </aside>

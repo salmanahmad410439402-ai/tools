@@ -4,6 +4,9 @@ import { pdfOptimizeTools } from "./tool-defs/pdf-optimize.ts";
 import { pdfEditTools } from "./tool-defs/pdf-edit.ts";
 import { pdfCreateTools } from "./tool-defs/pdf-create.ts";
 import { pdfExtractTools } from "./tool-defs/pdf-extract.ts";
+import { pdfPageTools } from "./tool-defs/pdf-pages.ts";
+import { pdfConvertTools } from "./tool-defs/pdf-convert.ts";
+import { pdfAnnotateTools } from "./tool-defs/pdf-annotate.ts";
 import { imageTools } from "./tool-defs/images.ts";
 
 /**
@@ -20,6 +23,9 @@ export const tools: Tool[] = [
   ...pdfOptimizeTools,
   ...pdfEditTools,
   ...pdfCreateTools,
+  ...pdfPageTools,
+  ...pdfConvertTools,
+  ...pdfAnnotateTools,
   ...pdfExtractTools,
   ...imageTools,
 ];
@@ -39,7 +45,7 @@ export const TOOL_GROUPS: { key: ToolGroup; label: string; description: string }
   {
     key: "edit",
     label: "Edit & sign",
-    description: "Add numbers, stamps, signatures and annotations.",
+    description: "Type on a page, highlight, draw, add signature and numbering.",
   },
   {
     key: "create",
@@ -49,7 +55,12 @@ export const TOOL_GROUPS: { key: ToolGroup; label: string; description: string }
   {
     key: "extract",
     label: "Extract",
-    description: "Get images or other content back out of a PDF.",
+    description: "Get images or text back out of a PDF.",
+  },
+  {
+    key: "security",
+    label: "Security & privacy",
+    description: "Watermark a document or strip the properties that travel with it.",
   },
 ];
 

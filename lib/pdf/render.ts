@@ -1,4 +1,4 @@
-import { loadPdfjsDocument, renderPageToCanvas, canvasToJpeg, canvasToPng } from "./pdfjs";
+import { loadPdfjsDocument, renderPageToCanvas, canvasToJpeg, canvasToPng, canvasToWebp } from "./pdfjs";
 
 export interface RenderedPage {
   pageIndex: number;
@@ -65,7 +65,7 @@ export async function renderThumbnails(
   return thumbs;
 }
 
-export type ImageExportFormat = "jpg" | "png";
+export type ImageExportFormat = "jpg" | "png" | "webp";
 
 /** PDF → JPG/PNG at a chosen DPI (72 DPI = 1:1 with the PDF's own points). */
 export async function pdfToImages(
@@ -92,7 +92,9 @@ export async function pdfToImages(
     const blob =
       options.format === "jpg"
         ? await canvasToJpeg(canvas, options.quality / 100)
-        : await canvasToPng(canvas);
+        : options.format === "webp"
+          ? await canvasToWebp(canvas, options.quality / 100)
+          : await canvasToPng(canvas);
     results.push({ pageIndex, blob });
     canvas.width = 0;
     canvas.height = 0;
