@@ -109,7 +109,7 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Word `.docx` parsing | `mammoth` 1.13.0 (BSD-2-Clause) | only on the Word to PDF page |
 | Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
-| BMP / TIFF / GIF / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
+| BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 
 Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
 
@@ -168,6 +168,40 @@ the sitemap and structured data use the real host.
 and committed, so the build itself needs no Python.
 
 ---
+
+## Image converter: formats and verification
+
+Eleven output formats, chosen **after** the images are added, from any input the browser can decode
+(JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, SVG, and HEIC via the bundled decoder):
+
+| Format | Written by | Transparency | Notes |
+| --- | --- | --- | --- |
+| JPG | browser | flattened | background colour fills transparent pixels |
+| PNG | browser | kept | lossless |
+| WebP | browser | kept | lossy, smallest useful web format |
+| AVIF | browser (Chrome/Edge/Firefox) | kept | disabled with a reason where unsupported |
+| GIF | local encoder | flattened | 216-colour palette, first frame |
+| ICO | local encoder | kept | 16 / 32 / 48 / 256 px frames in one file |
+| TIFF | local encoder | flattened | uncompressed RGB, one strip |
+| BMP | local encoder | flattened | uncompressed 24-bit |
+| PDF | `pdf-lib` | flattened | one page per image, page sized to the image |
+| SVG | local encoder | kept | PNG embedded in an SVG wrapper — **not** vectorised |
+| PPM | local encoder | flattened | binary Netpbm P6 |
+
+**Every result is verified before it is offered.** `verifyEncoded()` re-reads the bytes it just
+produced: JPG, PNG, WebP, GIF, AVIF and SVG are decoded again and their dimensions compared with
+what was requested; BMP, TIFF, ICO and PPM are checked against their file signature; PDF must have
+both a `%PDF-` header and an `%%EOF` trailer. A failure is reported per file instead of handing over
+a corrupt download, and each row in the results list shows what was checked.
+
+Two failure modes are handled explicitly:
+
+- **Format not writable in this browser** (typically AVIF in Safari): the button is disabled with
+  "n/a" and an explanation, and the encoder throws a readable error rather than emitting a file
+  with the wrong MIME type.
+- **Image larger than the canvas ceiling**: a canvas silently returns a *blank* image above its
+  limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
+  the result note reports the scaled dimensions.
 
 ## Build status
 
@@ -240,6 +274,12 @@ in Step 2, because they belong in the same PDF menu.
   detects this at runtime and disables the option instead of producing broken files.
 - **TIFF output** is uncompressed RGB (browsers have no TIFF encoder); files are larger than the
   source. **GIF output** is single-frame with a 216-colour palette.
+- **SVG output** is a valid SVG with the bitmap embedded as a base64 PNG. It is not traced into
+  vectors — the page says so, because "raster to SVG" is usually sold as tracing.
+- **PDF output** from the converter is one image per page, sized to the image. For multi-image
+  documents with A4 pages and margins, use Image to PDF.
+- **ICO output** always contains 16, 32, 48 and 256 px frames, centre-cropped to a square; a frame
+  larger than the source is upscaled.
 - **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
   browser, but very large HEIC batches are slow on older phones.
 
@@ -257,8 +297,11 @@ launch (Chrome, Safari iOS, Firefox, Edge):
 2. **Compress PDF** — 1-page PDF, 100-page PDF, 20 MB scan, password-protected PDF (should warn),
    corrupt file (should explain, not crash). Verify Light keeps text selectable, Strong does not,
    and that the before/after sizes are honest.
-3. **Image Converter / JPG to PNG** — JPG → PNG, PNG → JPG (transparent background → white),
-   → WebP, → AVIF (Chrome), → BMP/TIFF/GIF/ICO, batch of 5 with ZIP download.
+3. **Image Converter / JPG to PNG** — add a photo and a transparent PNG, then walk every target:
+   → JPG (transparency becomes the chosen background), → PNG/WebP/AVIF (alpha kept), → GIF, → BMP,
+   → TIFF, → ICO (check the file opens as an icon with 4 sizes), → PDF (one page, opens in Acrobat),
+   → SVG (opens in Chrome and shows the image), → PPM. Confirm each row says "Verified: decodes
+   cleanly at W × H px", that Save reopens the file in Preview/Photos, and that a batch of 5 zips.
 4. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll.
 5. **Network tab** — run any tool and confirm no request carries file data.

@@ -11,7 +11,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PDFDocument, PDFName, StandardFonts, degrees } from "pdf-lib";
 import { buildImagePdf, computePlacement, PAGE_SIZES } from "../lib/pdf/image-to-pdf.ts";
-import { encodeBmp, encodeTiff, encodeGif, encodeIco } from "../lib/images/codecs.ts";
+import { encodeBmp, encodeTiff, encodeGif, encodeIco, encodePpm, encodeSvg } from "../lib/images/codecs.ts";
+import { clampToCanvasLimits } from "../lib/images/index.ts";
 
 const work = mkdtempSync(join(tmpdir(), "filecraft-smoke-"));
 let failures = 0;
@@ -161,14 +162,92 @@ console.log("\nCustom image encoders");
     check(`${extension.toUpperCase()} decodes at the right size`, info.includes(`${width}x${height}`), info);
   }
 
-  // ICO needs PNG bytes; reuse the BMP payload's header check instead of PNG.
-  const ico = encodeIco(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), 32, 32);
-  const icoBytes = Buffer.from(await ico.arrayBuffer());
+  // PPM (P6) — verify the header and the exact payload length.
+  const ppmBytes = Buffer.from(await encodePpm(source).arrayBuffer());
+  const ppmHeader = ppmBytes.subarray(0, 16).toString("latin1");
+  check("PPM header declares the right geometry", ppmHeader.startsWith(`P6\n${width} ${height}\n255\n`), ppmHeader);
   check(
-    "ICO header is valid",
-    icoBytes.readUInt16LE(0) === 0 && icoBytes.readUInt16LE(2) === 1 && icoBytes.readUInt16LE(4) === 1,
+    "PPM carries 3 bytes per pixel",
+    ppmBytes.length === `P6\n${width} ${height}\n255\n`.length + width * height * 3,
   );
-  check("ICO payload follows the 22-byte header", icoBytes.length === 22 + 4);
+
+  // SVG wrapper — must be valid XML pointing at an embedded PNG.
+  {
+    const target = join(work, "encode.ppm");
+    writeFileSync(target, ppmBytes);
+    const info = execFileSync("identify", ["-format", "%m %wx%h", target]).toString();
+    check("PPM decodes in an independent decoder", info.includes(`${width}x${height}`), info);
+  }
+
+  const svg = encodeSvg(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), width, height);
+  const svgText = await svg.text();
+  check("SVG wrapper declares its size", svgText.includes(`width="${width}" height="${height}"`));
+  check("SVG embeds the bitmap as base64 PNG", svgText.includes("data:image/png;base64,iVBORw=="));
+  check("SVG is well-formed XML", /^<\?xml[^>]*\?>[\s\S]*<\/svg>\s*$/.test(svgText.trim()) && svg.type === "image/svg+xml");
+
+  // ICO — multi-size container: header, directory offsets and payload lengths.
+  const frames = [16, 32, 48, 256].map((size) => ({ size, pngBytes: new Uint8Array(size).fill(7) }));
+  const icoBytes = Buffer.from(await encodeIco(frames).arrayBuffer());
+  check(
+    "ICO header reports every frame",
+    icoBytes.readUInt16LE(0) === 0 && icoBytes.readUInt16LE(2) === 1 && icoBytes.readUInt16LE(4) === 4,
+  );
+  let icoOffset = 6 + frames.length * 16;
+  let directoryOk = true;
+  for (let index = 0; index < frames.length; index += 1) {
+    const entry = 6 + index * 16;
+    const edge = icoBytes[entry];
+    const expectedEdge = frames[index].size >= 256 ? 0 : frames[index].size;
+    const length = icoBytes.readUInt32LE(entry + 8);
+    const offset = icoBytes.readUInt32LE(entry + 12);
+    if (edge !== expectedEdge || length !== frames[index].size || offset !== icoOffset) directoryOk = false;
+    icoOffset += length;
+  }
+  check("ICO directory entries point at the right payloads", directoryOk);
+  check("ICO file length matches the directory", icoBytes.length === icoOffset);
+  // A container is only useful if real PNGs survive inside it: build one from
+  // ImageMagick-generated frames and read it back with the same tool.
+  {
+    const realFrames = [16, 32, 48, 256].map((size) => {
+      const png = join(work, `ico-${size}.png`);
+      execFileSync("convert", ["-size", `${size}x${size}`, "gradient:red-blue", png]);
+      return { size, pngBytes: new Uint8Array(readFileSync(png)) };
+    });
+    const target = join(work, "multi.ico");
+    writeFileSync(target, Buffer.from(await encodeIco(realFrames).arrayBuffer()));
+    const info = execFileSync("identify", ["-format", "%wx%h ", target]).toString().trim().split(" ");
+    check("multi-size ICO opens as 16/32/48/256", info.join(",") === "16x16,32x32,48x48,256x256", info.join(","));
+  }
+
+  const firstPayload = icoBytes.readUInt32LE(6 + 12);
+  check(
+    "ICO keeps its PNG payload intact",
+    firstPayload === 6 + frames.length * 16 && icoBytes.subarray(firstPayload, firstPayload + 16).every((byte) => byte === 7),
+  );
+}
+
+/* ─────────────────────── canvas size clamping ──────────────────────────── */
+
+console.log("\nCanvas limits (the guard that stops blank output)");
+{
+  const phone = clampToCanvasLimits(4032, 3024, 16_000_000);
+  check("a 12 MP phone photo is left untouched", !phone.scaled && phone.width === 4032 && phone.height === 3024);
+
+  const huge = clampToCanvasLimits(8064, 6048, 16_000_000);
+  const pixels = huge.width * huge.height;
+  check("a 48 MP photo is scaled into the budget", huge.scaled && pixels <= 16_000_000, `${huge.width}x${huge.height}`);
+  check(
+    "clamping keeps the aspect ratio",
+    Math.abs(huge.width / huge.height - 8064 / 6048) < 0.001,
+    `${(huge.width / huge.height).toFixed(4)} vs ${(8064 / 6048).toFixed(4)}`,
+  );
+
+  const panorama = clampToCanvasLimits(20_000, 1_000, 40_000_000, 16_384);
+  check("a long panorama respects the maximum side", panorama.width === 16_384, `${panorama.width}x${panorama.height}`);
+  check("clamped dimensions are whole pixels", Number.isInteger(panorama.width) && Number.isInteger(panorama.height));
+
+  const tiny = clampToCanvasLimits(1, 1, 16_000_000);
+  check("a 1×1 image is never scaled below one pixel", tiny.width === 1 && tiny.height === 1);
 }
 
 /* ───────────────────────── result ───────────────────────── */

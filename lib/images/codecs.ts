@@ -126,18 +126,6 @@ export function encodeTiff(image: PixelSource): Blob {
 
 /* ─────────────────────────────── ICO ────────────────────────────────────── */
 
-/** ICO container with one PNG-compressed image (supported since Windows Vista). */
-export function encodeIco(pngBytes: Uint8Array, width: number, height: number): Blob {
-  const header = new ByteWriter();
-  header.u16le(0).u16le(1).u16le(1);
-  header.u8(width >= 256 ? 0 : width).u8(height >= 256 ? 0 : height);
-  header.u8(0).u8(0).u16le(1).u16le(32).u32le(pngBytes.length).u32le(22);
-  const bytes = new Uint8Array(22 + pngBytes.length);
-  bytes.set(header.toUint8Array(), 0);
-  bytes.set(pngBytes, 22);
-  return new Blob([bytes as unknown as BlobPart], { type: "image/x-icon" });
-}
-
 /* ─────────────────────────────── GIF ────────────────────────────────────── */
 
 /** 6×6×6 colour cube — 216 colours, fast to map, no dithering. */
@@ -237,4 +225,99 @@ export function encodeGif(image: PixelSource): Blob {
   }
   out.u8(0).u8(0x3b);
   return new Blob([out.toUint8Array() as unknown as BlobPart], { type: "image/gif" });
+}
+
+/* ─────────────────────────────── PPM ────────────────────────────────────── */
+
+/**
+ * Binary Netpbm PPM (P6), 8 bits per channel. Lossless, uncompressed and
+ * trivial for scripts and scientific tools to read — the reason it is here.
+ */
+export function encodePpm(image: PixelSource): Blob {
+  const { width, height, data } = image;
+  const header = `P6\n${width} ${height}\n255\n`;
+  const bytes = new Uint8Array(header.length + width * height * 3);
+  for (let i = 0; i < header.length; i += 1) bytes[i] = header.charCodeAt(i) & 0xff;
+  let offset = header.length;
+  for (let i = 0; i < data.length; i += 4) {
+    bytes[offset] = data[i];
+    bytes[offset + 1] = data[i + 1];
+    bytes[offset + 2] = data[i + 2];
+    offset += 3;
+  }
+  return new Blob([bytes as unknown as BlobPart], { type: "image/x-portable-pixmap" });
+}
+
+/* ─────────────────────────────── SVG ────────────────────────────────────── */
+
+/** Base64 for binary data, chunked so large images cannot blow the call stack. */
+export function bytesToBase64(data: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let offset = 0; offset < data.length; offset += chunk) {
+    binary += String.fromCharCode(...data.subarray(offset, offset + chunk));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Wraps a PNG inside an SVG of the same size.
+ *
+ * This is a real, valid SVG — it renders everywhere — but it is **not**
+ * vectorised: the pixels are embedded as a base64 PNG. Callers must say so,
+ * because "raster to SVG" is usually sold as tracing and this is not tracing.
+ */
+export function encodeSvg(pngBytes: Uint8Array, width: number, height: number): Blob {
+  const payload = bytesToBase64(pngBytes);
+  const svg =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">\n` +
+    `<image width="${width}" height="${height}" x="0" y="0" ` +
+    `xlink:href="data:image/png;base64,${payload}"/>\n</svg>\n`;
+  return new Blob([svg], { type: "image/svg+xml" });
+}
+
+/* ─────────────────────────── ICO (multi-size) ───────────────────────────── */
+
+export interface IcoFrame {
+  pngBytes: Uint8Array;
+  /** Square edge in pixels (16–256). */
+  size: number;
+}
+
+/**
+ * ICO container holding several PNG-compressed sizes (Vista+ layout), which is
+ * what Windows and browsers actually pick from for favicons and app icons.
+ */
+export function encodeIco(frames: IcoFrame[]): Blob {
+  if (!frames.length) throw new Error("An icon needs at least one size.");
+  const count = frames.length;
+  const header = new ByteWriter();
+  header.u16le(0).u16le(1).u16le(count);
+
+  let offset = 6 + count * 16;
+  const directory = new ByteWriter();
+  for (const frame of frames) {
+    directory
+      .u8(frame.size >= 256 ? 0 : frame.size)
+      .u8(frame.size >= 256 ? 0 : frame.size)
+      .u8(0)
+      .u8(0)
+      .u16le(1)
+      .u16le(32)
+      .u32le(frame.pngBytes.length)
+      .u32le(offset);
+    offset += frame.pngBytes.length;
+  }
+
+  const bytes = new Uint8Array(offset);
+  bytes.set(header.toUint8Array(), 0);
+  bytes.set(directory.toUint8Array(), 6);
+  let cursor = 6 + count * 16;
+  for (const frame of frames) {
+    bytes.set(frame.pngBytes, cursor);
+    cursor += frame.pngBytes.length;
+  }
+  return new Blob([bytes as unknown as BlobPart], { type: "image/x-icon" });
 }

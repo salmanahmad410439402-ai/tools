@@ -316,6 +316,7 @@ export function ResultsPanel({
   zipLabel = "Download all as ZIP",
   heading = "Your files are ready",
   extra,
+  compare = "compression",
 }: {
   files: ResultFile[];
   onReset: () => void;
@@ -323,6 +324,12 @@ export function ResultsPanel({
   zipLabel?: string;
   heading?: string;
   extra?: React.ReactNode;
+  /**
+   * "compression" reports savings (the default, right for PDF/image compression);
+   * "conversion" reports the size change in either direction, because a format
+   * change is not supposed to shrink anything.
+   */
+  compare?: "compression" | "conversion";
 }) {
   const [zipping, setZipping] = useState(false);
   if (!files.length) return null;
@@ -368,11 +375,20 @@ export function ResultsPanel({
                     <>
                       {" "}
                       <span className="text-line">·</span> was {formatBytes(file.originalSize)}
-                      {saved !== null && saved > 0 && (
+                      {saved !== null && compare === "compression" && saved > 0 && (
                         <span className="ml-1 font-semibold text-success">{saved}% smaller</span>
                       )}
-                      {saved !== null && saved <= 0 && (
+                      {saved !== null && compare === "compression" && saved <= 0 && (
                         <span className="ml-1 font-semibold text-warning">no saving</span>
+                      )}
+                      {saved !== null && compare === "conversion" && saved > 0 && (
+                        <span className="ml-1 font-semibold text-success">{saved}% smaller</span>
+                      )}
+                      {saved !== null && compare === "conversion" && saved < 0 && (
+                        <span className="ml-1 font-semibold text-subtle">{Math.abs(saved)}% larger</span>
+                      )}
+                      {saved !== null && compare === "conversion" && saved === 0 && (
+                        <span className="ml-1 text-subtle">same size</span>
                       )}
                     </>
                   )}
