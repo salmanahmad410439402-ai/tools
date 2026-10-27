@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/outfit";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import {
   ADSENSE_PUBLISHER_ID,
-  ADSENSE_SCRIPT_ENABLED,
   BING_SITE_VERIFICATION,
   GOOGLE_SITE_VERIFICATION,
   SITE_DESCRIPTION,
@@ -20,6 +18,7 @@ import { CookieNotice } from "@/components/CookieNotice";
 import { Analytics } from "@/components/Analytics";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 import { THEME_INIT_SCRIPT } from "@/components/ThemeToggle";
+import { AdSenseScript } from "@/components/AdSenseScript";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -84,18 +83,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             `html.light` is the opt-in alabaster theme chosen from the header
             toggle. Only that stored choice switches the palette. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* AdSense verification + manual ad units. The library is only fetched
-            when ads are enabled, so a site without ads makes no Google
-            requests. Auto ads must stay OFF in the AdSense dashboard; every ad
-            here is placed by AdSlot. */}
-        {ADSENSE_SCRIPT_ENABLED && (
-          <Script
-            async
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUBLISHER_ID}`}
-          />
-        )}
+        {/* The AdSense library is mounted by <AdSenseScript /> below, because it
+            must not load until the visitor allows advertising. Auto ads stay OFF
+            in the AdSense dashboard; every unit is placed by AdSlot. */}
       </head>
       <body className="flex min-h-screen flex-col">
         <a
@@ -111,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <CookieNotice />
         <Analytics />
+        <AdSenseScript />
       </body>
     </html>
   );

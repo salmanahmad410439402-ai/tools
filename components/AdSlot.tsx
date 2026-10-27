@@ -1,12 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Script from "next/script";
 import { ADSENSE_PUBLISHER_ID, ADS_ENABLED, ADS_SLOT_INLINE, ADS_SLOT_SIDEBAR, ADS_SLOT_TOOL_TOP } from "@/data/site";
 import { cn } from "@/lib/utils";
+import { readConsent, subscribeConsent, type ConsentRecord } from "@/lib/consent";
 
 /**
  * Manual ad units only (Auto ads are assumed to be off in the AdSense account).
  *
  * Rules enforced here:
  *  - nothing renders while ADS_ENABLED is false, and no ad request is made;
+ *  - nothing renders until the visitor has allowed advertising, so declining the
+ *    consent panel means no ad request at all (Google's own certified message
+ *    still governs EEA/UK/CH personalisation);
  *  - space is reserved so the page does not jump (CLS);
  *  - every unit is labelled "Advertisement";
  *  - units below the fold are lazy via loading="lazy" on the iframe inside
@@ -29,7 +36,14 @@ export function AdSlot({
   variant?: AdVariant;
   className?: string;
 }) {
-  if (!ADS_ENABLED) return null;
+  const [consent, setConsent] = useState<ConsentRecord | null>(null);
+
+  useEffect(() => {
+    setConsent(readConsent());
+    return subscribeConsent(setConsent);
+  }, []);
+
+  if (!ADS_ENABLED || !consent?.ads) return null;
 
   const { h, slot } = HEIGHTS[variant];
   const width = variant === "sidebar" ? 300 : 728;

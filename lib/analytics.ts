@@ -1,5 +1,6 @@
 import { track as vercelTrack } from "@vercel/analytics";
-import { ANALYTICS_DOMAIN, ANALYTICS_ENABLED, ANALYTICS_SCRIPT_URL, VERCEL_ANALYTICS_ENABLED } from "@/data/site";
+import { VERCEL_ANALYTICS_ENABLED } from "@/data/site";
+import { readConsent } from "@/lib/consent";
 
 type EventProps = Record<string, string | number | boolean>;
 
@@ -20,6 +21,8 @@ declare global {
  */
 export function track(event: string, props: EventProps = {}) {
   if (typeof window === "undefined") return;
+  // Nothing is measured without an explicit "Allow" in the consent panel.
+  if (!readConsent()?.analytics) return;
   try {
     if (VERCEL_ANALYTICS_ENABLED) vercelTrack(event, props);
     window.plausible?.(event, { props });
@@ -37,12 +40,3 @@ export function sizeBucket(bytes: number): string {
   if (bytes < 50_000_000) return "10-50MB";
   return ">50MB";
 }
-
-export const analyticsEnabled = ANALYTICS_ENABLED;
-
-/** Which backend this build talks to, for the privacy/cookie pages. */
-export const analyticsProvider: "vercel" | "script" | "none" = VERCEL_ANALYTICS_ENABLED
-  ? "vercel"
-  : ANALYTICS_SCRIPT_URL && ANALYTICS_DOMAIN
-    ? "script"
-    : "none";

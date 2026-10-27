@@ -4,6 +4,7 @@ import { CATEGORIES } from "@/data/site";
 import { tools } from "@/data/tools";
 import { Logo } from "./Logo";
 import { ShieldCheck } from "lucide-react";
+import { CookieSettingsButton } from "./CookieSettingsButton";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -87,6 +88,11 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                {/* Re-opens the consent panel; analytics and ads stay off until
+                    the visitor allows them. */}
+                <CookieSettingsButton className="text-left text-body transition-colors hover:text-brand-600" />
+              </li>
             </ul>
           </nav>
         </div>

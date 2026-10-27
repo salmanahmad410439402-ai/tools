@@ -69,8 +69,9 @@ export default function PrivacyPolicyPage() {
           account — not by this site, which stores nothing about your visit.
         </li>
         <li>
-          <strong>Local browser storage.</strong> Two small preferences — whether you dismissed the cookie
-          notice, and whether you chose the light or dark theme — are stored in your browser's localStorage.
+          <strong>Local browser storage.</strong> A few small preferences — your answer to the consent panel
+          (whether analytics and advertising are allowed), and whether you chose the light or dark theme — are
+          stored in your browser's localStorage.
           They are not cookies, are not shared and never leave your device. Clearing site data removes them.
         </li>
         <li>
@@ -144,6 +145,10 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <h2>6. Analytics</h2>
+      <p>
+        Analytics runs only after you press “Allow” in the consent panel — nothing is measured beforehand, and
+        the choice can be changed at any time with <strong>Cookie settings</strong> in the footer.
+      </p>
       {VERCEL_ANALYTICS_ENABLED ? (
         <>
           <p>
@@ -167,9 +172,8 @@ export default function PrivacyPolicyPage() {
             <a href="https://vercel.com/legal/privacy-policy" rel="nofollow noopener" target="_blank">
               Vercel privacy policy
             </a>
-            . Because no cookie is set and no personal identifier is stored, no consent banner is required for
-            this measurement under current EU guidance; if that changes, this page and the site will change with
-            it.
+            . Because no cookie is set and no personal identifier is stored, this measurement would not require
+            consent under current EU guidance — we ask anyway, and refuse to load anything if you decline.
           </p>
         </>
       ) : ANALYTICS_SCRIPT_URL ? (

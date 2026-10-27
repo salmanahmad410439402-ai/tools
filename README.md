@@ -157,6 +157,14 @@ The flag is public (`NEXT_PUBLIC_`) on purpose: the server render and the client
 on whether the script exists. When it is off, the Vercel client code is not even bundled — it is a
 lazy chunk behind `next/dynamic`.
 
+**Consent comes first.** Even when a provider is enabled, nothing loads until the visitor presses
+"Allow analytics" in the cookie panel (`lib/consent.ts` stores `filecraft-consent` in localStorage
+and broadcasts changes; `CookieNotice`, `Analytics`, `AdSlot` and `AdSenseScript` all subscribe).
+Declining or closing the panel means no measurement request and no ad request. The panel is not
+modal — no overlay, no scroll lock, no focus trap — and the tools never depend on it. The footer's
+"Cookie settings" button clears the record and reopens the panel. Set
+`NEXT_PUBLIC_ADSENSE_SCRIPT=on` if Google's review needs the AdSense snippet present before consent.
+
 Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content, only a
 coarse size bucket. `lib/analytics.ts` is the single place that emits them; `components/Analytics.tsx`
 is the single place that loads a provider. The Privacy Policy and Cookie Policy branch on the same
