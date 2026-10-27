@@ -48,12 +48,13 @@ npm run check        # all three
 | Tool page template | `components/ToolLayout.tsx` |
 | Tool widgets | `components/tools/*` |
 
-`data/site.ts` currently ships with placeholders — **replace these three values before launch**:
+`data/site.ts` holds the identity of the site. The contact inbox is set; the **site name and domain
+are still placeholders** and must be replaced before launch:
 
 ```ts
-export const SITE_NAME = "Filecraft";
-export const SITE_URL = "https://example.com";      // no trailing slash
-export const CONTACT_EMAIL = "hello@example.com";
+export const SITE_NAME = "Filecraft";                        // placeholder — confirm before launch
+export const SITE_URL = "https://example.com";               // placeholder, no trailing slash
+export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";    // live
 ```
 
 Canonical URLs, Open Graph tags, structured data, `sitemap.xml`, `robots.txt` and the footer
@@ -137,6 +138,18 @@ only a coarse size bucket.
 
 Navigation, home cards, category pages, search, sitemap, breadcrumbs, JSON-LD and related-tool
 links all update automatically.
+
+### Slug rule (enforced)
+
+**The slug is the search phrase, and the same phrase must appear in that page's `<title>` and H1.**
+`/word-to-pdf/`, `/image-to-pdf/`, `/jpg-to-png/`, `/add-page-numbers-to-pdf/` — words separated by
+hyphens, nothing else. `npm run validate` fails if `slug.replace(/-/g, " ")` is missing from either
+the SEO title or the H1, so a rename cannot leave the URL and the visible page disagreeing.
+
+Slugs that are live today: `merge-pdf`, `split-pdf`, `organize-pdf`, `rotate-pdf`, `compress-pdf`,
+`add-page-numbers-to-pdf`, `watermark-pdf`, `sign-pdf`, `pdf-editor`, `pdf-metadata`, `txt-to-pdf`,
+`word-to-pdf`, `csv-to-pdf`, `markdown-to-pdf`, `image-to-pdf`, `pdf-to-jpg`, `image-converter`,
+`jpg-to-png`.
 
 **Note on `/blog/[slug]`:** the article template is finished
 (`components/guides/GuideArticle.tsx`), but Next's static export refuses a dynamic route whose

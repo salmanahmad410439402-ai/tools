@@ -4,7 +4,7 @@ import type { Tool } from "@/lib/tool-types";
 export const pdfCreateTools: Tool[] = [
   {
     slug: "txt-to-pdf",
-    name: "Text to PDF",
+    name: "TXT to PDF",
     shortName: "TXT to PDF",
     category: "pdf-tools",
     group: "create",
@@ -12,10 +12,10 @@ export const pdfCreateTools: Tool[] = [
     icon: "FileType2",
     tagline: "Turn a .txt file or pasted text into a clean, paginated PDF with your margins.",
     bestFor: "You wrote notes in Notepad and need a printable PDF, or a plain-text log must be archived.",
-    seoTitle: "Text to PDF — Convert TXT or Pasted Text",
+    seoTitle: "TXT to PDF — Convert Text or Paste It",
     metaDescription:
       "Convert .txt files or pasted text into a PDF with selectable text, custom margins, page size and font size. Free, in your browser.",
-    h1: "Text to PDF — Convert Plain Text Into a Clean Document",
+    h1: "TXT to PDF — Turn Plain Text Into a Clean Document",
     intro: [
       "Paste text or drop a .txt file, choose a page size, margin and font size, and get a paginated PDF with real, selectable text. Paragraph breaks are respected, long lines wrap properly, and pages break where the text runs out of room.",
       "Everything runs locally. Latin text uses the PDF's built-in fonts, so the result stays under 50 KB; if your text needs Cyrillic, Greek, Hebrew, Arabic or typographic quotes, a Unicode font is fetched from this site and embedded automatically.",
@@ -138,7 +138,7 @@ export const pdfCreateTools: Tool[] = [
         a: "A Unicode font was embedded because the text was not plain Latin. Subsetting keeps it to a few hundred kilobytes. Latin-only text produces files of about 20–40 KB.",
       },
     ],
-    related: ["docx-to-pdf", "markdown-to-pdf", "merge-pdf"],
+    related: ["word-to-pdf", "markdown-to-pdf", "merge-pdf"],
     inputFormats: ["TXT", "MD", "CSV", "pasted text"],
     outputFormats: ["PDF"],
     keywords: ["txt to pdf", "text to pdf", "convert notepad to pdf", "plain text pdf"],
@@ -146,7 +146,7 @@ export const pdfCreateTools: Tool[] = [
     updated: "2026-10-27",
   },
   {
-    slug: "docx-to-pdf",
+    slug: "word-to-pdf",
     name: "Word to PDF",
     shortName: "Word to PDF",
     category: "pdf-tools",
@@ -299,10 +299,10 @@ export const pdfCreateTools: Tool[] = [
     icon: "FileSpreadsheet",
     tagline: "Print a spreadsheet as a readable table with a repeating header row.",
     bestFor: "You need to send a price list or an expense sheet as a document nobody can accidentally edit.",
-    seoTitle: "CSV or Excel to PDF — Clean Table Layout",
+    seoTitle: "CSV to PDF — Clean Table Layout, No Upload",
     metaDescription:
       "Convert CSV, TSV or Excel .xlsx files into a PDF table with repeated headers, landscape support and sensible column widths. In your browser.",
-    h1: "CSV & Excel to PDF — Turn a Spreadsheet Into a Document",
+    h1: "CSV to PDF — Turn a Spreadsheet Into a Document",
     intro: [
       "Load a .csv, .tsv or .xlsx file and get a PDF containing a properly drawn table: header row, borders, alternating shading and automatic page breaks with the header repeated on every page.",
       "Column widths are calculated from the content, so a “notes” column gets more room than an “id” column instead of every column being equally squeezed. Long cells wrap rather than being cut off, and nothing is truncated silently.",
@@ -425,7 +425,7 @@ export const pdfCreateTools: Tool[] = [
         a: "No. The file is parsed in your browser and the PDF is generated locally.",
       },
     ],
-    related: ["txt-to-pdf", "page-numbers-pdf", "merge-pdf"],
+    related: ["txt-to-pdf", "add-page-numbers-to-pdf", "merge-pdf"],
     inputFormats: ["CSV", "TSV", "XLSX"],
     outputFormats: ["PDF"],
     keywords: ["csv to pdf", "excel to pdf", "xlsx to pdf", "spreadsheet to pdf"],
@@ -445,7 +445,7 @@ export const pdfCreateTools: Tool[] = [
     seoTitle: "Markdown to PDF — Convert MD or HTML",
     metaDescription:
       "Convert Markdown or simple HTML to a PDF with headings, lists, code blocks and tables. Real selectable text, in your browser, no upload.",
-    h1: "Markdown & HTML to PDF — Documentation, Printed",
+    h1: "Markdown to PDF — Convert MD, HTML or a README",
     intro: [
       "Paste Markdown or HTML, or drop a .md/.html file, and get a PDF with headings, paragraphs, lists, block quotes, code blocks and tables. Styling comes from a clean default typographic scale rather than your CSS, so the output is consistent and readable.",
       "It is aimed at documentation, notes and handover packs. Markdown converts very faithfully because the structure is explicit; HTML is reduced to its structural elements, so a full website layout will not survive — and the page says so instead of pretending.",
@@ -576,7 +576,7 @@ export const pdfCreateTools: Tool[] = [
         a: "No. Parsing and PDF writing happen in your browser.",
       },
     ],
-    related: ["txt-to-pdf", "docx-to-pdf", "merge-pdf"],
+    related: ["txt-to-pdf", "word-to-pdf", "merge-pdf"],
     inputFormats: ["MD", "HTML", "TXT"],
     outputFormats: ["PDF"],
     keywords: ["markdown to pdf", "html to pdf", "md to pdf", "readme to pdf"],

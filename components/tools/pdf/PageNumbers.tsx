@@ -67,7 +67,7 @@ export function PageNumbers() {
           note: "Numbers drawn as real text on each page",
         },
       ]);
-      track("tool_completed", { tool: "page-numbers-pdf" });
+      track("tool_completed", { tool: "add-page-numbers-to-pdf" });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Page numbers could not be added.");
     } finally {

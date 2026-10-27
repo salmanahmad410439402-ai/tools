@@ -567,7 +567,7 @@ export const pdfOrganizeTools: Tool[] = [
         a: "Rotate again with the opposite angle, or start over — the original file is unchanged until you replace it.",
       },
     ],
-    related: ["organize-pdf", "page-numbers-pdf", "compress-pdf"],
+    related: ["organize-pdf", "add-page-numbers-to-pdf", "compress-pdf"],
     inputFormats: ["PDF"],
     outputFormats: ["PDF"],
     keywords: ["rotate pdf", "turn pdf pages", "fix sideways pdf", "rotate pdf 90 degrees"],

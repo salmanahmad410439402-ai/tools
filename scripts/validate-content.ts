@@ -25,6 +25,16 @@ for (const tool of tools) {
   seen.add(tool.slug);
   if (!/^[a-z0-9-]+$/.test(tool.slug)) problems.push(`${where}: slug must be lowercase kebab-case`);
 
+  // The slug is the search phrase: the same words must appear in the <title>
+  // and the H1, so the page's promise and its URL cannot drift apart.
+  const phrase = tool.slug.replace(/-/g, " ");
+  if (!tool.seoTitle.toLowerCase().includes(phrase)) {
+    problems.push(`${where}: <title> must contain the slug phrase "${phrase}"`);
+  }
+  if (!tool.h1.toLowerCase().includes(phrase)) {
+    problems.push(`${where}: H1 must contain the slug phrase "${phrase}"`);
+  }
+
   if (!CATEGORIES.some((category) => category.slug === tool.category)) {
     problems.push(`${where}: unknown category "${tool.category}"`);
   }

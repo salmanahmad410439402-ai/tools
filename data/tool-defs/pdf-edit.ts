@@ -3,7 +3,7 @@ import type { Tool } from "@/lib/tool-types";
 /** PDF tools that add something to a page: numbers, stamps, signatures, notes. */
 export const pdfEditTools: Tool[] = [
   {
-    slug: "page-numbers-pdf",
+    slug: "add-page-numbers-to-pdf",
     name: "Add Page Numbers",
     category: "pdf-tools",
     group: "edit",
@@ -14,7 +14,7 @@ export const pdfEditTools: Tool[] = [
     seoTitle: "Add Page Numbers to PDF Free",
     metaDescription:
       "Add page numbers to a PDF in the position you choose, with “1 of 12” style formats and a custom starting number. No upload, no watermark.",
-    h1: "Add Page Numbers to a PDF — Position, Format, Start",
+    h1: "Add Page Numbers to PDF — Position, Format, Start",
     intro: [
       "Write real page numbers onto every page: bottom centre, bottom right, top right or any of six positions, in a size and margin you choose. The format can be a plain “3” or something more formal such as “Page 3 of 12”.",
       "Numbers are drawn as text on the page, so they print and appear everywhere — unlike a viewer's status bar. The original content is not re-encoded, which keeps text selectable and file size almost unchanged.",
@@ -157,10 +157,10 @@ export const pdfEditTools: Tool[] = [
     icon: "Stamp",
     tagline: "Stamp text or a logo across your PDF with control over opacity, angle and position.",
     bestFor: "A draft, a quotation or a confidential document needs a visible status before it is shared.",
-    seoTitle: "Add a Watermark to PDF — Text or Logo",
+    seoTitle: "Watermark PDF — Add Text or Your Logo",
     metaDescription:
       "Add a text or image watermark to every page of a PDF: opacity, rotation, colour and tiling. Free, in-browser, no upload and no account.",
-    h1: "Watermark a PDF — Text or Image, Your Opacity",
+    h1: "Watermark PDF — Add a Text or Image Overlay",
     intro: [
       "Type “DRAFT”, “CONFIDENTIAL” or a client name, set the size, angle and opacity, and stamp it across every page. You can also drop in a logo or signature image and use that as the watermark.",
       "The watermark is drawn as a real object on each page, so it travels with the PDF — no viewer tricks, no overlay that disappears when someone prints it. Your original text stays selectable underneath.",
@@ -287,7 +287,7 @@ export const pdfEditTools: Tool[] = [
         a: "No. The PDF is opened, stamped and saved inside your browser.",
       },
     ],
-    related: ["page-numbers-pdf", "sign-pdf", "compress-pdf"],
+    related: ["add-page-numbers-to-pdf", "sign-pdf", "compress-pdf"],
     inputFormats: ["PDF", "PNG", "JPG"],
     outputFormats: ["PDF"],
     keywords: ["watermark pdf", "add draft watermark", "stamp pdf", "confidential watermark"],
@@ -303,10 +303,10 @@ export const pdfEditTools: Tool[] = [
     icon: "PenLine",
     tagline: "Draw, type or upload a signature and place it on the right spot of any page.",
     bestFor: "You need to return a signed contract and printing, signing and scanning is not practical.",
-    seoTitle: "Sign a PDF Free — Draw, Type or Upload",
+    seoTitle: "Sign PDF Free — Draw, Type or Upload",
     metaDescription:
       "Add your signature to a PDF: draw it with a mouse or finger, type it, or upload an image. Drag to place and resize. Free, in your browser.",
-    h1: "Sign a PDF — Draw, Type or Upload a Signature",
+    h1: "Sign PDF — Draw, Type or Upload a Signature",
     intro: [
       "Create a signature by drawing with a mouse, trackpad or finger, by typing your name in a script style, or by uploading a photo of your signature on white paper. Then click the page where it belongs and resize it to fit the line.",
       "The result is a standard PDF with your signature as an image on the chosen page — the same thing you would get from a print-sign-scan workflow, minus the scanner and the hundreds of kilobytes of noise it adds.",
@@ -421,7 +421,7 @@ export const pdfEditTools: Tool[] = [
         a: "Yes, one after another: each person signs their copy, then passes the file on. This tool is not a multi-party signing workflow with notifications.",
       },
     ],
-    related: ["pdf-editor", "watermark-pdf", "page-numbers-pdf"],
+    related: ["pdf-editor", "watermark-pdf", "add-page-numbers-to-pdf"],
     inputFormats: ["PDF", "PNG", "JPG"],
     outputFormats: ["PDF"],
     keywords: ["sign pdf", "add signature to pdf", "electronic signature", "sign document online"],
@@ -442,7 +442,7 @@ export const pdfEditTools: Tool[] = [
     seoTitle: "Free PDF Editor — Add Text and Annotations",
     metaDescription:
       "Annotate a PDF in your browser: add text boxes, highlights, rectangles, freehand drawing, images and white-out, then export. No upload.",
-    h1: "Basic PDF Editor — Annotate and Correct in the Browser",
+    h1: "PDF Editor — Add Text, Highlights and Shapes",
     intro: [
       "Open a page, then place text boxes, highlights, rectangles, freehand marks, images or white blocks over the content. When you export, everything is written into the PDF as real objects, so the file opens correctly for everyone else.",
       "Be clear about what this is: an annotation editor. It adds to the page and can cover things up, but it does not reflow the existing text. A PDF stores glyphs at fixed positions, not paragraphs, so there is no paragraph to re-break — that is a limit of the format, not of this tool.",
