@@ -93,7 +93,7 @@ export default function PdfToolsPage() {
           </div>
           <dl className="mt-5 grid max-w-lg grid-cols-3 gap-3">
             {category.facts.map((fact) => (
-              <div key={fact.label} className="rounded-xl border border-line bg-white px-3 py-2.5">
+              <div key={fact.label} className="rounded-xl border border-line bg-raised px-3 py-2.5">
                 <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-subtle">{fact.label}</dt>
                 <dd className="mt-0.5 text-[13.5px] font-semibold text-ink">{fact.value}</dd>
               </div>
@@ -107,7 +107,7 @@ export default function PdfToolsPage() {
             <a
               key={group.key}
               href={`#${group.key}`}
-              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[12.5px] font-semibold text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-line bg-raised px-3 text-[12.5px] font-semibold text-body transition-colors hover:border-brand-200 hover:text-brand-600"
             >
               {group.label}
               <span className="rounded-full bg-surface px-1.5 text-[10.5px] text-subtle">
@@ -197,7 +197,7 @@ export default function PdfToolsPage() {
             fidelity, format by format.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/convert-to-pdf/" className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-[13.5px] font-semibold text-brand-700">
+            <Link href="/convert-to-pdf/" className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-brand-200 bg-raised px-3 text-[13.5px] font-semibold text-brand-700">
               Convert to PDF guide
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
@@ -205,7 +205,7 @@ export default function PdfToolsPage() {
               <Link
                 key={tool.slug}
                 href={`/${tool.slug}/`}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 text-[13.5px] font-medium text-body hover:border-brand-200"
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body hover:border-brand-200"
               >
                 {tool.name}
               </Link>
@@ -216,7 +216,7 @@ export default function PdfToolsPage() {
         <Faq items={FAQS} heading="PDF tools: common questions" />
 
         <p className="mt-10 text-[13px] text-subtle">
-          {tools.length} tools across {SITE_NAME} · everything runs in your browser · last reviewed 27 October 2026
+          {tools.length} tools across {SITE_NAME} · everything runs in your browser · page updated 27 October 2026
         </p>
       </div>
     </>

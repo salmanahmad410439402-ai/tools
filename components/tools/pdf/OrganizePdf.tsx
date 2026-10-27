@@ -176,7 +176,7 @@ export function OrganizePdf() {
                       const from = entries.findIndex((item) => item.key === fromKey);
                       if (from >= 0) moveEntry(from, index);
                     }}
-                    className="group relative rounded-xl border border-line bg-white p-2"
+                    className="group relative rounded-xl border border-line bg-raised p-2"
                   >
                     <div className="relative overflow-hidden rounded-lg bg-surface">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -188,7 +188,7 @@ export function OrganizePdf() {
                         loading="lazy"
                         decoding="async"
                       />
-                      <span className="absolute left-1 top-1 rounded bg-ink/75 px-1.5 py-0.5 text-[10.5px] font-semibold text-white">
+                      <span className="absolute left-1 top-1 rounded bg-scrim px-1.5 py-0.5 text-[10.5px] font-semibold text-white">
                         {index + 1}
                       </span>
                     </div>

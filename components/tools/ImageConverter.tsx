@@ -320,7 +320,7 @@ export function ImageConverter({ presetFormat, conversionLabel, toolSlug = "imag
 
           <ul className="mt-2 grid gap-2 sm:grid-cols-2" aria-label="Queued images">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center gap-2 rounded-xl border border-line bg-white p-2">
+              <li key={item.id} className="flex items-center gap-2 rounded-xl border border-line bg-raised p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.preview}
@@ -376,7 +376,7 @@ export function ImageConverter({ presetFormat, conversionLabel, toolSlug = "imag
                             aria-pressed={active}
                             title={unavailable ? `${entry.label} is not supported by this browser` : entry.hint}
                             className={cn(
-                              "flex min-h-[58px] flex-col items-center justify-center rounded-xl border bg-white text-[13.5px] font-bold transition-colors",
+                              "flex min-h-[58px] flex-col items-center justify-center rounded-xl border bg-raised text-[13.5px] font-bold transition-colors",
                               "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/25",
                               active
                                 ? "border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500"
@@ -446,7 +446,7 @@ export function ImageConverter({ presetFormat, conversionLabel, toolSlug = "imag
             </Field>
 
             {activeFormat.alpha ? (
-              <div className="rounded-xl border border-line bg-white p-3 text-[12.5px] leading-relaxed text-body sm:col-span-1">
+              <div className="rounded-xl border border-line bg-raised p-3 text-[12.5px] leading-relaxed text-body sm:col-span-1">
                 <p className="font-semibold text-ink">Transparency is kept</p>
                 <p className="mt-0.5 text-subtle">
                   {activeFormat.label} supports an alpha channel, so transparent pixels stay transparent instead of
@@ -465,7 +465,7 @@ export function ImageConverter({ presetFormat, conversionLabel, toolSlug = "imag
                     type="color"
                     value={background}
                     onChange={(event) => setBackground(event.target.value)}
-                    className="h-11 w-14 cursor-pointer rounded-lg border border-line bg-white p-1"
+                    className="h-11 w-14 cursor-pointer rounded-lg border border-line bg-raised p-1"
                   />
                   <span className="font-mono text-[12.5px] uppercase text-subtle">{background}</span>
                 </div>

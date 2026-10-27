@@ -9,6 +9,7 @@ import { TOOL_GROUPS, tools } from "@/data/tools";
 import { searchAll, type SearchEntry } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 import { ToolIcon } from "./icons";
 
 const primaryNav = [
@@ -128,7 +129,7 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/90 bg-white/85 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-line/90 bg-page/85 backdrop-blur-md">
       <div className="container-page flex h-[68px] items-center gap-3">
         <Logo />
 
@@ -148,7 +149,7 @@ export function Header() {
               <ChevronDown className={cn("h-4 w-4 transition-transform", menuOpen && "rotate-180")} aria-hidden="true" />
             </button>
             {menuOpen && (
-              <div className="fixed inset-x-0 top-[68px] z-40 max-h-[calc(100vh-68px)] overflow-y-auto border-b border-line bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
+              <div className="fixed inset-x-0 top-[68px] z-40 max-h-[calc(100vh-68px)] overflow-y-auto border-b border-line bg-raised shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]">
                 <div className="container-page py-7">
                   <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 lg:grid-cols-4">
                     {/* PDF tools: the whole menu, grouped by task */}
@@ -243,10 +244,11 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 text-[14px] text-subtle transition-colors hover:border-brand-200 hover:text-ink"
+            className="flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[14px] text-subtle transition-colors hover:border-brand-200 hover:text-ink"
             aria-label="Search tools"
           >
             <Search className="h-4 w-4" aria-hidden="true" />
@@ -274,7 +276,7 @@ export function Header() {
       </div>
 
       {mobileOpen && (
-        <div id="mobile-nav" className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-line bg-white lg:hidden">
+        <div id="mobile-nav" className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-line bg-raised lg:hidden">
           <div className="container-page py-5">
             <nav aria-label="Mobile" className="grid gap-1">
               {primaryNav.map((item) => (
@@ -333,7 +335,7 @@ export function Header() {
 
       {searchOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-start justify-center bg-ink/40 px-4 pt-[12vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-start justify-center bg-scrim-soft px-4 pt-[12vh] backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby={searchId}
@@ -341,7 +343,7 @@ export function Header() {
             if (event.target === event.currentTarget) setSearchOpen(false);
           }}
         >
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-white shadow-lift">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-raised shadow-lift">
             <h2 id={searchId} className="sr-only">
               Search tools
             </h2>
@@ -396,14 +398,14 @@ export function Header() {
                     index === activeIndex ? "bg-brand-50" : "hover:bg-surface",
                   )}
                 >
-                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-brand-600 ring-1 ring-line">
+                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-raised text-brand-600 ring-1 ring-line">
                     <ToolIcon name={tools.find((tool) => `/${tool.slug}/` === entry.href)?.icon ?? "FileText"} className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-[14.5px] font-semibold text-ink">{entry.title}</span>
                     <span className="block truncate text-[13px] text-subtle">{entry.description}</span>
                   </span>
-                  <span className="ml-auto shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-subtle ring-1 ring-line">
+                  <span className="ml-auto shrink-0 rounded-full bg-raised px-2 py-0.5 text-[11px] font-semibold text-subtle ring-1 ring-line">
                     {entry.group}
                   </span>
                 </button>

@@ -79,7 +79,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
               </h2>
               <ol className="mt-4 grid gap-3 sm:grid-cols-2">
                 {tool.steps.map((step, index) => (
-                  <li key={step.title} className="rounded-card border border-line bg-white p-4">
+                  <li key={step.title} className="rounded-card border border-line bg-raised p-4">
                     <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-50 text-[12.5px] font-bold text-brand-700 ring-1 ring-brand-100">
                       {index + 1}
                     </span>
@@ -204,7 +204,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                 <Link href="/contact/" className="link">
                   Tell us which file type, browser and step failed
                 </Link>{" "}
-                — accurate bug reports are how these tools stay reliable. This page was last reviewed on{" "}
+                — accurate bug reports are how these tools get fixed. This page was last updated on{" "}
                 {new Date(tool.updated).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "long",
@@ -217,7 +217,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
 
           <aside className="hidden lg:block" aria-label="Tool sidebar">
             <div className="sticky top-[88px] space-y-4">
-              <div className="rounded-card border border-line bg-white p-5 shadow-card">
+              <div className="rounded-card border border-line bg-raised p-5 shadow-card">
                 <p className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-ink">
                   <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
                   Private by design
@@ -234,7 +234,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                 </Link>
               </div>
 
-              <div className="rounded-card border border-line bg-white p-5">
+              <div className="rounded-card border border-line bg-raised p-5">
                 <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink">On this page</p>
                 <ul className="mt-2 space-y-1.5 text-[13px]">
                   {[
@@ -253,7 +253,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                 </ul>
               </div>
 
-              <div className="rounded-card border border-line bg-white p-5">
+              <div className="rounded-card border border-line bg-raised p-5">
                 <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink">All {toolCount} tools</p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-body">
                   Every tool on {SITE_NAME} works the same way: pick a file, do the job, download it.

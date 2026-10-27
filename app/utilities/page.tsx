@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "When will they be available?",
-    a: "They are the fifth build step. The site ships in stages so each tool gets a tested page and real written documentation instead of appearing as an empty shell.",
+    a: "They are planned for a later build step. The site ships in stages so a utility appears only once its code works, with documentation written to match, instead of as an empty shell.",
   },
   {
     q: "Can I request a different utility?",

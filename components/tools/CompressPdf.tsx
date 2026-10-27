@@ -161,7 +161,7 @@ export function CompressPdf() {
         <>
           <ul className="mt-4 space-y-2" aria-label="PDFs to compress">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center gap-3 rounded-xl border border-line bg-white px-3 py-2.5">
+              <li key={item.id} className="flex items-center gap-3 rounded-xl border border-line bg-raised px-3 py-2.5">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>

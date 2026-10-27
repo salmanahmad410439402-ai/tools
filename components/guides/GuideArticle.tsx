@@ -137,7 +137,7 @@ export function GuideArticle({ guide }: { guide: Guide }) {
 
             <div className="mt-10 rounded-card border border-line bg-surface p-5">
               <p className="text-[13.5px] leading-relaxed text-body">
-                Written and reviewed by the {SITE_NAME} team. Found something wrong or out of date?{" "}
+                Written by the person who maintains {SITE_NAME}. Found something wrong or out of date?{" "}
                 <Link href="/contact/" className="link">
                   Tell us
                 </Link>{" "}

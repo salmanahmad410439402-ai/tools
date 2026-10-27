@@ -6,7 +6,21 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export const SITE_NAME = "Filecraft";
-export const SITE_URL = "https://example.com"; // no trailing slash
+/**
+ * Canonical origin, no trailing slash.
+ *
+ * Set NEXT_PUBLIC_SITE_URL at build time (and in your host's environment) to
+ * the domain you actually deploy to. Canonicals, sitemap.xml, robots.txt,
+ * structured data and Open Graph URLs are all derived from this one value.
+ * The fallback keeps a local build working; `npm run check` warns while it is
+ * still in place, and README.md has the two-line launch step.
+ */
+const PLACEHOLDER_ORIGIN = "https://example.com";
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || PLACEHOLDER_ORIGIN).replace(/\/+$/, "");
+/** True while the site is still on the placeholder — copy avoids printing a fake domain. */
+export const SITE_URL_IS_PLACEHOLDER = SITE_URL === PLACEHOLDER_ORIGIN;
+/** Hostname for display, e.g. "filecraft.app"; a neutral phrase before launch. */
+export const SITE_DOMAIN_LABEL = SITE_URL_IS_PLACEHOLDER ? "this site" : SITE_URL.replace(/^https?:\/\//, "");
 export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";
 /** ─────────────────────────────────────────────────────────────────────────── */
 
@@ -20,6 +34,14 @@ export const ADS_TXT_LINE = "google.com, pub-3078074422458018, DIRECT, f08c47fec
  * Set NEXT_PUBLIC_ADS_ENABLED=true (and redeploy) when approval arrives.
  */
 export const ADS_ENABLED = process.env.NEXT_PUBLIC_ADS_ENABLED === "true";
+/**
+ * The AdSense library is not loaded while no ads are shown, so a site with ads
+ * switched off also makes zero requests to Google. Set
+ * NEXT_PUBLIC_ADSENSE_SCRIPT=on if Google's review asks for the snippet to be
+ * present before approval.
+ */
+export const ADSENSE_SCRIPT_ENABLED =
+  ADS_ENABLED || process.env.NEXT_PUBLIC_ADSENSE_SCRIPT === "on";
 export const ADS_SLOT_TOOL_TOP = process.env.NEXT_PUBLIC_ADS_SLOT_TOOL_TOP ?? "";
 export const ADS_SLOT_INLINE = process.env.NEXT_PUBLIC_ADS_SLOT_INLINE ?? "";
 export const ADS_SLOT_SIDEBAR = process.env.NEXT_PUBLIC_ADS_SLOT_SIDEBAR ?? "";
@@ -31,11 +53,25 @@ export const ADS_SLOT_SIDEBAR = process.env.NEXT_PUBLIC_ADS_SLOT_SIDEBAR ?? "";
 export const ANALYTICS_SCRIPT_URL = process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL ?? "";
 export const ANALYTICS_DOMAIN = process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN ?? "";
 
+/**
+ * Optional search-engine verification tokens. Set these in the host's
+ * environment at deploy time; the meta tag is emitted on every page, which is
+ * the easiest way to verify a static site in Search Console and Bing Webmaster
+ * Tools without uploading HTML files.
+ */
+export const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "";
+export const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "";
+
 export const TAGLINE = "Free PDF & image tools that run privately in your browser";
 export const SITE_DESCRIPTION =
   "Merge, compress and convert PDFs and images entirely in your browser. No uploads, no sign-up, no watermarks — your files never leave your device.";
 
-export const FOUNDER_NAME = "The Filecraft team";
+/**
+ * How the site refers to whoever runs it. One person built and maintains it;
+ * keep the copy in the first person singular or neutral. Do not inflate this
+ * into a "team".
+ */
+export const OPERATOR_NAME = "the Filecraft maintainer";
 export const SITE_LAUNCH_YEAR = 2026;
 
 export type CategorySlug = "pdf-tools" | "convert-to-pdf" | "image-tools" | "utilities";

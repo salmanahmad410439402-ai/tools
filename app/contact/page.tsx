@@ -7,7 +7,7 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = buildMetadata({
   title: `Contact ${SITE_NAME}`,
   description:
-    "Email the team behind Filecraft: bug reports, questions about a tool, corrections and requests for new tools. A real person replies.",
+    "Email the developer behind Filecraft: bug reports, questions about a tool, corrections and requests for new tools. One person reads every message.",
   path: "/contact/",
 });
 
@@ -15,7 +15,7 @@ export default function ContactPage() {
   return (
     <LegalPage
       title="Contact us"
-      intro="One email address, read by the people who build the tools. No ticket system, no chatbot and no form that quietly throws your message away."
+      intro="One email address, read by the person who builds the tools. No ticket system, no chatbot and no form that quietly throws your message away."
       updated="2026-10-27"
       crumbs={[
         { name: "Home", path: "/" },

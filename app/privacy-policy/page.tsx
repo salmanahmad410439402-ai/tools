@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADSENSE_PUBLISHER_ID, CONTACT_EMAIL, SITE_NAME, SITE_URL } from "@/data/site";
+import { ADS_ENABLED, ADSENSE_PUBLISHER_ID, CONTACT_EMAIL, SITE_NAME, SITE_URL } from "@/data/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 
@@ -24,10 +24,10 @@ export default function PrivacyPolicyPage() {
     >
       <h2>1. Who is responsible</h2>
       <p>
-        {SITE_NAME} ({SITE_URL}) is a website operated by an independent team. For any privacy question or
+        {SITE_NAME} ({SITE_URL}) is an independent website run by one person. For any privacy question or
         request, contact <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. There is no separate data
-        protection officer because the site does not run a business that requires one; the people who run the
-        site answer privacy emails themselves.
+        protection officer because this is not a business that requires one; the person who runs the site
+        answers privacy email personally.
       </p>
 
       <h2>2. Your files are never uploaded</h2>
@@ -43,8 +43,9 @@ export default function PrivacyPolicyPage() {
       </p>
       <p>
         You can verify this yourself: open your browser's developer tools, select the Network tab, clear it and
-        run any tool. No request carries your file. The tools continue to work with the network disconnected
-        after the page has loaded.
+        run any tool. No request carries your file. Once a tool page and its code have fully loaded, that tool
+        keeps working even if you disconnect from the network — the first use of a tool fetches its processing
+        code, which is why a freshly opened tab needs the page to load once.
       </p>
 
       <h2>3. What we do collect</h2>
@@ -54,14 +55,15 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>Server and CDN logs.</strong> Our static host records the IP address, user agent, requested URL,
-          timestamp and response status for each request. These logs are used for security and to diagnose
-          outages, and are retained for a short period (typically up to 30 days) before being deleted.
+          <strong>Server and CDN logs.</strong> The static host that serves these pages logs the IP address, user
+          agent, requested URL, timestamp and response status for each request. Those logs belong to the host, are
+          used for security and to diagnose outages, and are kept only for the retention period set on the host
+          account — not by this site, which stores nothing about your visit.
         </li>
         <li>
-          <strong>Local browser storage.</strong> One small preference — whether you dismissed the cookie notice
-          — is stored in your browser's localStorage. It is not a cookie, is not shared and never leaves your
-          device. Clearing site data removes it.
+          <strong>Local browser storage.</strong> Two small preferences — whether you dismissed the cookie
+          notice, and whether you chose the light or dark theme — are stored in your browser's localStorage.
+          They are not cookies, are not shared and never leave your device. Clearing site data removes them.
         </li>
         <li>
           <strong>Emails you send us.</strong> If you email {CONTACT_EMAIL}, we receive your address, your message
@@ -71,11 +73,21 @@ export default function PrivacyPolicyPage() {
       </ul>
 
       <h2>4. Advertising and Google AdSense</h2>
-      <p>
-        This site is supported by advertising served by Google. Google is a third-party vendor and uses cookies
-        to serve ads based on your prior visits to this and other websites. The AdSense publisher account used
-        here is <code>{ADSENSE_PUBLISHER_ID}</code>.
-      </p>
+      {ADS_ENABLED ? (
+        <p>
+          This site is supported by advertising served by Google. Google is a third-party vendor and uses
+          cookies to serve ads based on your prior visits to this and other websites. The AdSense publisher
+          account used here is <code>{ADSENSE_PUBLISHER_ID}</code>.
+        </p>
+      ) : (
+        <p>
+          <strong>No advertisements are being served right now.</strong> A Google AdSense publisher account (
+          <code>{ADSENSE_PUBLISHER_ID}</code>) is reserved for the site, but no ad is displayed and the AdSense
+          library is not loaded, so no advertising cookie is set and no request reaches Google's ad servers. The
+          rest of this section describes what applies from the moment ads are switched on; this page is updated
+          in the same release when that happens.
+        </p>
+      )}
       <ul>
         <li>
           Google's use of advertising cookies enables it and its partners to serve ads to you based on your visit
@@ -111,11 +123,12 @@ export default function PrivacyPolicyPage() {
 
       <h2>5. Consent in the EEA, UK and Switzerland</h2>
       <p>
-        For visitors in the European Economic Area, the United Kingdom and Switzerland, Google's certified
-        consent management message (configured in AdSense under “Privacy &amp; messaging”) asks for your consent
-        before advertising cookies are used, and records your choice. You can change your answer at any time by
-        selecting “Privacy settings” in the footer of a page where the message is available, or by clearing site
-        data in your browser.
+        Once ads are live, visitors in the European Economic Area, the United Kingdom and Switzerland will be
+        shown Google's certified consent management message (configured in AdSense under “Privacy &amp;
+        messaging”) before any advertising cookie is used, and it records the choice. You can change the answer
+        at any time by selecting “Privacy settings” in the footer of a page where the message is available, or by
+        clearing site data in your browser. While ads are switched off, no consent message appears because there
+        are no advertising cookies to consent to.
       </p>
       <p>
         Our own cookie notice does not block the page and does not gate the tools. Nothing on this site depends
@@ -124,11 +137,12 @@ export default function PrivacyPolicyPage() {
 
       <h2>6. Analytics</h2>
       <p>
-        The current build ships with no third-party analytics. If lightweight, cookie-free analytics are enabled
-        in future (for example Plausible or Umami — tools that do not set cookies, do not fingerprint and do not
-        track you across sites), the only events recorded would be coarse and non-identifying: that a tool page
-        was viewed, that a conversion started, that it completed or failed, and a file-size bucket such as
-        “1–10 MB”. Never a file name, never file content, never an identifier that follows you elsewhere.
+        This build ships with no analytics at all: no analytics script is loaded and no measurement request
+        leaves your browser. If lightweight, cookie-free analytics are switched on later (for example Plausible
+        or Umami — tools that do not set cookies, do not fingerprint and do not track you across sites), the only
+        events recorded would be coarse and non-identifying: that a tool page was viewed, that a conversion
+        started, that it completed or failed, and a file-size bucket such as “1–10 MB”. Never a file name, never
+        file content, never an identifier that follows you elsewhere. This page changes before that happens.
       </p>
 
       <h2>7. Legal bases (GDPR)</h2>

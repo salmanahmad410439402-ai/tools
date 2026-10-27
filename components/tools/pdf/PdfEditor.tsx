@@ -237,7 +237,7 @@ export function PdfEditor({
                   "min-h-[38px] rounded-lg border px-3 text-[12.5px] font-semibold transition-colors",
                   tool === entry.key
                     ? "border-brand-500 bg-brand-50 text-brand-700"
-                    : "border-line bg-white text-body hover:border-brand-200",
+                    : "border-line bg-raised text-body hover:border-brand-200",
                 )}
               >
                 {entry.label}
@@ -312,7 +312,7 @@ export function PdfEditor({
                   type="file"
                   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                   onChange={(event) => onImagePick(event.target.files?.[0] ?? null)}
-                  className="block w-full cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
+                  className="block w-full cursor-pointer rounded-lg border border-line bg-raised px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
                 />
               </div>
             )}
@@ -332,7 +332,7 @@ export function PdfEditor({
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerLeave={onPointerUp}
-                className="relative mx-auto w-full max-w-xl touch-none overflow-hidden rounded-xl border border-line bg-white shadow-card"
+                className="relative mx-auto w-full max-w-xl touch-none overflow-hidden rounded-xl border border-line bg-raised shadow-card"
                 style={{ cursor: tool === "text" ? "text" : "crosshair" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

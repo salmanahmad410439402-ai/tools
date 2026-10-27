@@ -32,7 +32,7 @@ export function ToolFrame({
     <section
       aria-labelledby={labelledBy}
       className={cn(
-        "rounded-[22px] border border-line bg-white p-4 shadow-card sm:p-6",
+        "rounded-[22px] border border-line bg-raised p-4 shadow-card sm:p-6",
         className,
       )}
     >
@@ -190,7 +190,7 @@ export function Dropzone({
       >
         <span
           className={cn(
-            "grid place-items-center rounded-2xl bg-white text-brand-600 shadow-sm ring-1 ring-line transition-transform group-hover:scale-[1.03]",
+            "grid place-items-center rounded-2xl bg-raised text-brand-600 shadow-sm ring-1 ring-line transition-transform group-hover:scale-[1.03]",
             compact ? "h-10 w-10" : "h-14 w-14",
           )}
         >
@@ -203,7 +203,7 @@ export function Dropzone({
           {subtitle ?? `${acceptedLabel} · up to ${maxSizeMb} MB per file · or paste with ⌘V`}
         </span>
         {!compact && (
-          <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11.5px] font-medium text-body ring-1 ring-line">
+          <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1 text-[11.5px] font-medium text-body ring-1 ring-line">
             <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
             Files stay on your device
           </span>
@@ -351,7 +351,7 @@ export function ResultsPanel({
         {files.map((file) => {
           const saved = file.originalSize ? percentSaved(file.originalSize, file.size) : null;
           return (
-            <li key={file.id} className="flex flex-wrap items-center gap-3 bg-white px-4 py-3">
+            <li key={file.id} className="flex flex-wrap items-center gap-3 bg-raised px-4 py-3">
               {file.previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -466,10 +466,10 @@ export function Field({
 }
 
 export const inputClass =
-  "h-11 w-full rounded-xl border border-line bg-white px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
+  "h-11 w-full rounded-xl border border-line bg-raised px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
 
 export const selectClass =
-  "h-11 w-full appearance-none rounded-xl border border-line bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748B%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat px-3 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
+  "h-11 w-full appearance-none rounded-xl border border-line bg-raised bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748B%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat px-3 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
 
 export function Segmented<T extends string>({
   options,
@@ -500,7 +500,7 @@ export function Segmented<T extends string>({
                 "flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 transition-colors",
                 active
                   ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
-                  : "border-line bg-white hover:border-brand-200",
+                  : "border-line bg-raised hover:border-brand-200",
               )}
             >
               <span className="flex items-center gap-2">
@@ -516,7 +516,7 @@ export function Segmented<T extends string>({
                   aria-hidden="true"
                   className={cn(
                     "grid h-4 w-4 place-items-center rounded-full border",
-                    active ? "border-brand-500 bg-brand-500" : "border-line bg-white",
+                    active ? "border-brand-500 bg-brand-500" : "border-line bg-raised",
                   )}
                 >
                   {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}

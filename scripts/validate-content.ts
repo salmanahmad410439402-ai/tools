@@ -8,10 +8,18 @@
  */
 import { tools } from "../data/tools.ts";
 import { guides } from "../data/guides.ts";
-import { CATEGORIES } from "../data/site.ts";
+import { CATEGORIES, SITE_URL, SITE_URL_IS_PLACEHOLDER } from "../data/site.ts";
 
 const problems: string[] = [];
 const warnings: string[] = [];
+
+// The launch blocker that is easiest to forget: building with the fallback
+// origin publishes canonicals, a sitemap and structured data for example.com.
+if (SITE_URL_IS_PLACEHOLDER) {
+  warnings.push(
+    "SITE_URL is still the placeholder origin. Set NEXT_PUBLIC_SITE_URL to the live domain before deploying, or every canonical, sitemap entry and JSON-LD URL will point at example.com.",
+  );
+}
 
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
@@ -95,7 +103,7 @@ for (const guide of guides) {
 }
 
 // eslint-disable-next-line no-console
-console.log(`\n${tools.length} tools · ${guides.length} guides · ${CATEGORIES.length} categories`);
+console.log(`\n${tools.length} tools · ${guides.length} guides · ${CATEGORIES.length} categories · ${SITE_URL}`);
 
 if (warnings.length) {
   // eslint-disable-next-line no-console
