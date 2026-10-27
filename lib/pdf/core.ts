@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import { loadPdfjsDocument, describePdfError } from "./pdfjs";
+import { loadPdfjsDocument, describePdfError } from "./pdfjs.ts";
 
 /** Shared helpers for every PDF tool. All of them run on the client. */
 

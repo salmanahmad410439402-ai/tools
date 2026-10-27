@@ -142,7 +142,7 @@ export function WatermarkPdf() {
                 type="file"
                 accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                 onChange={(event) => setImage(event.target.files?.[0] ?? null)}
-                className="block w-full cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
+                className="block w-full cursor-pointer rounded-lg border border-line bg-raised px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
               />
               {image && (
                 <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-success">

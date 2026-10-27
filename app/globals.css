@@ -3,9 +3,90 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * One palette, two themes. Tailwind's ink/body/subtle/line/surface/brand and
+   * page/raised tokens read these variables (see tailwind.config.ts), so the
+   * theme toggle only has to flip `.dark` on <html>.
+   *
+   * Light values are the original brand palette. Dark values are deliberately
+   * not pure black and not pure white: #0B0F1A page, #111726 panels, softer
+   * indigo tints, and text at #E9EDF5 / #A8B3C5 so long articles stay readable.
+   */
   :root {
     color-scheme: light;
     --header-h: 68px;
+
+    --page: 255 255 255;
+    --raised: 255 255 255;
+    --surface: 248 250 252;
+    --line: 226 232 240;
+    --ink: 15 23 42;
+    --body: 71 85 105;
+    --subtle: 100 116 139;
+
+    --brand-50: 238 242 255;
+    --brand-100: 224 231 255;
+    --brand-200: 199 210 254;
+    --brand-300: 165 180 252;
+    --brand-400: 129 140 248;
+    --brand-500: 79 70 229;
+    --brand-600: 67 56 202;
+    --brand-700: 55 48 163;
+    --brand-800: 49 46 129;
+    --brand-900: 30 27 75;
+
+    --success: 22 163 74;
+    --warning: 217 119 6;
+    --danger: 220 38 38;
+
+    --focus-ring: rgba(79, 70, 229, 0.22);
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -18px rgba(15, 23, 42, 0.25);
+    --shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -20px rgba(79, 70, 229, 0.35);
+    --selection-bg: #e0e7ff;
+    --selection-fg: #1e1b4b;
+    /* Overlays over document previews and photos (labels, modal backdrop). */
+    --scrim-soft: rgba(15, 23, 42, 0.4);
+    --scrim: rgba(15, 23, 42, 0.78);
+    --scrim-strong: rgba(15, 23, 42, 0.96);
+    /* Soft brand glow used behind the header and hero. */
+    --glow: radial-gradient(60% 80% at 50% 0%, rgba(79, 70, 229, 0.1), transparent 70%);
+  }
+
+  html.dark {
+    color-scheme: dark;
+
+    --page: 10 14 23;
+    --raised: 17 23 38;
+    --surface: 15 21 34;
+    --line: 34 44 63;
+    --ink: 238 242 249;
+    --body: 169 180 199;
+    --subtle: 133 146 168;
+
+    --brand-50: 25 29 51;
+    --brand-100: 33 38 66;
+    --brand-200: 47 55 104;
+    --brand-300: 90 99 201;
+    --brand-400: 129 140 248;
+    --brand-500: 91 94 232;
+    --brand-600: 129 140 248;
+    --brand-700: 165 180 252;
+    --brand-800: 199 210 254;
+    --brand-900: 224 231 255;
+
+    --success: 52 211 153;
+    --warning: 251 191 36;
+    --danger: 248 113 113;
+
+    --focus-ring: rgba(129, 140, 248, 0.35);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 14px 34px -22px rgba(0, 0, 0, 0.9);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.55), 0 22px 48px -24px rgba(99, 102, 241, 0.5);
+    --selection-bg: #312e81;
+    --selection-fg: #e0e7ff;
+    --scrim-soft: rgba(0, 0, 0, 0.6);
+    --scrim: rgba(2, 6, 23, 0.82);
+    --scrim-strong: rgba(2, 6, 23, 0.97);
+    --glow: radial-gradient(60% 80% at 50% 0%, rgba(99, 102, 241, 0.22), transparent 70%);
   }
 
   html {
@@ -15,7 +96,7 @@
   }
 
   body {
-    @apply bg-white text-body antialiased;
+    @apply bg-page text-body antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
   }
@@ -33,14 +114,22 @@
   }
 
   ::selection {
-    background-color: #e0e7ff;
-    color: #1e1b4b;
+    background-color: var(--selection-bg);
+    color: var(--selection-fg);
   }
 
   :focus-visible {
-    outline: 2px solid #4f46e5;
+    outline: 2px solid rgb(var(--brand-500));
     outline-offset: 2px;
   }
+
+  /* Native widgets, inputs and scrollbars follow the active theme. */
+  input,
+  select,
+  textarea {
+    color-scheme: inherit;
+  }
+
 
   /* Respect users who ask for less motion. */
   @media (prefers-reduced-motion: reduce) {
@@ -72,7 +161,34 @@
   }
 
   .btn-secondary {
-    @apply btn border border-line bg-white text-ink hover:border-brand-200 hover:bg-brand-50;
+    @apply btn border border-line bg-raised text-ink hover:border-brand-300 hover:bg-brand-50;
+  }
+
+  /* Filled buttons keep a deep indigo in dark mode: white on a pale accent
+     would drop under 3:1, so hover darkens instead of lightening. */
+  html.dark .btn-primary {
+    background-color: rgb(var(--brand-500));
+  }
+
+  html.dark .btn-primary:hover {
+    background-color: #4f46e5;
+  }
+
+  html.dark .btn-primary:active {
+    background-color: #4338ca;
+  }
+
+  /* Text links need a lighter indigo than the button surface in dark mode. */
+  html.dark .link,
+  html.dark .article a {
+    color: rgb(var(--brand-400));
+    text-decoration-color: rgb(var(--brand-300));
+  }
+
+  html.dark .link:hover,
+  html.dark .article a:hover {
+    color: rgb(var(--brand-700));
+    text-decoration-color: rgb(var(--brand-400));
   }
 
   .btn-ghost {
@@ -80,7 +196,7 @@
   }
 
   .card {
-    @apply rounded-card border border-line bg-white shadow-card;
+    @apply rounded-card border border-line bg-raised shadow-card;
   }
 
   .eyebrow {
@@ -151,4 +267,43 @@
   .scrollbar-thin {
     scrollbar-width: thin;
   }
+}
+
+@layer utilities {
+  /* Hero/header ambience. Uses the theme glow so dark mode is not a white haze. */
+  .bg-glow {
+    background-image: var(--glow);
+  }
+
+  /*
+   * Neutral overlays. These were `bg-ink/75`, which inverts in dark mode
+   * (ink becomes near-white) and swallowed the white labels drawn on top.
+   */
+  .bg-scrim-soft {
+    background-color: var(--scrim-soft);
+  }
+
+  .bg-scrim {
+    background-color: var(--scrim);
+  }
+
+  .bg-scrim-strong {
+    background-color: var(--scrim-strong);
+  }
+}
+
+/*
+ * Progressive enhancement: colours are defined without JavaScript. <html> gets
+ * `.js` from the inline head script in app/layout.tsx; only then do we animate
+ * theme changes, so a no-JS visitor never sees a transition flash.
+ */
+/* Only animate when the visitor has not asked for reduced motion (the block
+   further up already neutralises durations for those users). */
+.js body,
+.js .card,
+.js .btn {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }

@@ -255,7 +255,7 @@ export function TextToPdf({ mode }: { mode: TextSourceMode }) {
                   ? "name,qty,price\nWidget,4,9.99"
                   : "Paste or write your text here…"
             }
-            className="w-full rounded-xl border border-line bg-white p-3 text-[13.5px] leading-relaxed text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15"
+            className="w-full rounded-xl border border-line bg-raised p-3 text-[13.5px] leading-relaxed text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15"
           />
           <p className="mt-1 text-[11.5px] text-subtle">
             {text ? `${text.length.toLocaleString()} characters pasted` : "Nothing pasted yet."}
@@ -273,7 +273,7 @@ export function TextToPdf({ mode }: { mode: TextSourceMode }) {
               </label>
               <select
                 id="csv-sheet"
-                className="rounded-lg border border-line bg-white px-2 py-1 text-[12px]"
+                className="rounded-lg border border-line bg-raised px-2 py-1 text-[12px]"
                 value={sheet}
                 onChange={(event) => setSheet(event.target.value)}
               >

@@ -10,8 +10,9 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { CATEGORIES, SITE_NAME, SITE_URL, TAGLINE } from "@/data/site";
-import { popularTools, toolCount, tools, toolsByCategory } from "@/data/tools";
+import { CATEGORIES, SITE_NAME, TAGLINE } from "@/data/site";
+import { toolsForCategory, popularTools, toolCount, tools } from "@/data/tools";
+import { roadmap } from "@/data/roadmap";
 import { guides } from "@/data/guides";
 import { buildMetadata } from "@/lib/seo";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/jsonld";
@@ -29,11 +30,18 @@ export const metadata: Metadata = buildMetadata({
 });
 
 const FACTS = [
-  { value: `${toolCount}`, label: "tools live today", detail: "Every one tested and documented" },
+  { value: `${toolCount}`, label: "tools live today", detail: "Each one works in your browser" },
   { value: "0", label: "files uploaded", detail: "Processing happens in your tab" },
   { value: "0", label: "accounts needed", detail: "No email, no login, no paywall" },
   { value: "100%", label: "browser-based", detail: "Works offline after the page loads" },
 ];
+
+/**
+ * The home page shows a curated set, not all of them: the point of the section
+ * is to get someone to the right tool quickly, and 33 cards is a wall.
+ */
+const featuredTools = popularTools.slice(0, 8);
+const newestTools = tools.filter((tool) => tool.isNew).slice(0, 5);
 
 const STEPS = [
   {
@@ -115,7 +123,7 @@ export default function HomePage() {
       <StructuredData data={[websiteJsonLd(), organizationJsonLd(), faqJsonLd(HOME_FAQ)]} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-line bg-gradient-to-b from-brand-50/70 via-white to-white">
+      <section className="relative overflow-hidden border-b border-line bg-gradient-to-b from-brand-50/70 via-page to-page">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-24 -top-32 h-[380px] w-[380px] rounded-full bg-brand-100/60 blur-3xl"
@@ -171,7 +179,7 @@ export default function HomePage() {
 
           {/* CSS-only product mock: no image request, so the LCP stays fast. */}
           <div className="relative">
-            <div className="rounded-[22px] border border-line bg-white p-4 shadow-lift sm:p-5">
+            <div className="rounded-[22px] border border-line bg-raised p-4 shadow-lift sm:p-5">
               <div className="flex items-center justify-between border-b border-line pb-3">
                 <p className="text-[13px] font-bold text-ink">Compress PDF</p>
                 <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-success">
@@ -181,7 +189,7 @@ export default function HomePage() {
               <div className="mt-3 rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-6 text-center">
                 <p className="text-[13.5px] font-semibold text-ink">report-2026.pdf</p>
                 <p className="mt-1 text-[11.5px] text-subtle">3 pages · 12.4 MB</p>
-                <div className="mx-auto mt-3 h-1.5 w-32 overflow-hidden rounded-full bg-white">
+                <div className="mx-auto mt-3 h-1.5 w-32 overflow-hidden rounded-full bg-raised">
                   <div className="h-full w-4/5 rounded-full bg-brand-500" />
                 </div>
               </div>
@@ -209,7 +217,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Facts strip ──────────────────────────────────────────────────── */}
-      <section aria-label="Site facts" className="border-b border-line bg-white">
+      <section aria-label="Site facts" className="border-b border-line bg-raised">
         <div className="container-page grid grid-cols-2 divide-line py-6 sm:grid-cols-4 sm:divide-x">
           {FACTS.map((fact) => (
             <div key={fact.label} className="px-2 py-3 text-center sm:px-4">
@@ -229,25 +237,36 @@ export default function HomePage() {
             Which tool do you need?
           </h2>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">
-            Four tools are live today, each documented with its real limits. More arrive in clear steps —
-            no “coming soon” pages that waste a click.
+            {toolCount} tools are live today, each documented with its real limits. These cover the everyday
+            jobs — combine, shrink, convert, sign — and the full list is one click away.
           </p>
         </div>
 
         <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool) => (
+          {featuredTools.map((tool) => (
             <ToolCard key={tool.slug} tool={tool} />
           ))}
         </div>
 
+        <div className="mt-6">
+          <Link
+            href="/tools/"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+          >
+            See all {toolCount} tools
+            <ArrowRight className="h-4 w-4 text-brand-600" aria-hidden="true" />
+          </Link>
+        </div>
+
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {CATEGORIES.map((category) => {
-            const count = toolsByCategory(category.slug).length;
+            const count = toolsForCategory(category.slug).length;
+            const planned = roadmap.filter((item) => item.category === category.slug).length;
             return (
               <Link
                 key={category.slug}
                 href={`/${category.slug}/`}
-                className="group flex items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+                className="group flex items-center gap-3 rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
               >
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-surface text-brand-600 ring-1 ring-line">
                   <ToolIcon name={category.icon} className="h-4 w-4" />
@@ -255,7 +274,11 @@ export default function HomePage() {
                 <span className="min-w-0">
                   <span className="block text-[14px] font-semibold text-ink">{category.name}</span>
                   <span className="text-[11.5px] text-subtle">
-                    {count} tool{count === 1 ? "" : "s"}
+                    {count > 0
+                      ? `${count} tool${count === 1 ? "" : "s"}`
+                      : planned > 0
+                        ? `${planned} planned`
+                        : "Coming later"}
                   </span>
                 </span>
                 <ChevronRight className="ml-auto h-4 w-4 text-subtle transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -280,7 +303,7 @@ export default function HomePage() {
           </div>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li key={step.title} className="rounded-card border border-line bg-white p-5">
+              <li key={step.title} className="rounded-card border border-line bg-raised p-5">
                 <span className="inline-grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-[14px] font-bold text-brand-600">
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -306,8 +329,8 @@ export default function HomePage() {
               Browsers can do this work now, so all four of those costs are unnecessary.
             </p>
             <p className="mt-3 text-[15.5px] leading-relaxed text-body">
-              {SITE_NAME} is a small independent project. Every tool page is written by hand, tested with real
-              files and kept honest about what a browser can and cannot do.
+              {SITE_NAME} is a one-person project: every tool page is written by hand, checked in a real browser
+              before it goes live, and kept honest about what a browser can and cannot do.
             </p>
             <Link href="/about/" className="btn-secondary mt-6">
               About {SITE_NAME}
@@ -317,7 +340,7 @@ export default function HomePage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {HIGHLIGHTS.map((highlight) => (
-              <div key={highlight.title} className="rounded-card border border-line bg-white p-5">
+              <div key={highlight.title} className="rounded-card border border-line bg-raised p-5">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-600">
                   <highlight.icon className="h-4 w-4" aria-hidden="true" />
                 </span>
@@ -349,7 +372,7 @@ export default function HomePage() {
             <Link
               key={`${conversion.from}-${conversion.to}`}
               href={conversion.href}
-              className="group rounded-card border border-line bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+              className="group rounded-card border border-line bg-raised p-4 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
             >
               <p className="flex items-center gap-1.5 text-[14.5px] font-bold text-ink">
                 {conversion.from}
@@ -385,7 +408,7 @@ export default function HomePage() {
               <Link
                 key={guide.slug}
                 href={`/blog/${guide.slug}/`}
-                className="rounded-card border border-line bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+                className="rounded-card border border-line bg-raised p-5 transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
               >
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read
@@ -402,12 +425,12 @@ export default function HomePage() {
       <section className="border-t border-line bg-surface" aria-labelledby="faq-home">
         <div className="container-page grid gap-10 py-14 sm:py-16 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <p className="eyebrow">Popular right now</p>
+            <p className="eyebrow">New in this release</p>
             <h2 className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
-              Popular tools to start with
+              Recently added tools
             </h2>
-            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
-              {popularTools.slice(0, 5).map((tool) => (
+            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
+              {newestTools.map((tool) => (
                 <li key={tool.slug}>
                   <Link href={`/${tool.slug}/`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-brand-50/50">
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
@@ -423,7 +446,7 @@ export default function HomePage() {
               ))}
             </ul>
             <p className="mt-3 text-[12px] text-subtle">
-              Ordered from the tool list, not from invented statistics.
+              Straight from the tool registry in shipping order — no invented popularity numbers.
             </p>
           </div>
 
@@ -432,7 +455,7 @@ export default function HomePage() {
             <h2 id="faq-home" className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
               Questions people ask first
             </h2>
-            <div className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+            <div className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
               {HOME_FAQ.slice(0, 4).map((item) => (
                 <details key={item.q} className="group">
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-[15px] font-semibold text-ink marker:hidden [&::-webkit-details-marker]:hidden">
@@ -473,7 +496,7 @@ export default function HomePage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group rounded-xl border border-line bg-white px-4 py-3 transition-colors hover:border-brand-300"
+                className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-brand-300"
               >
                 <span className="flex items-center justify-between text-[14px] font-semibold text-ink">
                   {link.label}
@@ -486,9 +509,10 @@ export default function HomePage() {
         </div>
         <p className="mt-6 text-center text-[12.5px] text-subtle">
           {SITE_NAME} · {TAGLINE} ·{" "}
-          <a href={`${SITE_URL}/sitemap.xml`} className="hover:text-brand-600">
+          {/* Relative link: the exported sitemap is served from this origin. */}
+          <Link href="/sitemap.xml" prefetch={false} className="hover:text-brand-600">
             Sitemap
-          </a>
+          </Link>
         </p>
       </section>
     </>

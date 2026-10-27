@@ -22,6 +22,22 @@ const UNICODE_FONT_URL = "/fonts/DejaVuSans.ttf";
 const UNICODE_FONT_BOLD_URL = "/fonts/DejaVuSans-Bold.ttf";
 
 let cache: { regular: ArrayBuffer; bold: ArrayBuffer } | null = null;
+let fontkitPromise: Promise<unknown> | null = null;
+
+/**
+ * pdf-lib cannot embed a TrueType file without fontkit, and fontkit is ~200 KB
+ * of parser. It is imported only when a document actually contains characters
+ * outside WinAnsi, and registered on that document before any font is embedded.
+ * Without this call every Cyrillic/Greek/Hebrew/Arabic conversion throws
+ * "no fontkit instance was found" — which is exactly what happened before the
+ * engine test in scripts/smoke-test.mjs existed.
+ */
+async function registerFontkit(doc: PDFDocument) {
+  if (!fontkitPromise) {
+    fontkitPromise = import("@pdf-lib/fontkit").then((mod) => (mod as { default?: unknown }).default ?? mod);
+  }
+  doc.registerFontkit((await fontkitPromise) as Parameters<PDFDocument["registerFontkit"]>[0]);
+}
 
 async function fetchFont(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url);
@@ -53,6 +69,7 @@ export async function getFontPair(doc: PDFDocument, sample: string): Promise<Fon
   }
 
   const { regular, bold } = await loadUnicodeFonts();
+  await registerFontkit(doc);
   const [regularFont, boldFont] = await Promise.all([
     doc.embedFont(regular, { subset: true }).catch(() => doc.embedFont(regular)),
     doc.embedFont(bold, { subset: true }).catch(() => doc.embedFont(bold)),

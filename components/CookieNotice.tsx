@@ -42,7 +42,7 @@ export function CookieNotice() {
     <div
       role="region"
       aria-label="Cookie information"
-      className="fixed bottom-4 left-4 z-40 max-w-sm animate-fade-up rounded-xl border border-line bg-white p-4 shadow-lift sm:bottom-6 sm:left-6"
+      className="fixed bottom-4 left-4 z-40 max-w-sm animate-fade-up rounded-xl border border-line bg-raised p-4 shadow-lift sm:bottom-6 sm:left-6"
     >
       <div className="flex items-start gap-3">
         <p className="text-[13px] leading-relaxed text-body">

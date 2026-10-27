@@ -52,7 +52,7 @@ export default function BlogIndexPage() {
                 <Link
                   key={tool.slug}
                   href={`/${tool.slug}/`}
-                  className="group flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200"
+                  className="group flex items-center justify-between rounded-xl border border-line bg-raised px-4 py-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-brand-200"
                 >
                   {tool.name}
                   <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -63,7 +63,7 @@ export default function BlogIndexPage() {
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {guides.map((guide) => (
-              <article key={guide.slug} className="rounded-card border border-line bg-white p-5 shadow-card">
+              <article key={guide.slug} className="rounded-card border border-line bg-raised p-5 shadow-card">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read ·{" "}
                   {new Date(guide.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}

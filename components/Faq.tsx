@@ -22,7 +22,7 @@ export function Faq({
       <Heading id={`${id}-title`} className="text-[22px] font-bold tracking-tight text-ink sm:text-2xl">
         {heading}
       </Heading>
-      <div className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+      <div className="mt-4 divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
         {items.map((item) => (
           <details key={item.q} className="group">
             <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-[15.5px] font-semibold text-ink transition-colors hover:bg-surface marker:hidden [&::-webkit-details-marker]:hidden">

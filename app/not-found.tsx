@@ -30,7 +30,7 @@ export default function NotFound() {
             <Link
               key={tool.slug}
               href={`/${tool.slug}/`}
-              className="group rounded-xl border border-line bg-white px-4 py-3 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+              className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
             >
               <span className="flex items-center justify-between text-[14px] font-semibold text-ink">
                 {tool.name}

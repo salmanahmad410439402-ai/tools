@@ -8,29 +8,45 @@ const config: Config = {
     "./data/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
+        /*
+         * Every colour that changes between themes points at a CSS variable
+         * declared in app/globals.css (html.light and html.dark). Brand tints,
+         * surfaces and text labels are redefined there, so `text-ink`,
+         * `bg-surface`, `border-line` and friends work in both themes without a
+         * `dark:` variant at every call site. Functional colours keep their
+         * identity in both themes, only softened for dark contrast.
+         *
+         * The variables hold space-separated channels ("15 23 42") and the
+         * tokens wrap them in rgb(… / <alpha-value>), which is what makes
+         * opacity modifiers such as `bg-page/85` and `border-line/90` work.
+         * A plain `var(--x)` colour silently drops those classes.
+         */
         brand: {
-          50: "#EEF2FF",
-          100: "#E0E7FF",
-          200: "#C7D2FE",
-          300: "#A5B4FC",
-          400: "#818CF8",
-          500: "#4F46E5",
-          600: "#4338CA",
-          700: "#3730A3",
-          800: "#312E81",
-          900: "#1E1B4B",
+          50: "rgb(var(--brand-50) / <alpha-value>)",
+          100: "rgb(var(--brand-100) / <alpha-value>)",
+          200: "rgb(var(--brand-200) / <alpha-value>)",
+          300: "rgb(var(--brand-300) / <alpha-value>)",
+          400: "rgb(var(--brand-400) / <alpha-value>)",
+          500: "rgb(var(--brand-500) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)",
+          800: "rgb(var(--brand-800) / <alpha-value>)",
+          900: "rgb(var(--brand-900) / <alpha-value>)",
         },
-        ink: "#0F172A",
-        body: "#475569",
-        subtle: "#64748B",
-        line: "#E2E8F0",
-        surface: "#F8FAFC",
-        success: "#16A34A",
-        warning: "#D97706",
-        danger: "#DC2626",
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        body: "rgb(var(--body) / <alpha-value>)",
+        subtle: "rgb(var(--subtle) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)",
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        page: "rgb(var(--page) / <alpha-value>)",
+        raised: "rgb(var(--raised) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)",
+        danger: "rgb(var(--danger) / <alpha-value>)",
       },
       fontFamily: {
         sans: [
@@ -54,9 +70,9 @@ const config: Config = {
         card: "18px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -18px rgba(15, 23, 42, 0.25)",
-        lift: "0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -20px rgba(79, 70, 229, 0.35)",
-        focus: "0 0 0 4px rgba(79, 70, 229, 0.22)",
+        card: "rgb(var(--shadow-card) / <alpha-value>)",
+        lift: "rgb(var(--shadow-lift) / <alpha-value>)",
+        focus: "0 0 0 4px var(--focus-ring)",
         inset: "inset 0 1px 2px rgba(15, 23, 42, 0.06)",
       },
       keyframes: {

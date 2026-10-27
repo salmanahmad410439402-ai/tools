@@ -149,7 +149,7 @@ export function SplitPdf() {
         />
       ) : (
         <>
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
               <FileText className="h-5 w-5" aria-hidden="true" />
             </span>

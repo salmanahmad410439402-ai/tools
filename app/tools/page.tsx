@@ -53,7 +53,7 @@ export default function ToolsPage() {
               <li key={category.slug}>
                 <Link
                   href={`/${category.slug}/`}
-                  className="inline-flex min-h-[36px] items-center rounded-full border border-line bg-white px-3 font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+                  className="inline-flex min-h-[36px] items-center rounded-full border border-line bg-raised px-3 font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
                 >
                   {category.name}
                 </Link>

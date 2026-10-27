@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { getFontPair, type FontPair } from "./fonts";
+import { getFontPair, type FontPair } from "./fonts.ts";
 
 /**
  * A small, honest text-layout engine used by the TXT, Word, CSV and

@@ -301,7 +301,7 @@ export function SignPdf() {
                   type="file"
                   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                   onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
-                  className="block w-full cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
+                  className="block w-full cursor-pointer rounded-lg border border-line bg-raised px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
                 />
               </div>
             )}
@@ -314,7 +314,7 @@ export function SignPdf() {
               onPointerUp={endDraw}
               onPointerLeave={endDraw}
               className={cn(
-                "w-full touch-none rounded-lg border border-dashed border-line bg-white",
+                "w-full touch-none rounded-lg border border-dashed border-line bg-raised",
                 mode !== "draw" && "pointer-events-none",
               )}
               aria-label="Signature pad — draw your signature here"
@@ -375,7 +375,7 @@ export function SignPdf() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") setPosition({ x: 0.55, y: 0.2 });
                 }}
-                className="relative mx-auto w-full max-w-sm cursor-crosshair overflow-hidden rounded-xl border border-line bg-white shadow-card"
+                className="relative mx-auto w-full max-w-sm cursor-crosshair overflow-hidden rounded-xl border border-line bg-raised shadow-card"
                 aria-label="Page preview — click to place the signature"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

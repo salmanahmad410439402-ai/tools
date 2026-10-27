@@ -23,7 +23,7 @@ export function RelatedTools({ slugs, guideSlugs = [] }: { slugs: string[]; guid
           <Link
             key={tool!.slug}
             href={`/${tool!.slug}/`}
-            className="group flex items-start gap-3 rounded-xl border border-line bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+            className="group flex items-start gap-3 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
               <ToolIcon name={tool!.icon} className="h-4 w-4" />
@@ -41,7 +41,7 @@ export function RelatedTools({ slugs, guideSlugs = [] }: { slugs: string[]; guid
           <Link
             key={guide!.slug}
             href={`/blog/${guide!.slug}/`}
-            className="group flex items-start gap-3 rounded-xl border border-line bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+            className="group flex items-start gap-3 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/40"
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface text-subtle ring-1 ring-line">
               <ToolIcon name="FileText" className="h-4 w-4" />

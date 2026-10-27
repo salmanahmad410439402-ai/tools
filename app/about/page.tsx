@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CONTACT_EMAIL, SITE_NAME } from "@/data/site";
 import { tools } from "@/data/tools";
+import { roadmap } from "@/data/roadmap";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = buildMetadata({
   title: `About ${SITE_NAME} — Who Runs This Site`,
   description:
-    "Who builds Filecraft, how the tools are tested, how the site is funded and why everything runs in your browser instead of on a server.",
+    "Who runs Filecraft, how each tool is checked before it goes live, how the site is funded and why every tool runs in your browser instead of on a server.",
   path: "/about/",
 });
 
@@ -16,7 +17,7 @@ export default function AboutPage() {
   return (
     <LegalPage
       title={`About ${SITE_NAME}`}
-      intro={`${SITE_NAME} is an independent project that builds free file tools which run entirely inside your browser. This page explains who is behind it, how the tools are tested and how the site pays for itself.`}
+      intro={`${SITE_NAME} is a small independent project that builds free file tools which run entirely inside your browser. This page explains who is behind it, how a tool gets published, and how the site pays for itself.`}
       updated="2026-10-27"
       crumbs={[
         { name: "Home", path: "/" },
@@ -25,77 +26,79 @@ export default function AboutPage() {
     >
       <h2>Who runs this site</h2>
       <p>
-        {SITE_NAME} is built and maintained by a small independent team of two people: a front-end engineer who
-        writes the tools and a technical writer who tests them against real documents and writes the pages you
-        read. There is no company behind the site, no investors and no support department — the same two people
-        answer the emails.
+        {SITE_NAME} is built and maintained by one person — a front-end developer working alone, not a company
+        and not an agency. There is no editorial department, no support desk and no investors: the same person
+        designs the pages, writes the code that processes your files, and answers the email.
       </p>
       <p>
-        You can reach us at{" "}
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Every message is read by a human, usually within
-        two to three working days. Bug reports that name the file type, the browser and the step that failed are
-        the most useful thing you can send.
+        You can reach that person at{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Every message is read by a human. Bug reports
+        that name the file type, the browser and the step that failed are the most useful thing you can send.
       </p>
 
       <h2>Why these tools exist</h2>
       <p>
         File conversion has become a toll booth. A typical free converter uploads your document to a server,
-        holds the download behind a countdown, stamps a logo on the output, or asks for a credit card after
-        three files. The work itself — merging pages, re-encoding an image, writing a PDF — is something a
-        modern browser can do locally in under a second.
+        holds the download behind a countdown, stamps a logo on the output, or asks for a card after three
+        files. The work itself — merging pages, re-encoding an image, writing a PDF — is something a modern
+        browser can do locally in under a second.
       </p>
       <p>
-        So the brief for this site was deliberately narrow: do the whole job in the browser, say clearly that
-        the file never leaves the device, and write down the limits instead of hiding them. There is no upload
+        So the brief for this site is deliberately narrow: do the whole job in the browser, say plainly that the
+        file never leaves the device, and write down the limits instead of hiding them. There is no upload
         button anywhere on the site, because there is no server that stores files.
       </p>
 
-      <h2>How the tools are tested</h2>
+      <h2>How a tool gets published</h2>
       <p>
-        Every tool is checked by hand before it is published, against a fixed set of files: a one-page PDF, a
-        100-page PDF, a 20 MB photograph, an iPhone HEIC photo, a file containing Arabic and Hindi text, and a
-        deliberately damaged file to see how the error is explained. Outputs are opened in Adobe Acrobat,
-        macOS Preview, Chrome's PDF viewer and a phone viewer before the page goes live.
+        Every page on this site is honest about one of two states. A tool is either <strong>live</strong> — the
+        widget on the page reads your file, processes it in the browser and gives you a download — or it is{" "}
+        <strong>planned</strong>, which means the page explains what is coming and there is no widget. The
+        count in the header, the cards on the homepage, the category totals and the sitemap are all generated
+        from the same list, so those numbers cannot drift apart.
       </p>
       <p>
-        That is also why the catalogue grows in steps rather than all at once. A tool appears on this site when
-        it works, not when its landing page is written. You can see what is planned — and what is still missing
-        — on the{" "}
+        Before a tool is marked live, the developer runs it in Chrome and Firefox on desktop and in a mobile
+        browser, with a handful of real files: a short PDF, a long one, a large photo, and an image with a
+        transparent background where that matters. Error paths are exercised too — a wrong file type, an
+        encrypted PDF, a file that is too large for the browser's memory — so a failure produces a sentence you
+        can act on rather than a blank screen. This is a single developer checking their own work, not a formal
+        QA lab, and the pages are written to say so.
+      </p>
+      <p>
+        Writing the documentation is part of shipping the tool. Each live tool has a page with steps, limits and
+        FAQ answers that match what the code actually does, including the jobs it cannot do well — a browser
+        cannot reflow a PDF's text, cannot run OCR on a scan, and cannot repair missing pages. Today{" "}
+        {tools.length} tools are live and {roadmap.length} are on the roadmap; you can see both lists on the{" "}
         <Link href="/tools/">all tools page</Link>.
       </p>
 
       <h2>How the site is funded</h2>
       <p>
-        Advertising. Ordinary display ads appear on the pages around the tools — never inside a tool, never
-        between a setting and the button that starts the work, and never next to a download link. There is no
-        paid tier, no subscription and no upsell, so the tools stay free for everyone, including people who
-        cannot or will not pay for software.
+        {SITE_NAME} does not show ads yet. The plan is ordinary display advertising on the pages around the
+        tools — never inside a tool, never between a setting and the button that starts the work, and never
+        next to a download link. No ads are served until Google has reviewed and approved the site, and the{" "}
+        <Link href="/privacy-policy/">Privacy Policy</Link> describes exactly what changes when that happens.
+        There is no paid tier, no subscription and no upsell.
       </p>
       <p>
-        Ads are only shown once Google has reviewed and approved the site, and only to visitors in regions
-        where the applicable consent has been collected. The{" "}
-        <Link href="/privacy-policy/">Privacy Policy</Link> explains exactly what Google receives and how to
-        opt out.
+        Until then the site costs one person hosting and a domain, and the tools stay free for everyone,
+        including people who cannot or will not pay for software.
       </p>
 
-      <h2>What we will not build</h2>
+      <h2>What this site will not build</h2>
       <ul>
         <li>Tools that remove a password or DRM from files you cannot open yourself.</li>
         <li>Tools that download copyrighted media from streaming services.</li>
         <li>Anything that quietly sends a file to a server while claiming to be private.</li>
-        <li>Fake testimonials, invented user counts and star ratings nobody gave us.</li>
+        <li>Invented testimonials, user counts or star ratings.</li>
       </ul>
 
-      <h2>Editorial standards</h2>
+      <h2>Corrections</h2>
       <p>
-        Pages on this site are written by the people who built the tool, in plain English, with numbers that can
-        be checked. Nothing is generated by spinning another site's text. When a browser genuinely cannot do
-        something well, the page says so and explains the workaround, even when that means sending a visitor to
-        a different kind of software.
-      </p>
-      <p>
-        Pages are reviewed when the tool changes. Each tool page shows the date of its last review at the
-        bottom, and currently {tools.length} tools are documented in full.
+        Pages are updated when the code changes. If you find a sentence that no longer matches what the tool
+        does — a format that fails, a limit that is wrong, a claim that reads like marketing — email{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and it will be fixed or removed.
       </p>
     </LegalPage>
   );

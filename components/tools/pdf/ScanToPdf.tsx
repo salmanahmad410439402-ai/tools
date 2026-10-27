@@ -200,7 +200,7 @@ export function ScanToPdf() {
     <ToolFrame labelledBy="tool-title">
       {!cameraOn ? (
         <div className="rounded-2xl border-2 border-dashed border-line bg-surface/60 p-6 text-center sm:p-8">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white text-brand-600 shadow-card ring-1 ring-line">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-raised text-brand-600 shadow-card ring-1 ring-line">
             <Camera className="h-6 w-6" aria-hidden="true" />
           </span>
           <p className="mt-3 text-[15.5px] font-semibold text-ink">Scan a document with your camera</p>
@@ -238,7 +238,7 @@ export function ScanToPdf() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-ink/95">
+        <div className="overflow-hidden rounded-2xl border border-line bg-scrim-strong">
           <video ref={videoRef} playsInline muted className="block max-h-[52vh] w-full object-contain" />
           <div className="flex flex-wrap items-center justify-between gap-2 bg-ink px-3 py-2.5">
             <p className="text-[12px] text-white/70">Fill the frame with the page, hold steady, then capture.</p>
@@ -250,7 +250,7 @@ export function ScanToPdf() {
               <button
                 type="button"
                 onClick={stopCamera}
-                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-white/20 px-3 text-[13px] font-semibold text-white hover:bg-white/10"
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-white/20 px-3 text-[13px] font-semibold text-white hover:bg-raised/10"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
                 Done
@@ -310,7 +310,7 @@ export function ScanToPdf() {
                   loading="lazy"
                   decoding="async"
                 />
-                <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 text-[10.5px] font-semibold text-white">
+                <span className="absolute bottom-1 left-1 rounded bg-scrim px-1.5 text-[10.5px] font-semibold text-white">
                   {index + 1}
                 </span>
                 <button
@@ -319,7 +319,7 @@ export function ScanToPdf() {
                     URL.revokeObjectURL(shot.url);
                     setShots((current) => current.filter((entry) => entry.id !== shot.id));
                   }}
-                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/95 text-danger shadow-sm ring-1 ring-line"
+                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-raised/95 text-danger shadow-sm ring-1 ring-line"
                   aria-label={`Remove captured page ${index + 1}`}
                 >
                   <Trash2 className="h-3 w-3" aria-hidden="true" />

@@ -8,7 +8,7 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col rounded-card border border-line bg-white p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift",
+        "group relative flex h-full flex-col rounded-card border border-line bg-raised p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift",
         className,
       )}
     >

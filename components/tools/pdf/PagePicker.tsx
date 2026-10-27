@@ -190,7 +190,7 @@ export function PagePicker({ mode, toolSlug }: { mode: PageMode; toolSlug: strin
                         aria-pressed={active}
                         aria-label={`Page ${thumb.pageIndex + 1}${active ? ", selected" : ""}`}
                         className={cn(
-                          "group relative block w-full overflow-hidden rounded-lg border-2 bg-white transition-all",
+                          "group relative block w-full overflow-hidden rounded-lg border-2 bg-raised transition-all",
                           active
                             ? removing
                               ? "border-danger shadow-sm"
@@ -213,8 +213,8 @@ export function PagePicker({ mode, toolSlug }: { mode: PageMode; toolSlug: strin
                             active
                               ? removing
                                 ? "bg-danger text-white"
-                                : "bg-brand-600 text-white"
-                              : "bg-white/90 text-body",
+                                : "bg-brand-500 text-white"
+                              : "bg-raised/90 text-body",
                           )}
                         >
                           {thumb.pageIndex + 1}
@@ -225,7 +225,7 @@ export function PagePicker({ mode, toolSlug }: { mode: PageMode; toolSlug: strin
                   );
                 })}
                 {preview.truncated && (
-                  <li className="col-span-full rounded-lg bg-white px-3 py-2 text-[12px] text-subtle">
+                  <li className="col-span-full rounded-lg bg-raised px-3 py-2 text-[12px] text-subtle">
                     Showing the first {preview.thumbs.length} pages — use the page box above for the rest.
                   </li>
                 )}

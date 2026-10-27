@@ -1,5 +1,7 @@
 import {
+  PDFDict,
   PDFDocument,
+  PDFHexString,
   PDFName,
   degrees,
   rgb,
@@ -7,7 +9,7 @@ import {
   type PDFFont,
   type PDFImage,
 } from "pdf-lib";
-import { loadPdfDocument, savePdf, verifyPdf } from "./core";
+import { loadPdfDocument, savePdf, verifyPdf } from "./core.ts";
 
 /* ─────────────────────────────── Merge ─────────────────────────────────── */
 
@@ -316,7 +318,13 @@ export async function readMetadata(bytes: ArrayBuffer): Promise<PdfMetadataField
     title: doc.getTitle() ?? "",
     author: doc.getAuthor() ?? "",
     subject: doc.getSubject() ?? "",
-    keywords: (doc.getKeywords() ?? "").split(/[,;]\s*/).filter(Boolean).join(", "),
+    // Most PDFs store keywords comma-separated; normalise whatever we find into
+    // the same shape the editor shows, instead of passing the raw string on.
+    keywords: (doc.getKeywords() ?? "")
+      .split(/[,;]/)
+      .map((keyword) => keyword.trim())
+      .filter(Boolean)
+      .join(", "),
     creator: doc.getCreator() ?? "",
   };
 }
@@ -326,12 +334,20 @@ export async function writeMetadata(bytes: ArrayBuffer, fields: PdfMetadataField
   doc.setTitle(fields.title.trim());
   doc.setAuthor(fields.author.trim());
   doc.setSubject(fields.subject.trim());
-  doc.setKeywords(
-    fields.keywords
-      .split(/[,;]/)
-      .map((keyword) => keyword.trim())
-      .filter(Boolean),
-  );
+  const keywords = fields.keywords
+    .split(/[,;]/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+  // pdf-lib's setKeywords() joins the array with spaces, which loses the
+  // separators and makes an edited file read back as one long keyword. Writing
+  // the Info entry directly keeps "a, b" round-tripping as "a, b".
+  const infoRef = doc.context.trailerInfo.Info;
+  const info = infoRef ? doc.context.lookup(infoRef, PDFDict) : undefined;
+  if (info) {
+    info.set(PDFName.of("Keywords"), PDFHexString.fromText(keywords.join(", ")));
+  } else {
+    doc.setKeywords(keywords);
+  }
   doc.setCreator(fields.creator.trim() || "Filecraft");
   doc.setProducer("Filecraft (browser)");
   doc.setModificationDate(new Date());

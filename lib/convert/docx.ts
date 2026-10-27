@@ -1,5 +1,5 @@
 import type { Block } from "@/lib/pdf/text-pdf";
-import { htmlToBlocks } from "./text-sources";
+import { htmlToBlocks } from "./text-sources.ts";
 
 /**
  * Word (.docx) → blocks, via Mammoth (BSD-2-Clause).

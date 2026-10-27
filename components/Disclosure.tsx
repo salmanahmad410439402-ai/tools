@@ -48,7 +48,7 @@ export function Disclosure({
       id={id}
       open={defaultOpen}
       onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-      className={cn("group mt-3 scroll-mt-24 overflow-hidden rounded-card border border-line bg-white", className)}
+      className={cn("group mt-3 scroll-mt-24 overflow-hidden rounded-card border border-line bg-raised", className)}
     >
       <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 marker:hidden hover:bg-surface [&::-webkit-details-marker]:hidden">
         <span>

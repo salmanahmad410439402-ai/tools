@@ -6,13 +6,21 @@ import { CATEGORIES } from "@/data/site";
 
 export const dynamic = "force-static";
 
+/**
+ * Canonical sitemap. Only pages that are actually indexable appear here: a URL
+ * that is noindexed (an empty /blog/, /utilities/) is never advertised to
+ * crawlers, because the two signals contradict each other.
+ *
+ * Entries carry `lastModified` only where there is a real date to give (the
+ * tool's own `updated` field). Stamping every URL with the build time teaches
+ * Google to ignore the value.
+ */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-
   const staticPages: { path: string; priority: number; changeFrequency: "daily" | "weekly" | "monthly" | "yearly" }[] = [
     { path: "/", priority: 1, changeFrequency: "weekly" },
     { path: "/tools/", priority: 0.9, changeFrequency: "weekly" },
-    { path: "/blog/", priority: 0.7, changeFrequency: "weekly" },
+    // The guide index stays out until it lists at least one guide.
+    ...(guides.length > 0 ? [{ path: "/blog/", priority: 0.7, changeFrequency: "weekly" as const }] : []),
     { path: "/about/", priority: 0.5, changeFrequency: "yearly" },
     { path: "/contact/", priority: 0.5, changeFrequency: "yearly" },
     { path: "/faq/", priority: 0.6, changeFrequency: "monthly" },
@@ -27,7 +35,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     (category) => category.slug !== "utilities" || tools.some((tool) => tool.category === "utilities"),
   ).map((category) => ({
     url: `${SITE_URL}/${category.slug}/`,
-    lastModified: now,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
@@ -35,7 +42,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticPages.map((page) => ({
       url: `${SITE_URL}${page.path}`,
-      lastModified: now,
       changeFrequency: page.changeFrequency,
       priority: page.priority,
     })),

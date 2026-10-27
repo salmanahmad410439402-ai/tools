@@ -58,7 +58,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
           </div>
           <dl className="mt-5 grid max-w-lg grid-cols-3 gap-3">
             {category.facts.map((fact) => (
-              <div key={fact.label} className="rounded-xl border border-line bg-white px-3 py-2.5">
+              <div key={fact.label} className="rounded-xl border border-line bg-raised px-3 py-2.5">
                 <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-subtle">{fact.label}</dt>
                 <dd className="mt-0.5 text-[13.5px] font-semibold text-ink">{fact.value}</dd>
               </div>
@@ -67,7 +67,9 @@ export function CategoryPage({ category, intro, faqs }: Props) {
         </header>
 
         <h2 className="mt-10 text-[20px] font-bold tracking-tight text-ink">
-          {items.length} {items.length === 1 ? "tool" : "tools"} available now
+          {items.length > 0
+            ? `${items.length} ${items.length === 1 ? "tool" : "tools"} available now`
+            : "Not live yet — here is what is planned"}
         </h2>
         {items.length > 0 ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -93,12 +95,12 @@ export function CategoryPage({ category, intro, faqs }: Props) {
               Planned for this category
             </h2>
             <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-body">
-              No pages exist for these yet — they are listed so the roadmap is public. Each will get its own
-              tested page and written guide when it ships.
+              No pages exist for these yet — they are listed so the roadmap is public. Each gets its own page
+              when the tool actually works, not before.
             </p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2">
               {planned.map((item) => (
-                <li key={item.name} className="rounded-xl border border-dashed border-line bg-white px-3 py-2.5 text-[13px] text-body">
+                <li key={item.name} className="rounded-xl border border-dashed border-line bg-raised px-3 py-2.5 text-[13px] text-body">
                   {item.name}
                 </li>
               ))}
@@ -117,7 +119,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
                   <Link
                     key={slug}
                     href={`/${slug}/`}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-white px-3 text-[13.5px] font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body transition-colors hover:border-brand-200 hover:text-brand-600"
                   >
                     <ToolIcon name={other.icon} className="h-4 w-4" />
                     {other.name}

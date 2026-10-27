@@ -5,7 +5,9 @@ there is no upload endpoint, no backend, no database and no account system.
 
 - **Stack:** Next.js 15 (App Router) · TypeScript · Tailwind CSS · static export (`out/`)
 - **Deploy target:** any static host (Netlify, Cloudflare Pages, Vercel, S3 + CDN, GitHub Pages, nginx)
-- **Ads:** Google AdSense wired up but switched **off** until approval (`ADS_ENABLED=false`)
+- **Ads:** Google AdSense wired up but switched **off** until approval (`ADS_ENABLED=false`); no Google
+  request is made while it stays off
+- **Theme:** light + dark, following the visitor's system preference, with a header switch
 
 ---
 
@@ -28,7 +30,7 @@ Checks that run in CI or before a deploy:
 ```bash
 npm run typecheck    # tsc --noEmit
 npm run validate     # content + registry rules (title lengths, FAQs, word counts, links)
-npm test             # Node smoke tests for the PDF/image engines
+npm test             # Node smoke tests for the PDF, DOCX and image engines
 npm run check        # all three
 ```
 
@@ -49,27 +51,50 @@ npm run check        # all three
 | Tool page template | `components/ToolLayout.tsx` |
 | Tool widgets | `components/tools/*` |
 
-`data/site.ts` holds the identity of the site. The contact inbox is set; the **site name and domain
-are still placeholders** and must be replaced before launch:
+`data/site.ts` holds the identity of the site:
 
 ```ts
-export const SITE_NAME = "Filecraft";                        // placeholder — confirm before launch
-export const SITE_URL = "https://example.com";               // placeholder, no trailing slash
-export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";    // live
+export const SITE_NAME = "Filecraft";
+export const CONTACT_EMAIL = "Alhamdstudio839@gmail.com";
+// Set at build time — this is the only place the domain lives:
+// NEXT_PUBLIC_SITE_URL=https://your-domain.tld
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
 ```
 
 Canonical URLs, Open Graph tags, structured data, `sitemap.xml`, `robots.txt` and the footer
-email are all generated from those constants.
+email are all generated from those constants. **The fallback origin is a placeholder:**
+`npm run validate` prints a warning while it is in use, because shipping it would publish
+canonicals and a sitemap for `example.com`.
 
 ---
+
+## Launch checklist
+
+1. **Domain.** Set `NEXT_PUBLIC_SITE_URL` in the host's build environment (no trailing slash),
+   rebuild, then confirm `out/sitemap.xml`, `out/robots.txt` and a canonical tag on any page all
+   show the real host. `npm run validate` must print no placeholder warning.
+2. **Host.** Deploy `out/` and check that `/foo/` resolves to `foo/index.html`
+   (`trailingSlash: true`), that `sitemap.xml` and `robots.txt` are served at the root, and that
+   `ads.txt` is reachable.
+3. **Search Console.** Add the domain as a property (use the Domain property with DNS
+   verification if you can), submit `https://your-domain.tld/sitemap.xml`, and use *URL
+   inspection* on the homepage, one category page and one tool page. If you prefer the meta-tag
+   method, set `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` (and optionally
+   `NEXT_PUBLIC_BING_SITE_VERIFICATION`) and rebuild — the tag is emitted only when set.
+4. **Ads.** Leave `NEXT_PUBLIC_ADS_ENABLED` unset until AdSense approves the site. Set
+   `NEXT_PUBLIC_ADSENSE_SCRIPT=on` only if the review asks for the library to be present.
+5. **Before asking for review**, read the About, Privacy, Cookie and Contact pages once more and
+   make sure every sentence still describes the code that ships.
 
 ## Advertising (AdSense)
 
 The publisher ID `ca-pub-3078074422458018` is already in:
 
-- the async AdSense script in `<head>` (`app/layout.tsx`)
-- `<meta name="google-adsense-account">` on every page
+- `<meta name="google-adsense-account">` on every page (`app/layout.tsx`)
 - `public/ads.txt`
+- the async AdSense script in `<head>`, which is **only injected when ads are enabled** (or when
+  `NEXT_PUBLIC_ADSENSE_SCRIPT=on`). A site with ads switched off therefore makes no requests to
+  Google at all, which is what the Privacy and Cookie pages state.
 
 Ad **units** are disabled by default. `components/AdSlot.tsx` renders `null` and makes no ad
 request while the flag is off, so ad blockers and reviewers see a clean page.
@@ -113,6 +138,7 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
+| Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
 
 Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
 
@@ -153,11 +179,10 @@ Slugs that are live today: `merge-pdf`, `split-pdf`, `organize-pdf`, `rotate-pdf
 `word-to-pdf`, `csv-to-pdf`, `markdown-to-pdf`, `image-to-pdf`, `pdf-to-jpg`, `image-converter`,
 `jpg-to-png`.
 
-**Note on `/blog/[slug]`:** the article template is finished
-(`components/guides/GuideArticle.tsx`), but Next's static export refuses a dynamic route whose
-`generateStaticParams()` is empty. The route file is created in the same commit as the first
-guide — copy-paste instructions are in the template's header comment. Until then `/blog/` is
-`noindex` and left out of the sitemap, so nothing thin gets indexed.
+**Note on `/blog/[slug]`:** the route exists as of the first guide. Adding a guide to
+`data/guides.ts` is enough — `/blog/`, the homepage section, the sitemap and the article
+structured data all read the same array. If the array is ever emptied again, `/blog/` flips back
+to `noindex` and leaves the sitemap automatically.
 
 ---
 
@@ -217,6 +242,37 @@ Two failure modes are handled explicitly:
 - **Image larger than the canvas ceiling**: a canvas silently returns a *blank* image above its
   limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
   the result note reports the scaled dimensions.
+
+## Theme (light + dark)
+
+`app/globals.css` declares one palette twice — `:root` and `html.dark` — and every colour token
+(`ink`, `body`, `subtle`, `line`, `surface`, `page`, `raised`, the `brand` ramp, `success`,
+`warning`, `danger`) points at a CSS variable. That is why components use `bg-raised`,
+`text-ink`, `border-line` and never `dark:` variants at each call site.
+
+- `components/ThemeToggle.tsx` holds the button, the storage key (`filecraft-theme`) and the
+  inline script that decides the theme **before first paint** (stored choice, else
+  `prefers-color-scheme`). No flash, and the site still renders correctly with JavaScript off.
+- `html` carries `class="light"` or `class="dark"`, so third-party CSS and `color-scheme` follow.
+- Overlays over document previews use `.bg-scrim*` (a scrim variable), not `bg-ink/70`, because
+  `ink` flips to near-white in dark mode and would swallow the white labels drawn on top.
+- Filled buttons keep a deep indigo in dark mode (`html.dark .btn-primary`) so white text stays
+  above 4.5:1; links use the lighter `--brand-400`.
+- The toggle writes to `localStorage`, which is listed in the Cookie Policy.
+
+## Tests and what they do not cover
+
+`npm test` runs engines in Node with no browser: page geometry, image→PDF, the merge/split/
+extract/rotate/organise/page-number/watermark/metadata operations, the rebuild path used by
+Repair, DOCX → HTML → blocks → PDF via Mammoth, CSV/Markdown/HTML parsing, the custom image
+encoders and the canvas-limit guard. `jsdom` supplies `DOMParser` for the HTML/DOCX steps only.
+
+Anything that needs a canvas, a camera or a worker is verified manually: PDF compression levels
+(the *strong* level rasterises), PDF → JPG/PNG/WebP rendering, the image converter and its AVIF
+probe, Scan to PDF (`getUserMedia`), and the editor/signature canvases. The manual pass is: open
+the page in Chrome and Firefox, run one real file through it, check the download opens, then
+break it on purpose (wrong type, encrypted PDF, huge image) and confirm the error message is a
+sentence rather than a blank screen.
 
 ## Build status
 

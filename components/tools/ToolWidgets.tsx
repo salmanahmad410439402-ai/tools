@@ -5,7 +5,7 @@ import type { Tool, WidgetKey } from "@/lib/tool-types";
 
 function WidgetSkeleton() {
   return (
-    <div className="rounded-[22px] border border-line bg-white p-4 shadow-card sm:p-6" aria-busy="true">
+    <div className="rounded-[22px] border border-line bg-raised p-4 shadow-card sm:p-6" aria-busy="true">
       <div className="h-[168px] animate-pulse rounded-2xl border-2 border-dashed border-line bg-surface sm:h-[196px]" />
       <div className="mt-4 flex items-center justify-between">
         <div className="h-4 w-40 animate-pulse rounded bg-surface" />
@@ -117,8 +117,9 @@ export function ToolWidget({
     default:
       return (
         <div className="rounded-card border border-line bg-surface p-6 text-[14px] text-body">
-          This tool is not available yet. It is listed on the roadmap and will appear here when it is
-          finished and tested.
+          This tool is not built yet. It is listed on the roadmap and this page will not show a widget until
+          the processing code is finished. Nothing you drop here would be processed, so there is nothing to
+          drop.
         </div>
       );
   }

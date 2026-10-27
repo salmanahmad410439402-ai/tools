@@ -249,7 +249,7 @@ export function ImageToPdf({ input }: { input?: "jpg" | "png" | "webp" } = {}) {
                       return next;
                     });
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-line bg-white p-2"
+                  className="flex items-center gap-2 rounded-xl border border-line bg-raised p-2"
                 >
                   <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-line" aria-hidden="true" />
                   <span className="w-5 shrink-0 text-center text-[11.5px] font-semibold text-subtle">{index + 1}</span>
