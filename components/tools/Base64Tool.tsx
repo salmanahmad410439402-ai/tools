@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Clipboard, Code2, ImageDown, Loader2, TextCursorInput } from "lucide-react";
 import { ACCEPT_IMAGE, INPUT_EXTENSIONS } from "@/lib/images";
 import {
@@ -47,6 +47,22 @@ export function Base64Tool({ toolSlug = "image-to-base64" }: Props) {
   const [pasted, setPasted] = useState("");
   const [decoded, setDecoded] = useState<{ bytes: Uint8Array; mime: string; detected: boolean; preview: string | null } | null>(null);
 
+  // Previews are object URLs; release them when the tab closes the page or the
+  // file is replaced, so a handful of 20 MB photos cannot pile up in memory.
+  const objectUrls = useRef<string[]>([]);
+  const trackUrl = useCallback((url: string) => {
+    objectUrls.current.forEach((existing) => URL.revokeObjectURL(existing));
+    objectUrls.current = [url];
+    return url;
+  }, []);
+  useEffect(() => {
+    const urls = objectUrls;
+    return () => {
+      urls.current.forEach((url) => URL.revokeObjectURL(url));
+      urls.current = [];
+    };
+  }, []);
+
   const encode = useCallback(
     async (files: File[]) => {
       const file = files[0];
@@ -63,7 +79,7 @@ export function Base64Tool({ toolSlug = "image-to-base64" }: Props) {
           mime,
           size: bytes.length,
           snippets: parts,
-          preview: mime.startsWith("image/") ? URL.createObjectURL(file) : null,
+          preview: mime.startsWith("image/") ? trackUrl(URL.createObjectURL(file)) : null,
         });
         setSnippet("dataUri");
         track("tool_started", { tool: toolSlug, files: 1 });
@@ -74,7 +90,7 @@ export function Base64Tool({ toolSlug = "image-to-base64" }: Props) {
         setWorking(false);
       }
     },
-    [toolSlug],
+    [toolSlug, trackUrl],
   );
 
   const copy = async (text: string) => {
@@ -98,7 +114,7 @@ export function Base64Tool({ toolSlug = "image-to-base64" }: Props) {
         bytes: parsed.bytes,
         mime,
         detected: Boolean(parsed.detectedMime),
-        preview: mime.startsWith("image/") ? URL.createObjectURL(blob) : null,
+        preview: mime.startsWith("image/") ? trackUrl(URL.createObjectURL(blob)) : null,
       });
       track("tool_completed", { tool: toolSlug, format: mime, files: 1, size: sizeBucket(parsed.bytes.length) });
     } catch (caught) {
