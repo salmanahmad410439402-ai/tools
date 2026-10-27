@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { categoryBySlug, SITE_NAME, type Category } from "@/data/site";
-import { toolsByCategory } from "@/data/tools";
+import { toolsForCategory } from "@/data/tools";
 import { roadmap } from "@/data/roadmap";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/jsonld";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function CategoryPage({ category, intro, faqs }: Props) {
-  const items = toolsByCategory(category.slug);
+  const items = toolsForCategory(category.slug);
   const planned = roadmap.filter((item) => item.category === category.slug);
   const crumbs = [
     { name: "Home", path: "/" },

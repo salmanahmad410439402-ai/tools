@@ -28,6 +28,18 @@ const ImageConverter = dynamic(() => import("./ImageConverter").then((mod) => mo
   loading: () => <WidgetSkeleton />,
 });
 
+const MergePdf = dynamic(() => import("./pdf/MergePdf").then((mod) => mod.MergePdf), { loading: () => <WidgetSkeleton /> });
+const SplitPdf = dynamic(() => import("./pdf/SplitPdf").then((mod) => mod.SplitPdf), { loading: () => <WidgetSkeleton /> });
+const OrganizePdf = dynamic(() => import("./pdf/OrganizePdf").then((mod) => mod.OrganizePdf), { loading: () => <WidgetSkeleton /> });
+const RotatePdf = dynamic(() => import("./pdf/RotatePdf").then((mod) => mod.RotatePdf), { loading: () => <WidgetSkeleton /> });
+const PageNumbers = dynamic(() => import("./pdf/PageNumbers").then((mod) => mod.PageNumbers), { loading: () => <WidgetSkeleton /> });
+const WatermarkPdf = dynamic(() => import("./pdf/WatermarkPdf").then((mod) => mod.WatermarkPdf), { loading: () => <WidgetSkeleton /> });
+const SignPdf = dynamic(() => import("./pdf/SignPdf").then((mod) => mod.SignPdf), { loading: () => <WidgetSkeleton /> });
+const PdfEditor = dynamic(() => import("./pdf/PdfEditor").then((mod) => mod.PdfEditor), { loading: () => <WidgetSkeleton /> });
+const PdfToImage = dynamic(() => import("./pdf/PdfToImage").then((mod) => mod.PdfToImage), { loading: () => <WidgetSkeleton /> });
+const MetadataEditor = dynamic(() => import("./pdf/MetadataEditor").then((mod) => mod.MetadataEditor), { loading: () => <WidgetSkeleton /> });
+const TextToPdf = dynamic(() => import("./pdf/TextToPdf").then((mod) => mod.TextToPdf), { loading: () => <WidgetSkeleton /> });
+
 export function ToolWidget({
   widget,
   presetFormat,
@@ -52,6 +64,34 @@ export function ToolWidget({
           toolSlug={toolSlug}
         />
       );
+    case "merge-pdf":
+      return <MergePdf />;
+    case "split-pdf":
+      return <SplitPdf />;
+    case "page-organizer":
+      return <OrganizePdf />;
+    case "rotate-pdf":
+      return <RotatePdf />;
+    case "page-numbers":
+      return <PageNumbers />;
+    case "watermark-pdf":
+      return <WatermarkPdf />;
+    case "sign-pdf":
+      return <SignPdf />;
+    case "pdf-editor":
+      return <PdfEditor />;
+    case "pdf-to-image":
+      return <PdfToImage />;
+    case "pdf-metadata":
+      return <MetadataEditor />;
+    case "txt-to-pdf":
+      return <TextToPdf mode="txt" />;
+    case "docx-to-pdf":
+      return <TextToPdf mode="docx" />;
+    case "csv-to-pdf":
+      return <TextToPdf mode="csv" />;
+    case "markdown-to-pdf":
+      return <TextToPdf mode="markdown" />;
     default:
       return (
         <div className="rounded-card border border-line bg-surface p-6 text-[14px] text-body">
