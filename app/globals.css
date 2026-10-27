@@ -94,7 +94,9 @@
     --shadow-glow: 0 0 40px hsl(var(--primary) / 0.4);
     --shadow-glow-hover: 0 0 60px hsl(var(--primary) / 0.6);
 
-    --glass-bg: hsl(222 47% 12% / 0.9);
+    /* Resting surface is the card token (8%); hovering steps up to --secondary
+       (12%), which is the brightness change visible in the reference cards. */
+    --glass-bg: hsl(var(--card) / 0.92);
     --glass-border: hsl(215 27% 24%);
     --glass-shadow:
       0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(215 27% 28% / 0.3),
@@ -592,24 +594,75 @@
     background: rgba(16, 185, 129, 0.1);
   }
 
-  /* ── Card interaction: indigo border, coloured shadow, small lift ────── */
+  /*
+   * ── Interactive card ──────────────────────────────────────────────────────
+   * Hovering (or tabbing into) a card makes it pop: it lifts 6px and scales
+   * slightly, the surface brightens, the border turns indigo with a soft outer
+   * ring, and its title + icon light up. `:focus-within` gives keyboard users
+   * the same feedback as a mouse.
+   */
   .card-hover {
     transition:
-      transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
+      transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
   }
 
-  .card-hover:hover {
-    transform: translateY(-4px);
-    border-color: hsl(var(--primary) / 0.4);
+  .card-hover:hover,
+  .card-hover:focus-within {
+    transform: translateY(-6px) scale(1.012);
+    border-color: hsl(var(--primary) / 0.45);
+    background-color: hsl(var(--secondary) / 0.96);
     box-shadow:
-      0 8px 32px hsl(243 75% 59% / 0.18),
-      inset 0 1px 0 hsl(215 27% 32% / 0.5);
+      0 0 0 1px hsl(var(--primary) / 0.25),
+      0 24px 60px -28px hsl(var(--primary) / 0.55),
+      0 10px 24px -18px rgba(0, 0, 0, 0.85),
+      inset 0 1px 0 hsl(215 27% 34% / 0.55);
   }
 
-  html.light .card-hover:hover {
-    box-shadow: 0 8px 32px hsl(243 75% 59% / 0.12);
+  html.light .card-hover:hover,
+  html.light .card-hover:focus-within {
+    background-color: #ffffff;
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.2),
+      0 18px 40px -22px hsl(var(--primary) / 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  /* The title of the hovered card takes the brand indigo, like the reference. */
+  .card-hover .card-title {
+    transition: color 0.2s ease;
+  }
+
+  .card-hover:hover .card-title,
+  .card-hover:focus-within .card-title {
+    color: hsl(var(--brand-600));
+  }
+
+  /* Its icon tile brightens and grows a touch. */
+  .card-hover .card-icon {
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  .card-hover:hover .card-icon,
+  .card-hover:focus-within .card-icon {
+    border-color: hsl(var(--primary) / 0.5);
+    background-color: hsl(var(--primary) / 0.18);
+    color: hsl(var(--brand-700));
+    transform: scale(1.06);
+  }
+
+  /* Lift and scale are decoration; drop them for reduced-motion users. */
+  @media (prefers-reduced-motion: reduce) {
+    .card-hover:hover,
+    .card-hover:focus-within {
+      transform: none;
+    }
   }
 
   /*

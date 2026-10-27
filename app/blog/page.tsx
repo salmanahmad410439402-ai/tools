@@ -63,13 +63,15 @@ export default function BlogIndexPage() {
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {guides.map((guide) => (
-              <article key={guide.slug} className="glass-panel p-5 shadow-card">
+              <article key={guide.slug} className="glass-panel card-hover p-5">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read ·{" "}
                   {new Date(guide.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
-                <h2 className="mt-2 text-[16.5px] font-bold leading-snug text-ink">
-                  <Link href={`/blog/${guide.slug}/`} className="hover:text-brand-600">
+                <h2 className="card-title mt-2 text-[16.5px] font-bold leading-snug text-ink">
+                  <Link href={`/blog/${guide.slug}/`} className="focus:outline-none">
+                    {/* Stretched link: the whole card is clickable, the name stays on the link. */}
+                    <span className="absolute inset-0 z-10 rounded-card" aria-hidden="true" />
                     {guide.title}
                   </Link>
                 </h2>
