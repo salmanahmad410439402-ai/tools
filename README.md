@@ -140,15 +140,27 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 | Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
 
-Analytics is opt-in and cookie-free. Leave the env vars empty (default) to send nothing:
+Analytics is opt-in and cookie-free. Two options, both off unless configured:
 
 ```bash
+# 1. Vercel Web Analytics — only works on Vercel hosting, because the script is
+#    served by the deployment at /_vercel/insights/script.js
+NEXT_PUBLIC_VERCEL_ANALYTICS=true
+
+# 2. Any Plausible/Umami-compatible script, for every other static host
 NEXT_PUBLIC_ANALYTICS_SCRIPT_URL=https://plausible.io/js/script.js
 NEXT_PUBLIC_ANALYTICS_DOMAIN=yourdomain.com
 ```
 
-Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content,
-only a coarse size bucket.
+On Vercel, add the first variable under Project → Settings → Environment Variables and redeploy.
+The flag is public (`NEXT_PUBLIC_`) on purpose: the server render and the client bundle must agree
+on whether the script exists. When it is off, the Vercel client code is not even bundled — it is a
+lazy chunk behind `next/dynamic`.
+
+Events recorded (when enabled): `tool_started`, `tool_completed` — no file names, no content, only a
+coarse size bucket. `lib/analytics.ts` is the single place that emits them; `components/Analytics.tsx`
+is the single place that loads a provider. The Privacy Policy and Cookie Policy branch on the same
+flags, so the legal copy cannot claim something the build does not do.
 
 ---
 

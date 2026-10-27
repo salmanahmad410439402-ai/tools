@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADS_ENABLED, ADSENSE_PUBLISHER_ID, CONTACT_EMAIL, SITE_NAME, SITE_URL } from "@/data/site";
+import {
+  ADS_ENABLED,
+  ADSENSE_PUBLISHER_ID,
+  ANALYTICS_SCRIPT_URL,
+  CONTACT_EMAIL,
+  SITE_NAME,
+  SITE_URL,
+  VERCEL_ANALYTICS_ENABLED,
+} from "@/data/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 
@@ -136,14 +144,54 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <h2>6. Analytics</h2>
-      <p>
-        This build ships with no analytics at all: no analytics script is loaded and no measurement request
-        leaves your browser. If lightweight, cookie-free analytics are switched on later (for example Plausible
-        or Umami — tools that do not set cookies, do not fingerprint and do not track you across sites), the only
-        events recorded would be coarse and non-identifying: that a tool page was viewed, that a conversion
-        started, that it completed or failed, and a file-size bucket such as “1–10 MB”. Never a file name, never
-        file content, never an identifier that follows you elsewhere. This page changes before that happens.
-      </p>
+      {VERCEL_ANALYTICS_ENABLED ? (
+        <>
+          <p>
+            This site uses <strong>Vercel Web Analytics</strong>, provided by Vercel Inc., to count page views
+            and to see which tools are started and finished. It is cookieless and does not build a profile of
+            you: there is no cookie, no localStorage entry, no fingerprint and no identifier that follows you to
+            another site. Vercel derives aggregate numbers — page, referrer, country, device type — from the
+            request itself, and the result is only ever visible to us as totals.
+          </p>
+          <p>
+            The custom events this site sends are <code>tool_started</code> and <code>tool_completed</code>. They
+            carry the tool&apos;s slug, a page or file count, and a coarse size bucket such as “1–10 MB”. Never a
+            file name, never file content, never anything you typed into a document.
+          </p>
+          <p>
+            Vercel acts as our processor for this data. See{" "}
+            <a href="https://vercel.com/docs/analytics/privacy-policy" rel="nofollow noopener" target="_blank">
+              Vercel&apos;s analytics privacy notice
+            </a>{" "}
+            and the{" "}
+            <a href="https://vercel.com/legal/privacy-policy" rel="nofollow noopener" target="_blank">
+              Vercel privacy policy
+            </a>
+            . Because no cookie is set and no personal identifier is stored, no consent banner is required for
+            this measurement under current EU guidance; if that changes, this page and the site will change with
+            it.
+          </p>
+        </>
+      ) : ANALYTICS_SCRIPT_URL ? (
+        <>
+          <p>
+            This site uses a cookie-free analytics script (Plausible or Umami compatible) to count page views.
+            It sets no cookies, does no fingerprinting and cannot follow you to another site. The only events
+            recorded are that a tool page was viewed, that a conversion started, that it completed or failed,
+            and a coarse size bucket such as “1–10 MB”. Never a file name, never file content.
+          </p>
+        </>
+      ) : (
+        <p>
+          <strong>This build ships with no analytics at all:</strong> no analytics script is loaded and no
+          measurement request leaves your browser. If cookie-free analytics are switched on later (Vercel Web
+          Analytics, or Plausible/Umami — none of which set cookies, fingerprint, or track you across sites), the
+          only events recorded would be coarse and non-identifying: that a tool page was viewed, that a
+          conversion started, that it completed or failed, and a file-size bucket such as “1–10 MB”. Never a file
+          name, never file content, never an identifier that follows you elsewhere. This page changes before that
+          happens.
+        </p>
+      )}
 
       <h2>7. Legal bases (GDPR)</h2>
       <p>Where the GDPR applies, we rely on the following legal bases:</p>

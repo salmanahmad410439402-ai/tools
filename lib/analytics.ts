@@ -1,4 +1,5 @@
-import { ANALYTICS_DOMAIN, ANALYTICS_SCRIPT_URL } from "@/data/site";
+import { track as vercelTrack } from "@vercel/analytics";
+import { ANALYTICS_DOMAIN, ANALYTICS_ENABLED, ANALYTICS_SCRIPT_URL, VERCEL_ANALYTICS_ENABLED } from "@/data/site";
 
 type EventProps = Record<string, string | number | boolean>;
 
@@ -12,10 +13,15 @@ declare global {
 /**
  * Cookie-free analytics hook. Deliberately tiny: no file names, no file sizes
  * beyond coarse buckets and never any file content.
+ *
+ * Vercel Analytics receives the event through its own queue (`window.va`), which
+ * the injected script drains; the other backends receive it from their globals.
+ * Everything is wrapped so a blocked script can never break a tool.
  */
 export function track(event: string, props: EventProps = {}) {
   if (typeof window === "undefined") return;
   try {
+    if (VERCEL_ANALYTICS_ENABLED) vercelTrack(event, props);
     window.plausible?.(event, { props });
     window.umami?.track(event, props);
   } catch {
@@ -32,4 +38,11 @@ export function sizeBucket(bytes: number): string {
   return ">50MB";
 }
 
-export const analyticsEnabled = Boolean(ANALYTICS_SCRIPT_URL && ANALYTICS_DOMAIN);
+export const analyticsEnabled = ANALYTICS_ENABLED;
+
+/** Which backend this build talks to, for the privacy/cookie pages. */
+export const analyticsProvider: "vercel" | "script" | "none" = VERCEL_ANALYTICS_ENABLED
+  ? "vercel"
+  : ANALYTICS_SCRIPT_URL && ANALYTICS_DOMAIN
+    ? "script"
+    : "none";

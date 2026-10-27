@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ADS_ENABLED, ADSENSE_PUBLISHER_ID, CONTACT_EMAIL, SITE_NAME } from "@/data/site";
+import {
+  ADS_ENABLED,
+  ADSENSE_PUBLISHER_ID,
+  ANALYTICS_SCRIPT_URL,
+  CONTACT_EMAIL,
+  SITE_NAME,
+  VERCEL_ANALYTICS_ENABLED,
+} from "@/data/site";
 import { buildMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 
@@ -125,9 +132,25 @@ export default function CookiePolicyPage() {
 
       <h2>5. Analytics</h2>
       <p>
-        {ADS_ENABLED
-          ? "Any analytics in use is cookie-free and aggregate. No cookies are set for measurement."
-          : "This build ships with no analytics at all. If cookie-free analytics (Plausible or Umami) are enabled later, no cookies would be set and no personal data would be collected."}
+        {VERCEL_ANALYTICS_ENABLED ? (
+          <>
+            Page views are counted with Vercel Web Analytics. It is cookieless: it sets no cookie and writes
+            nothing to your device, so there is nothing here for you to clear. It also does not fingerprint your
+            browser or track you across sites. See the <Link href="/privacy-policy/">Privacy Policy</Link> for
+            exactly which events are recorded.
+          </>
+        ) : ANALYTICS_SCRIPT_URL ? (
+          <>
+            The site uses a cookie-free analytics script. It sets no cookie and stores nothing on your device;
+            measurement is aggregated from the request itself.
+          </>
+        ) : (
+          <>
+            This build loads no analytics at all, so no measurement cookie or identifier exists. If cookie-free
+            analytics are enabled later (Vercel Web Analytics or Plausible/Umami), they set no cookies and this
+            page will be updated in the same release.
+          </>
+        )}
       </p>
 
       <h2>6. How to control cookies</h2>

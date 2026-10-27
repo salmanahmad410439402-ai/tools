@@ -46,12 +46,31 @@ export const ADS_SLOT_TOOL_TOP = process.env.NEXT_PUBLIC_ADS_SLOT_TOOL_TOP ?? ""
 export const ADS_SLOT_INLINE = process.env.NEXT_PUBLIC_ADS_SLOT_INLINE ?? "";
 export const ADS_SLOT_SIDEBAR = process.env.NEXT_PUBLIC_ADS_SLOT_SIDEBAR ?? "";
 
-/**
- * Optional, cookie-free analytics. Leave the script URL empty to disable.
- * Example: https://plausible.io/js/script.js
+/*
+ * ── Analytics ─────────────────────────────────────────────────────────────
+ * Two cookie-free options, both off unless configured. Never a tracked file,
+ * never a file name: only page views and the two tool events, with a coarse
+ * size bucket.
+ *
+ * 1. Vercel Analytics. The script is served by the deployment itself at
+ *    /_vercel/insights/script.js, so it only works on Vercel hosting — on any
+ *    other static host that path 404s. That is why it is opt-in rather than
+ *    automatic, and why the flag is public: the value has to be identical in
+ *    the server render and the client bundle.
+ *      NEXT_PUBLIC_VERCEL_ANALYTICS=true
+ *    In Vercel: Project → Settings → Environment Variables, then redeploy.
+ *
+ * 2. Any Plausible/Umami-compatible script, for every other host:
+ *      NEXT_PUBLIC_ANALYTICS_SCRIPT_URL=https://plausible.io/js/script.js
+ *      NEXT_PUBLIC_ANALYTICS_DOMAIN=yourdomain.com
  */
+export const VERCEL_ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_VERCEL_ANALYTICS === "true";
+
 export const ANALYTICS_SCRIPT_URL = process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL ?? "";
 export const ANALYTICS_DOMAIN = process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN ?? "";
+/** True when any cookie-free analytics will actually load on this build. */
+export const ANALYTICS_ENABLED =
+  VERCEL_ANALYTICS_ENABLED || Boolean(ANALYTICS_SCRIPT_URL && ANALYTICS_DOMAIN);
 
 /**
  * Optional search-engine verification tokens. Set these in the host's
