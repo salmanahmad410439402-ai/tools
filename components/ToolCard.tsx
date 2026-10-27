@@ -13,7 +13,7 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-brand-600 transition-colors group-hover:border-primary/40 group-hover:bg-primary/15">
+        <span className="card-icon grid h-11 w-11 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-brand-600">
           <ToolIcon name={tool.icon} className="h-5 w-5" />
         </span>
         <span className="flex items-center gap-1.5">
@@ -24,7 +24,7 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
         </span>
       </div>
 
-      <h3 className="mt-4 text-[16.5px] font-bold tracking-tight text-ink">
+      <h3 className="card-title mt-4 text-[16.5px] font-bold tracking-tight text-ink">
         <Link href={`/${tool.slug}/`} className="focus:outline-none">
           {/* Whole card is clickable via this overlay, while the accessible
               name stays on the link itself. */}

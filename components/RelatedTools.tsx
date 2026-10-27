@@ -23,13 +23,13 @@ export function RelatedTools({ slugs, guideSlugs = [] }: { slugs: string[]; guid
           <Link
             key={tool!.slug}
             href={`/${tool!.slug}/`}
-            className="group flex items-start gap-3 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-primary/40 hover:bg-primary/5"
+            className="card-hover group flex items-start gap-3 rounded-xl border border-line bg-raised p-4"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+            <span className="card-icon grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-brand-600">
               <ToolIcon name={tool!.icon} className="h-4 w-4" />
             </span>
             <span>
-              <span className="flex items-center gap-1 text-[14.5px] font-semibold text-ink">
+              <span className="card-title flex items-center gap-1 text-[14.5px] font-semibold text-ink">
                 {tool!.name}
                 <ArrowRight className="h-3.5 w-3.5 text-subtle transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>
@@ -41,13 +41,13 @@ export function RelatedTools({ slugs, guideSlugs = [] }: { slugs: string[]; guid
           <Link
             key={guide!.slug}
             href={`/blog/${guide!.slug}/`}
-            className="group flex items-start gap-3 rounded-xl border border-line bg-raised p-4 transition-colors hover:border-primary/40 hover:bg-primary/5"
+            className="card-hover group flex items-start gap-3 rounded-xl border border-line bg-raised p-4"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface text-subtle ring-1 ring-line">
+            <span className="card-icon grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface text-subtle ring-1 ring-line">
               <ToolIcon name="FileText" className="h-4 w-4" />
             </span>
             <span>
-              <span className="text-[14.5px] font-semibold text-ink">{guide!.title}</span>
+              <span className="card-title text-[14.5px] font-semibold text-ink">{guide!.title}</span>
               <span className="mt-0.5 block text-[13px] leading-relaxed text-subtle">{guide!.excerpt}</span>
             </span>
           </Link>

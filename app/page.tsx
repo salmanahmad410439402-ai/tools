@@ -294,11 +294,11 @@ export default function HomePage() {
           </div>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li key={step.title} className="glass-panel p-5">
-                <span className="inline-grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-[14px] font-bold text-brand-600">
+              <li key={step.title} className="glass-panel card-hover p-5">
+                <span className="card-icon inline-grid h-9 w-9 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-[14px] font-bold text-brand-600">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <h3 className="mt-3 text-[15.5px] font-bold text-ink">{step.title}</h3>
+                <h3 className="card-title mt-3 text-[15.5px] font-bold text-ink">{step.title}</h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-body">{step.text}</p>
               </li>
             ))}
@@ -331,11 +331,11 @@ export default function HomePage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {HIGHLIGHTS.map((highlight) => (
-              <div key={highlight.title} className="glass-panel p-5">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <div key={highlight.title} className="glass-panel card-hover p-5">
+                <span className="card-icon grid h-9 w-9 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-brand-600">
                   <highlight.icon className="h-4 w-4" aria-hidden="true" />
                 </span>
-                <h3 className="mt-3 text-[15px] font-bold text-ink">{highlight.title}</h3>
+                <h3 className="card-title mt-3 text-[15px] font-bold text-ink">{highlight.title}</h3>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-body">{highlight.text}</p>
               </div>
             ))}
@@ -363,9 +363,9 @@ export default function HomePage() {
             <Link
               key={`${conversion.from}-${conversion.to}`}
               href={conversion.href}
-              className="group glass-panel p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
+              className="group glass-panel card-hover p-4"
             >
-              <p className="flex items-center gap-1.5 text-[14.5px] font-bold text-ink">
+              <p className="card-title flex items-center gap-1.5 text-[14.5px] font-bold text-ink">
                 {conversion.from}
                 <ArrowRight className="h-3.5 w-3.5 text-brand-500" aria-hidden="true" />
                 {conversion.to}
@@ -399,12 +399,12 @@ export default function HomePage() {
               <Link
                 key={guide.slug}
                 href={`/blog/${guide.slug}/`}
-                className="glass-panel p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift"
+                className="glass-panel card-hover p-5"
               >
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
                   {guide.readingMinutes} min read
                 </p>
-                <h3 className="mt-2 text-[15.5px] font-bold leading-snug text-ink">{guide.title}</h3>
+                <h3 className="card-title mt-2 text-[15.5px] font-bold leading-snug text-ink">{guide.title}</h3>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-body">{guide.excerpt}</p>
               </Link>
             ))}
