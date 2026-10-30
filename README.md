@@ -431,9 +431,15 @@ in Step 2, because they belong in the same PDF menu.
   PDFs, large on scans.
 - **Compress PDF, Strong** rasterises pages at 150 DPI or lower → text is no longer selectable.
   This is stated in the UI before the user starts.
-- **PDF editor** annotates pages (text boxes, highlights, boxes, white-out, pen, images). It cannot
-  rewrite existing body text — a PDF has no paragraphs to reflow. White-out covers text visually
-  but leaves the original characters in the file, so it is explicitly *not* redaction.
+- **PDF editor** either starts a blank document (A4/Letter/Legal/A5/A3/square, portrait or
+  landscape, any page count up to 20 at creation) or opens an existing PDF and draws over it. It
+  offers twelve tools — select, text, image, rectangle, rounded box, ellipse, triangle, line,
+  arrow, highlight, white-out and pen — with a searchable palette, a full colour wheel/hex/swatch
+  picker, opacity, rotation, layer order, undo/redo and a page strip for adding, duplicating,
+  reordering and deleting pages. Text is written as real selectable text. It still cannot rewrite
+  existing body text: a PDF stores positioned glyphs, not paragraphs, and no browser library can
+  reflow them. White-out covers text visually but leaves the original characters in the file, so
+  it is explicitly *not* redaction.
 - **Word to PDF** rebuilds the document from its structure (headings, paragraphs, bold/italic,
   lists, tables). Layout is re-created, not copied: columns, text boxes, charts, footnotes and
   floating images are dropped, and `.doc` (pre-2007) is not supported at all.
@@ -462,7 +468,9 @@ in Step 2, because they belong in the same PDF menu.
   require https and a permission grant, so the file picker is always offered as well.
 - **Add Text / Highlight / Draw / Add Shapes** all open the same editor with a different tool
   preselected. They draw into the page — they never rewrite existing text, and a highlight or a
-  shape over text is not redaction.
+  shape over text is not redaction. DejaVu Sans covers the fallback ranges for non-Latin-1 text but
+  ships without italic or bold-italic faces, so italic is dropped rather than faked for those
+  scripts.
 - **Remove Metadata From PDF** clears the document information fields; it does not touch page
   content, and an office suite that re-saves the file may stamp its own fields back in.
 - **iOS Safari** may return HEIC from the file picker instead of JPEG; HEIC is decoded in the
@@ -524,8 +532,21 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    with Word/Google Docs, then check a 300-character post against the X bar. Case converter: run
    each of the 13 buttons on text with existing capitals, and confirm “Use as input” chains. Lorem:
    change paragraph counts, switch to HTML and confirm the tags appear verbatim.
-7. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+7. **PDF editor (the creator)** — this is the largest widget on the site, so walk it end to end:
+   start a blank A4 document and add three pages; place text (type, change family, size, bold,
+   italic, alignment and line spacing), a rectangle, an ellipse, a triangle, a line and an arrow;
+   draw a freehand stroke; insert a PNG logo and resize it by a corner handle. Open every colour
+   field and confirm the system colour wheel opens, that a pasted hex code applies, that a swatch
+   applies, and that "No colour" clears a fill. Drag an element, nudge it with the arrow keys,
+   rotate it past 90°, change opacity, send it backward and forward, duplicate it and delete it.
+   Then open a PDF instead: add an inserted page, duplicate a page with its objects, reorder pages,
+   delete one, and confirm the thumbnail strip follows. Use Ctrl+Z / Ctrl+Shift+Z through all of
+   the above. Export and open the result in Acrobat, Preview and iOS Files: text must be
+   selectable, shapes must be in the same place as the preview, and the page order must match the
+   strip. Also test on a phone: the palette, inspector and page strip must all be reachable at
+   360 px without horizontal scroll, and drawing must work with a finger.
+8. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll; the crop handles must be draggable with a finger.
-8. **Network tab** — run any tool and confirm no request carries file data. Note that the
-   analytics script only loads after **Allow** in the consent panel.
-9. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+9. **Network tab** — run any tool, including the editor export, and confirm no request carries
+   file data. Note that the analytics script only loads after **Allow** in the consent panel.
+10. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

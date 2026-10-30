@@ -1,208 +1,706 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, PenTool, Trash2 } from "lucide-react";
-import { applyAnnotations, type Annotation, type AnnotationKind } from "@/lib/pdf/ops";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Circle,
+  Copy,
+  CornerDownRight,
+  Download,
+  Eraser,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  Minus,
+  MousePointer2,
+  PenTool,
+  Plus,
+  Search,
+  Square,
+  SquareDashed,
+  Trash2,
+  Triangle,
+  Type,
+  Undo2,
+  Redo2,
+  Wand2,
+} from "lucide-react";
+import { PDFDocument } from "pdf-lib";
+import {
+  EDITOR_PAGE_SIZES,
+  renderEditorPdf,
+  type EditorElement,
+  type EditorElementKind,
+  type FontFamily,
+  type PageSizeKey,
+  type PageSlot,
+  type TextAlign,
+} from "@/lib/pdf/editor";
 import { track } from "@/lib/analytics";
-import { revokeResults, type ResultFile } from "@/lib/download";
-import { cn, fileBaseName, outputName } from "@/lib/utils";
-import { Field, inputClass, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
+import { makePreviewUrl, revokeResults, type ResultFile } from "@/lib/download";
+import { cn } from "@/lib/utils";
+import { Field, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
+import { ColorField, ElementView, NumberField, SliderField, ToggleButton } from "./editor/ui";
 
-type Tool = "highlight" | "text" | "rect" | "whiteout" | "draw" | "image";
+type Tool = "select" | EditorElementKind;
 
-const TOOLS: { key: Tool; label: string }[] = [
-  { key: "text", label: "Text" },
-  { key: "highlight", label: "Highlight" },
-  { key: "rect", label: "Box" },
-  { key: "whiteout", label: "White-out" },
-  { key: "draw", label: "Pen" },
-  { key: "image", label: "Image" },
-];
-
-const COLORS = ["#F59E0B", "#DC2626", "#2563EB", "#0F172A", "#16A34A"];
-
-interface DraftAnnotation extends Annotation {
-  previewUrl?: string;
+interface ToolSpec {
+  key: Tool;
+  label: string;
+  keywords: string;
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  group: "Essentials" | "Shapes" | "Annotate" | "Insert";
 }
 
-export function PdfEditor({
-  initialTool = "text",
-  toolSlug = "pdf-editor",
-}: {
-  initialTool?: Tool;
-  toolSlug?: string;
-} = {}) {
+const TOOLS: ToolSpec[] = [
+  { key: "select", label: "Select & move", keywords: "select pointer move pick", icon: MousePointer2, group: "Essentials" },
+  { key: "text", label: "Text", keywords: "text type write label font paragraph", icon: Type, group: "Essentials" },
+  { key: "image", label: "Image", keywords: "image photo picture logo png jpg insert", icon: ImageIcon, group: "Insert" },
+  { key: "rect", label: "Rectangle", keywords: "square box rect border rectangle frame", icon: Square, group: "Shapes" },
+  { key: "roundrect", label: "Rounded box", keywords: "rounded corner box card", icon: SquareDashed, group: "Shapes" },
+  { key: "ellipse", label: "Ellipse", keywords: "circle oval ellipse round", icon: Circle, group: "Shapes" },
+  { key: "triangle", label: "Triangle", keywords: "triangle arrow head shape", icon: Triangle, group: "Shapes" },
+  { key: "line", label: "Line", keywords: "line rule divider stroke", icon: Minus, group: "Shapes" },
+  { key: "arrow", label: "Arrow", keywords: "arrow direction pointer callout", icon: CornerDownRight, group: "Shapes" },
+  { key: "highlight", label: "Highlight", keywords: "highlight marker emphasis yellow", icon: Wand2, group: "Annotate" },
+  { key: "whiteout", label: "White-out", keywords: "whiteout cover hide erase block", icon: Eraser, group: "Annotate" },
+  { key: "draw", label: "Pen", keywords: "pen draw freehand sketch signature scribble", icon: PenTool, group: "Annotate" },
+];
+
+const SHAPE_TOOLS = new Set<Tool>(["rect", "roundrect", "ellipse", "triangle", "line", "arrow", "highlight", "whiteout"]);
+
+interface Style {
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  opacity: number;
+  fontSize: number;
+  fontFamily: FontFamily;
+  bold: boolean;
+  italic: boolean;
+  align: TextAlign;
+  lineHeight: number;
+}
+
+const DEFAULT_STYLE: Style = {
+  fill: "#2563EB",
+  stroke: "#0F172A",
+  strokeWidth: 2,
+  opacity: 1,
+  fontSize: 18,
+  fontFamily: "sans",
+  bold: false,
+  italic: false,
+  align: "left",
+  lineHeight: 1.3,
+};
+
+interface PageEntry extends PageSlot {
+  id: string;
+}
+
+type DragMode = "create" | "move" | "resize" | "draw";
+
+interface DragState {
+  mode: DragMode;
+  id?: string;
+  corner?: "nw" | "ne" | "sw" | "se";
+  origin: { x: number; y: number };
+  element?: EditorElement;
+  moved: boolean;
+}
+
+const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
+export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { initialTool?: Tool; toolSlug?: string } = {}) {
+  /* ── document ─────────────────────────────────────────────────────────── */
   const [file, setFile] = useState<File | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
+  const [bytes, setBytes] = useState<ArrayBuffer | null>(null);
+  const [blank, setBlank] = useState<{ size: PageSizeKey; orientation: "portrait" | "landscape" } | null>(null);
+  const [blankPages, setBlankPages] = useState("1");
+  const [pages, setPages] = useState<PageEntry[]>([]);
+  const [pageSizes, setPageSizes] = useState<{ width: number; height: number }[]>([]);
+  const [activePage, setActivePage] = useState(0);
+
+  /* ── scene ────────────────────────────────────────────────────────────── */
+  const [elements, setElements] = useState<EditorElement[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>(initialTool);
-  const [color, setColor] = useState(COLORS[0]);
-  const [text, setText] = useState("");
-  const [fontSize, setFontSize] = useState(14);
-  const [annotations, setAnnotations] = useState<DraftAnnotation[]>([]);
-  const [drawing, setDrawing] = useState<Annotation | null>(null);
+  const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
+  const [draft, setDraft] = useState<EditorElement | null>(null);
+  const [toolSearch, setToolSearch] = useState("");
+  const [imageBytes, setImageBytes] = useState<{ bytes: ArrayBuffer; url: string } | null>(null);
+
+  /* ── history ──────────────────────────────────────────────────────────── */
+  const [past, setPast] = useState<{ elements: EditorElement[]; pages: PageEntry[] }[]>([]);
+  const [future, setFuture] = useState<{ elements: EditorElement[]; pages: PageEntry[] }[]>([]);
+
+  /* ── status ───────────────────────────────────────────────────────────── */
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ResultFile[]>([]);
-  const started = useRef<{ x: number; y: number } | null>(null);
-  const imageBytes = useRef<ArrayBuffer | null>(null);
-  const imageUrl = useRef<string | null>(null);
+  const [docTitle, setDocTitle] = useState("");
+
+  const drag = useRef<DragState | null>(null);
+  const lastRecord = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [stageWidth, setStageWidth] = useState(640);
 
   const info = usePdfInfo(file);
-  const preview = usePageThumbs(file, { maxWidth: 860, maxPages: 40 });
-  const thumb = preview.thumbs.find((item) => item.pageIndex === pageIndex);
+  const preview = usePageThumbs(file, { maxWidth: 900, maxPages: 60 });
+
+  /* ── measuring the stage so the preview matches PDF points ─────────────── */
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width) setStageWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [blank, file]);
+
+  /* ── reading page sizes ───────────────────────────────────────────────── */
+  useEffect(() => {
+    if (blank) {
+      const { width, height } = EDITOR_PAGE_SIZES[blank.size];
+      const size = blank.orientation === "landscape" ? { width: height, height: width } : { width, height };
+      setPageSizes(pages.map(() => size));
+      return;
+    }
+    if (!bytes) {
+      setPageSizes([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: false });
+        if (cancelled) return;
+        setPageSizes(doc.getPages().map((page) => page.getSize()));
+      } catch {
+        if (!cancelled) setPageSizes([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [blank, bytes, pages.length]);
+
+  /* ── opening a document ───────────────────────────────────────────────── */
+  const openFile = useCallback(async (next: File) => {
+    setError(null);
+    try {
+      const buffer = await next.arrayBuffer();
+      setBytes(buffer);
+      setFile(next);
+      setBlank(null);
+      setElements([]);
+      setSelectedId(null);
+      setPast([]);
+      setFuture([]);
+      setActivePage(0);
+      track("tool_started", { tool: toolSlug, files: 1 });
+    } catch {
+      setError("That file could not be read. Try choosing it again.");
+    }
+  }, [toolSlug]);
 
   useEffect(() => {
-    setAnnotations([]);
-    setPageIndex(0);
-  }, [file]);
-
-  const pointFromEvent = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return {
-      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
-      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
-    };
-  };
-
-  const id = () => `a-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!thumb) return;
-    const point = pointFromEvent(event);
-
-    if (tool === "text" || tool === "image") {
-      if (tool === "text" && !text.trim()) {
-        setError("Type the text you want to place first.");
-        return;
-      }
-      if (tool === "image" && !imageBytes.current) {
-        setError("Choose an image to place first.");
-        return;
-      }
-      setError(null);
-      setAnnotations((current) => [
-        ...current,
-        {
-          id: id(),
-          kind: tool as AnnotationKind,
-          pageIndex,
-          x: point.x,
-          y: point.y,
-          width: tool === "image" ? 0.28 : 0.4,
-          height: tool === "image" ? 0.16 : 0.06,
-          color,
-          text: tool === "text" ? text : undefined,
-          fontSize,
-          imageBytes: tool === "image" ? imageBytes.current ?? undefined : undefined,
-          previewUrl: tool === "image" ? imageUrl.current ?? undefined : undefined,
-        },
-      ]);
-      return;
-    }
-
-    if (tool === "draw") {
-      setDrawing({
-        id: id(),
-        kind: "draw",
-        pageIndex,
-        x: point.x,
-        y: point.y,
-        width: 0,
-        height: 0,
-        color,
-        points: [point],
-      });
-      return;
-    }
-
-    started.current = point;
-    setDrawing({
-      id: id(),
-      kind: tool as AnnotationKind,
-      pageIndex,
-      x: point.x,
-      y: point.y,
-      width: 0,
-      height: 0,
-      color,
+    if (!file || !info.pages) return;
+    setPages((current) => {
+      if (current.length) return current;
+      return Array.from({ length: info.pages }, (_, index) => ({ id: uid("p"), sourceIndex: index }));
     });
-  };
+  }, [file, info.pages]);
 
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!drawing) return;
-    const point = pointFromEvent(event);
-    if (drawing.kind === "draw") {
-      setDrawing({ ...drawing, points: [...(drawing.points ?? []), point] });
-      return;
-    }
-    const start = started.current;
-    if (!start) return;
-    setDrawing({
-      ...drawing,
-      x: Math.min(start.x, point.x),
-      y: Math.min(start.y, point.y),
-      width: Math.abs(point.x - start.x),
-      height: Math.abs(point.y - start.y),
-    });
-  };
-
-  const onPointerUp = () => {
-    if (!drawing) return;
-    const finished = drawing;
-    setDrawing(null);
-    started.current = null;
-    if (finished.kind === "draw") {
-      if ((finished.points?.length ?? 0) > 2) setAnnotations((current) => [...current, finished]);
-      return;
-    }
-    if (finished.width < 0.01 || finished.height < 0.008) return;
-    setAnnotations((current) => [...current, finished]);
-  };
-
-  const onImagePick = async (picked: File | null) => {
-    if (!picked) return;
-    if (imageUrl.current) URL.revokeObjectURL(imageUrl.current);
-    imageBytes.current = await picked.arrayBuffer();
-    imageUrl.current = URL.createObjectURL(picked);
-    setTool("image");
-    setError(null);
+  const startBlank = () => {
+    const count = Math.max(1, Math.min(20, Number(blankPages) || 1));
+    setBlank((current) => current ?? { size: "a4", orientation: "portrait" });
+    setPages(Array.from({ length: count }, () => ({ id: uid("p"), sourceIndex: null })));
+    setElements([]);
+    setSelectedId(null);
+    setPast([]);
+    setFuture([]);
+    setActivePage(0);
+    setFile(null);
+    setBytes(null);
+    track("tool_started", { tool: toolSlug });
   };
 
   const reset = () => {
     revokeResults(results);
-    if (imageUrl.current) URL.revokeObjectURL(imageUrl.current);
-    imageBytes.current = null;
-    imageUrl.current = null;
+    if (imageBytes) URL.revokeObjectURL(imageBytes.url);
+    setImageBytes(null);
     setResults([]);
     setFile(null);
-    setAnnotations([]);
+    setBytes(null);
+    setBlank(null);
+    setPages([]);
+    setPageSizes([]);
+    setElements([]);
+    setSelectedId(null);
     setError(null);
+    setPast([]);
+    setFuture([]);
+    setActivePage(0);
+    setDocTitle("");
   };
 
-  const run = async () => {
-    if (!file) return;
-    if (!annotations.length) {
-      setError("Add at least one annotation before exporting.");
+  const documentOpen = Boolean(blank || file);
+
+  /* ── history helpers ──────────────────────────────────────────────────── */
+  const snapshot = useCallback(() => ({ elements, pages }), [elements, pages]);
+
+  const pushHistory = useCallback(() => {
+    setPast((current) => [...current.slice(-49), snapshot()]);
+    setFuture([]);
+  }, [snapshot]);
+
+  /** Collapses rapid edits of the same field into one undo step. */
+  const record = useCallback(
+    (key: string) => {
+      const now = Date.now();
+      if (lastRecord.current.key === key && now - lastRecord.current.at < 1200) {
+        lastRecord.current.at = now;
+        return;
+      }
+      lastRecord.current = { key, at: now };
+      pushHistory();
+    },
+    [pushHistory],
+  );
+
+  const undo = () => {
+    setPast((current) => {
+      if (!current.length) return current;
+      const previous = current[current.length - 1];
+      setFuture((next) => [snapshot(), ...next].slice(0, 50));
+      setElements(previous.elements);
+      setPages(previous.pages);
+      setSelectedId(null);
+      setActivePage((page) => Math.min(page, Math.max(0, previous.pages.length - 1)));
+      return current.slice(0, -1);
+    });
+  };
+
+  const redo = () => {
+    setFuture((current) => {
+      if (!current.length) return current;
+      const next = current[0];
+      setPast((previous) => [...previous, snapshot()].slice(-50));
+      setElements(next.elements);
+      setPages(next.pages);
+      setSelectedId(null);
+      return current.slice(1);
+    });
+  };
+
+  /* ── element helpers ──────────────────────────────────────────────────── */
+  const selected = elements.find((element) => element.id === selectedId) ?? null;
+
+  const elementDefaults = useCallback(
+    (kind: EditorElementKind, rect: { x: number; y: number; width: number; height: number }): EditorElement => {
+      const base: EditorElement = {
+        id: uid("el"),
+        kind,
+        pageIndex: activePage,
+        ...rect,
+        opacity: style.opacity,
+        rotation: 0,
+      };
+      switch (kind) {
+        case "text":
+          return {
+            ...base,
+            text: "New text",
+            fontSize: style.fontSize,
+            fontFamily: style.fontFamily,
+            bold: style.bold,
+            italic: style.italic,
+            align: style.align,
+            lineHeight: style.lineHeight,
+            fill: style.stroke,
+            stroke: style.stroke,
+            wrap: true,
+          };
+        case "line":
+        case "arrow":
+          return { ...base, stroke: style.stroke, strokeWidth: style.strokeWidth, fill: null };
+        case "draw":
+          return { ...base, stroke: style.stroke, strokeWidth: style.strokeWidth, points: [] };
+        case "highlight":
+          return { ...base, fill: "#FDE68A", stroke: null };
+        case "whiteout":
+          return { ...base, fill: "#FFFFFF", stroke: null };
+        case "image":
+          return { ...base, imageBytes: imageBytes?.bytes, imageUrl: imageBytes?.url };
+        default:
+          return { ...base, fill: style.fill, stroke: style.stroke, strokeWidth: style.strokeWidth };
+      }
+    },
+    [activePage, imageBytes, style],
+  );
+
+  const addElement = (element: EditorElement) => {
+    pushHistory();
+    setElements((current) => [...current, element]);
+    setSelectedId(element.id);
+  };
+
+  const updateSelected = (patch: Partial<EditorElement>, historyKey: string) => {
+    if (!selected) return;
+    record(historyKey);
+    setElements((current) => current.map((element) => (element.id === selected.id ? { ...element, ...patch } : element)));
+  };
+
+  const removeSelected = () => {
+    if (!selected) return;
+    pushHistory();
+    setElements((current) => current.filter((element) => element.id !== selected.id));
+    setSelectedId(null);
+  };
+
+  const duplicateSelected = () => {
+    if (!selected) return;
+    pushHistory();
+    const copy: EditorElement = {
+      ...selected,
+      id: uid("el"),
+      x: clamp01(selected.x + 0.02),
+      y: clamp01(selected.y + 0.02),
+    };
+    setElements((current) => [...current, copy]);
+    setSelectedId(copy.id);
+  };
+
+  const reorder = (direction: "up" | "down") => {
+    if (!selected) return;
+    pushHistory();
+    setElements((current) => {
+      const index = current.findIndex((element) => element.id === selected.id);
+      if (index === -1) return current;
+      const target = direction === "up" ? index + 1 : index - 1;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  /* ── pointer geometry ─────────────────────────────────────────────────── */
+  const point = (event: React.PointerEvent | PointerEvent) => {
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: clamp01((event.clientX - rect.left) / rect.width),
+      y: clamp01((event.clientY - rect.top) / rect.height),
+    };
+  };
+
+  const onStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!documentOpen) return;
+    const start = point(event);
+    setError(null);
+
+    if (tool === "select") {
+      setSelectedId(null);
+      return;
+    }
+
+    if (tool === "text") {
+      const width = 0.34;
+      const height = Math.min(0.5, Math.max(0.05, (style.fontSize * 3) / (pageSizes[activePage]?.height || 842)));
+      addElement(elementDefaults("text", { x: clamp01(start.x), y: clamp01(start.y), width, height }));
+      setTool("select");
+      return;
+    }
+
+    if (tool === "image") {
+      if (!imageBytes) {
+        setError("Choose an image in the Insert panel first.");
+        return;
+      }
+      addElement(elementDefaults("image", { x: clamp01(start.x), y: clamp01(start.y), width: 0.3, height: 0.2 }));
+      setTool("select");
+      return;
+    }
+
+    if (tool === "draw") {
+      drag.current = { mode: "draw", origin: start, moved: false };
+      setDraft(elementDefaults("draw", { x: start.x, y: start.y, width: 0, height: 0 }));
+      return;
+    }
+
+    if (SHAPE_TOOLS.has(tool)) {
+      drag.current = { mode: "create", origin: start, moved: false };
+      setDraft(elementDefaults(tool, { x: start.x, y: start.y, width: 0, height: 0 }));
+    }
+  };
+
+  const onStagePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = drag.current;
+    if (!state) return;
+    const current = point(event);
+
+    if (state.mode === "create") {
+      state.moved = true;
+      setDraft((draftElement) =>
+        draftElement
+          ? {
+              ...draftElement,
+              x: Math.min(state.origin.x, current.x),
+              y: Math.min(state.origin.y, current.y),
+              width: Math.abs(current.x - state.origin.x),
+              height: Math.abs(current.y - state.origin.y),
+            }
+          : draftElement,
+      );
+      return;
+    }
+
+    if (state.mode === "draw") {
+      state.moved = true;
+      setDraft((draftElement) =>
+        draftElement ? { ...draftElement, points: [...(draftElement.points ?? []), current] } : draftElement,
+      );
+      return;
+    }
+
+    if (state.mode === "move" && state.id && state.element) {
+      const dx = current.x - state.origin.x;
+      const dy = current.y - state.origin.y;
+      if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) state.moved = true;
+      const element = state.element;
+      setElements((all) =>
+        all.map((entry) =>
+          entry.id === state.id
+            ? {
+                ...entry,
+                x: Math.min(1 - element.width, Math.max(0, element.x + dx)),
+                y: Math.min(1 - element.height, Math.max(0, element.y + dy)),
+              }
+            : entry,
+        ),
+      );
+      return;
+    }
+
+    if (state.mode === "resize" && state.id && state.element) {
+      const element = state.element;
+      state.moved = true;
+      const x2 = element.x + element.width;
+      const y2 = element.y + element.height;
+      let x = element.x;
+      let y = element.y;
+      let width = element.width;
+      let height = element.height;
+
+      if (state.corner === "nw" || state.corner === "sw") {
+        x = Math.min(current.x, x2 - 0.02);
+        width = x2 - x;
+      } else {
+        width = Math.max(0.02, current.x - element.x);
+      }
+      if (state.corner === "nw" || state.corner === "ne") {
+        y = Math.min(current.y, y2 - 0.02);
+        height = y2 - y;
+      } else {
+        height = Math.max(0.02, current.y - element.y);
+      }
+
+      setElements((all) => all.map((entry) => (entry.id === state.id ? { ...entry, x, y, width, height } : entry)));
+    }
+  };
+
+  /** Rebuilds the pre-drag element list so a drag is one undo step. */
+  const elementsBeforeDrag = (state: DragState, current: EditorElement[]) =>
+    current.map((entry) => (entry.id === state.id && state.element ? state.element : entry));
+
+  const onStagePointerUp = () => {
+    const state = drag.current;
+    const finished = draft;
+    drag.current = null;
+    setDraft(null);
+    if (!state) return;
+
+    if ((state.mode === "create" || state.mode === "draw") && finished) {
+      if (state.mode === "draw") {
+        if ((finished.points?.length ?? 0) > 2) addElement(finished);
+        return;
+      }
+      if (finished.width < 0.01 || finished.height < 0.01) {
+        // A click rather than a drag: give the shape a sensible default size.
+        addElement({ ...finished, width: 0.25, height: 0.12 });
+        return;
+      }
+      addElement(finished);
+      return;
+    }
+
+    if (state.moved && (state.mode === "move" || state.mode === "resize")) {
+      // The geometry has already been applied live, so the undo entry is the
+      // element as it was before the drag started.
+      setPast((current) => [...current.slice(-49), { elements: elementsBeforeDrag(state, elements), pages }]);
+      setFuture([]);
+    }
+  };
+
+  const startMove = (event: React.PointerEvent, element: EditorElement) => {
+    event.stopPropagation();
+    setSelectedId(element.id);
+    if (tool !== "select") return;
+    drag.current = { mode: "move", id: element.id, origin: point(event), element, moved: false };
+  };
+
+  const startResize = (event: React.PointerEvent, element: EditorElement, corner: "nw" | "ne" | "sw" | "se") => {
+    event.stopPropagation();
+    drag.current = { mode: "resize", id: element.id, corner, origin: point(event), element, moved: false };
+  };
+
+  /* ── keyboard ─────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedId) {
+        event.preventDefault();
+        removeSelected();
+        return;
+      }
+      if (event.key === "Escape") {
+        setSelectedId(null);
+        setTool("select");
+        return;
+      }
+      if (selectedId && /^Arrow/.test(event.key)) {
+        event.preventDefault();
+        const step = event.shiftKey ? 0.02 : 0.002;
+        const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+        const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+        setElements((current) =>
+          current.map((entry) =>
+            entry.id === selectedId
+              ? {
+                  ...entry,
+                  x: Math.min(1 - entry.width, Math.max(0, entry.x + dx)),
+                  y: Math.min(1 - entry.height, Math.max(0, entry.y + dy)),
+                }
+              : entry,
+          ),
+        );
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // Handlers close over current state on purpose; the listeners are cheap.
+  }, [selectedId, past, future, elements, pages]);
+
+  /* ── pages ────────────────────────────────────────────────────────────── */
+  const addPage = () => {
+    pushHistory();
+    setPages((current) => [...current, { id: uid("p"), sourceIndex: blank ? null : null }]);
+    setActivePage(pages.length);
+  };
+
+  const duplicatePage = (index: number) => {
+    const page = pages[index];
+    if (!page) return;
+    pushHistory();
+    setPages((current) => [...current.slice(0, index + 1), { id: uid("p"), sourceIndex: page.sourceIndex }, ...current.slice(index + 1)]);
+    setElements((current) => {
+      const copies = current
+        .filter((element) => element.pageIndex === index)
+        .map((element) => ({ ...element, id: uid("el"), pageIndex: index + 1 }));
+      return [...current.map((element) => (element.pageIndex > index ? { ...element, pageIndex: element.pageIndex + 1 } : element)), ...copies];
+    });
+    setActivePage(index + 1);
+  };
+
+  const deletePage = (index: number) => {
+    if (pages.length === 1) {
+      setError("A document needs at least one page.");
+      return;
+    }
+    pushHistory();
+    setPages((current) => current.filter((_, position) => position !== index));
+    setElements((current) =>
+      current
+        .filter((element) => element.pageIndex !== index)
+        .map((element) => (element.pageIndex > index ? { ...element, pageIndex: element.pageIndex - 1 } : element)),
+    );
+    setActivePage((page) => Math.max(0, page >= index ? page - 1 : page));
+    setSelectedId(null);
+  };
+
+  const movePage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= pages.length) return;
+    pushHistory();
+    setPages((current) => {
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setElements((current) =>
+      current.map((element) => {
+        if (element.pageIndex === index) return { ...element, pageIndex: target };
+        if (element.pageIndex === target) return { ...element, pageIndex: index };
+        return element;
+      }),
+    );
+    setActivePage(target);
+  };
+
+  /* ── export ───────────────────────────────────────────────────────────── */
+  const exportPdf = async () => {
+    if (!documentOpen) return;
+    if (!elements.length && !blank) {
+      setError("Add something to the page before exporting, or start a blank document to export an empty page.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const bytes = await applyAnnotations(await file.arrayBuffer(), annotations);
-      const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+      const result = await renderEditorPdf({
+        source: blank
+          ? { kind: "blank", pages: pages.length, size: blank.size, orientation: blank.orientation }
+          : { kind: "pdf", bytes: bytes! },
+        pages: blank ? undefined : pages.map((page) => ({ sourceIndex: page.sourceIndex })),
+        elements,
+        title: docTitle.trim() || undefined,
+      });
+
+      const blob = new Blob([result.bytes as unknown as BlobPart], { type: "application/pdf" });
+      const name = blank
+        ? `filecraft-document.pdf`
+        : `${(file?.name ?? "document").replace(/\.pdf$/i, "")}-edited.pdf`;
+
       setResults([
         {
-          id: "edited",
-          name: outputName(fileBaseName(file.name), "edited", "pdf"),
+          id: uid("result"),
+          name,
           blob,
           size: blob.size,
-          originalSize: file.size,
-          note: `${annotations.length} annotation${annotations.length === 1 ? "" : "s"} written into the pages`,
+          originalSize: blank ? undefined : file?.size,
+          note: `${result.pages} page${result.pages === 1 ? "" : "s"} · ${result.elements} object${
+            result.elements === 1 ? "" : "s"
+          } drawn${result.dropped ? ` · ${result.dropped} skipped` : ""}`,
         },
       ]);
-      track("tool_completed", { tool: toolSlug, annotations: annotations.length });
+      track("tool_completed", { tool: toolSlug, elements: result.elements, pages: result.pages });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The document could not be exported.");
     } finally {
@@ -210,270 +708,580 @@ export function PdfEditor({
     }
   };
 
+  /* ── derived ──────────────────────────────────────────────────────────── */
+  const filteredTools = useMemo(() => {
+    const query = toolSearch.trim().toLowerCase();
+    if (!query) return TOOLS;
+    return TOOLS.filter((entry) => `${entry.label} ${entry.keywords} ${entry.key}`.toLowerCase().includes(query));
+  }, [toolSearch]);
+
+  const pageSize = pageSizes[activePage] ?? pageSizes[0] ?? null;
+  const scale = pageSize ? stageWidth / pageSize.width : 1;
+  const pageElements = elements.filter((element) => element.pageIndex === activePage);
+  const activeThumb = pages[activePage]?.sourceIndex != null
+    ? preview.thumbs.find((thumb) => thumb.pageIndex === pages[activePage].sourceIndex)
+    : null;
+  const aspect = pageSize ? pageSize.height / pageSize.width : activeThumb ? activeThumb.height / activeThumb.width : 1.414;
+
   if (results.length) {
     return (
       <ToolFrame labelledBy="tool-title">
-        <ResultsPanel files={results} onReset={reset} heading="Your edited PDF is ready" />
+        <ResultsPanel
+          files={results}
+          onReset={reset}
+          heading="Your document is ready"
+          compare={blank ? "conversion" : "compression"}
+          zipLabel="Download"
+        />
       </ToolFrame>
     );
   }
 
-  const pageAnnotations = annotations.filter((annotation) => annotation.pageIndex === pageIndex);
+  /* ── start screen ─────────────────────────────────────────────────────── */
+  if (!documentOpen) {
+    return (
+      <ToolFrame labelledBy="tool-title">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <p className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+              <FileText className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              Start a blank document
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-subtle">
+              An empty page you fill yourself — title pages, invoices, certificates, posters.
+            </p>
+            <div className="mt-3 grid gap-3">
+              <Field label="Page size" htmlFor="new-size">
+                <select
+                  id="new-size"
+                  className={selectClass}
+                  value={blank?.size ?? "a4"}
+                  onChange={(event) => setBlank({ size: event.target.value as PageSizeKey, orientation: blank?.orientation ?? "portrait" })}
+                >
+                  {Object.entries(EDITOR_PAGE_SIZES).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Orientation" htmlFor="new-orientation">
+                  <select
+                    id="new-orientation"
+                    className={selectClass}
+                    value={blank?.orientation ?? "portrait"}
+                    onChange={(event) =>
+                      setBlank({ size: blank?.size ?? "a4", orientation: event.target.value as "portrait" | "landscape" })
+                    }
+                  >
+                    <option value="portrait">Portrait</option>
+                    <option value="landscape">Landscape</option>
+                  </select>
+                </Field>
+                <Field label="Pages" htmlFor="new-pages">
+                  <input
+                    id="new-pages"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={blankPages}
+                    onChange={(event) => setBlankPages(event.target.value)}
+                    className="h-11 w-full rounded-xl border border-line bg-raised px-3 font-mono text-[14px] tabular-nums text-ink outline-none focus:border-brand-400"
+                  />
+                </Field>
+              </div>
+              <button type="button" onClick={startBlank} className="btn-primary w-full">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create blank document
+              </button>
+            </div>
+          </div>
 
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <p className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+              <PenTool className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              Open a PDF to edit
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-subtle">
+              Add text, shapes, images, highlights and white-out on top of the pages.
+            </p>
+            <div className="mt-3">
+              <PdfSource file={null} onFile={openFile} onRemove={() => setFile(null)} title="Drop your PDF here" subtitle="PDF only · up to 200 MB · nothing is uploaded" />
+            </div>
+            <p className="mt-2 rounded-lg bg-raised px-3 py-2 text-[11px] leading-relaxed text-subtle">
+              Existing text cannot be retyped in a browser — a PDF stores positioned glyphs, not paragraphs. Cover a
+              line with white-out and write over it, or rebuild the page in a blank document.
+            </p>
+          </div>
+        </div>
+      </ToolFrame>
+    );
+  }
+
+  /* ── editor ───────────────────────────────────────────────────────────── */
   return (
     <ToolFrame labelledBy="tool-title">
-      <PdfSource file={file} onFile={(next) => { setFile(next); setError(null); }} onRemove={() => setFile(null)} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11.5px] font-semibold text-body">
+          {blank ? `Blank · ${EDITOR_PAGE_SIZES[blank.size].label.split(" (")[0]}` : (file?.name ?? "Document")}
+        </span>
+        <span className="text-[11.5px] text-subtle">
+          {pages.length} page{pages.length === 1 ? "" : "s"} · {elements.length} object{elements.length === 1 ? "" : "s"}
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!past.length}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-raised text-body disabled:opacity-40"
+            aria-label="Undo"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!future.length}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-raised text-body disabled:opacity-40"
+            aria-label="Redo"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={reset} className="ml-1 text-[11.5px] font-semibold text-subtle hover:text-danger">
+            Start over
+          </button>
+        </div>
+      </div>
 
-      {file && (
-        <>
-          <div className="mt-5 flex flex-wrap items-center gap-2" role="group" aria-label="Annotation tool">
-            {TOOLS.map((entry) => (
-              <button
-                key={entry.key}
-                type="button"
-                onClick={() => setTool(entry.key)}
-                aria-pressed={tool === entry.key}
-                className={cn(
-                  "min-h-[38px] rounded-lg border px-3 text-[12.5px] font-semibold transition-colors",
-                  tool === entry.key
-                    ? "border-brand-500 bg-brand-50 text-brand-700"
-                    : "border-line bg-raised text-body hover:border-primary/40",
-                )}
-              >
-                {entry.label}
-              </button>
-            ))}
-            <span className="ml-auto flex items-center gap-1.5">
-              {COLORS.map((value) => (
+      <div className="grid gap-4 lg:grid-cols-[200px_1fr_240px]">
+        {/* Tools */}
+        <div className="order-2 lg:order-1">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle" aria-hidden="true" />
+            <input
+              type="search"
+              value={toolSearch}
+              onChange={(event) => setToolSearch(event.target.value)}
+              placeholder="Search tools…"
+              aria-label="Search editing tools"
+              className="h-9 w-full rounded-lg border border-line bg-raised pl-8 pr-2 text-[12px] text-ink outline-none focus:border-brand-400"
+            />
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-1.5 lg:grid-cols-1">
+            {filteredTools.map((entry) => {
+              const Icon = entry.icon;
+              const active = tool === entry.key;
+              return (
                 <button
-                  key={value}
+                  key={entry.key}
                   type="button"
-                  onClick={() => setColor(value)}
-                  aria-label={`Use colour ${value}`}
-                  aria-pressed={color === value}
+                  onClick={() => setTool(entry.key)}
+                  aria-pressed={active}
                   className={cn(
-                    "h-6 w-6 rounded-full border-2 transition-transform",
-                    color === value ? "border-ink scale-110" : "border-white ring-1 ring-line",
+                    "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[12px] font-semibold transition-colors",
+                    active ? "border-primary/45 bg-primary/10 text-brand-700" : "border-line bg-raised text-body hover:border-primary/30",
                   )}
-                  style={{ backgroundColor: value }}
-                />
-              ))}
-            </span>
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-4">
-            <Field label="Page" htmlFor="editor-page">
-              <select
-                id="editor-page"
-                className={selectClass}
-                value={pageIndex}
-                onChange={(event) => setPageIndex(Number(event.target.value))}
-              >
-                {Array.from({ length: Math.max(info.pages, 1) }, (_, index) => (
-                  <option key={index} value={index}>
-                    Page {index + 1}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            {tool === "text" && (
-              <>
-                <Field label="Text to place" htmlFor="editor-text" className="sm:col-span-2">
-                  <input
-                    id="editor-text"
-                    className={inputClass}
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    placeholder="Correction, note or date"
-                  />
-                </Field>
-                <Field label="Text size" htmlFor="editor-size">
-                  <input
-                    id="editor-size"
-                    type="number"
-                    min={8}
-                    max={40}
-                    className={inputClass}
-                    value={fontSize}
-                    onChange={(event) => setFontSize(Number(event.target.value))}
-                  />
-                </Field>
-              </>
-            )}
-
-            {tool === "image" && (
-              <div className="sm:col-span-3">
-                <label htmlFor="editor-image" className="mb-1.5 block text-[12.5px] font-semibold text-ink">
-                  Image to place
-                </label>
-                <input
-                  id="editor-image"
-                  type="file"
-                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-                  onChange={(event) => onImagePick(event.target.files?.[0] ?? null)}
-                  className="block w-full cursor-pointer rounded-lg border border-line bg-raised px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-brand-700"
-                />
-              </div>
-            )}
-          </div>
-
-          {thumb ? (
-            <div className="mt-4">
-              <p className="mb-1.5 text-[12px] text-subtle">
-                {tool === "text" || tool === "image"
-                  ? "Click on the page to place it."
-                  : tool === "draw"
-                    ? "Draw on the page with your mouse or finger."
-                    : "Drag on the page to draw the area."}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{entry.label}</span>
+                </button>
+              );
+            })}
+            {!filteredTools.length && (
+              <p className="col-span-2 rounded-lg border border-dashed border-line px-2 py-3 text-center text-[11.5px] text-subtle">
+                No tool matches “{toolSearch}”.
               </p>
-              <div
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerLeave={onPointerUp}
-                className="relative mx-auto w-full max-w-xl touch-none overflow-hidden rounded-xl border border-line bg-raised shadow-card"
-                style={{ cursor: tool === "text" ? "text" : "crosshair" }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumb.url} alt={`Page ${pageIndex + 1}`} className="block w-full select-none" draggable={false} />
+            )}
+          </div>
 
-                {pageAnnotations.map((annotation) => {
-                  if (annotation.kind === "draw") {
-                    const points = annotation.points ?? [];
-                    return (
-                      <svg key={annotation.id} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
-                        <polyline
-                          points={points.map((point) => `${point.x * 100}%,${point.y * 100}%`).join(" ")}
-                          fill="none"
-                          stroke={annotation.color}
-                          strokeWidth={2.5}
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                    );
-                  }
-                  if (annotation.kind === "text") {
-                    return (
+          {tool === "image" && (
+            <div className="mt-2">
+              <label className="block text-[11.5px] font-semibold text-ink" htmlFor="editor-image">
+                Image file
+              </label>
+              <input
+                id="editor-image"
+                type="file"
+                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                onChange={async (event) => {
+                  const picked = event.target.files?.[0];
+                  if (!picked) return;
+                  if (imageBytes) URL.revokeObjectURL(imageBytes.url);
+                  setImageBytes({ bytes: await picked.arrayBuffer(), url: makePreviewUrl(picked) });
+                  setError(null);
+                }}
+                className="mt-1 block w-full cursor-pointer rounded-lg border border-line bg-raised px-2 py-1.5 text-[11.5px] file:mr-2 file:rounded file:border-0 file:bg-brand-50 file:px-2 file:py-1 file:text-[11px] file:font-semibold file:text-brand-700"
+              />
+              <p className="mt-1 text-[10.5px] leading-snug text-subtle">PNG or JPG. Then click the page to place it.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Stage */}
+        <div className="order-1 lg:order-2">
+          <div className="rounded-xl border border-line bg-[#0b1020] p-2">
+            <div className="mx-auto" style={{ maxWidth: 560 }}>
+              <div
+                ref={stageRef}
+                onPointerDown={onStagePointerDown}
+                onPointerMove={onStagePointerMove}
+                onPointerUp={onStagePointerUp}
+                onPointerLeave={onStagePointerUp}
+                className="relative w-full touch-none select-none overflow-hidden rounded bg-white shadow-card"
+                style={{ aspectRatio: `1 / ${aspect}`, cursor: tool === "select" ? "default" : tool === "text" ? "text" : "crosshair" }}
+              >
+                {activeThumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={activeThumb.url} alt={`Page ${activePage + 1}`} className="pointer-events-none absolute inset-0 h-full w-full object-fill" draggable={false} />
+                ) : blank ? null : (
+                  <div className="absolute inset-0 grid place-items-center text-[11px] text-subtle">
+                    {preview.loading ? "Rendering the page…" : "This page could not be previewed"}
+                  </div>
+                )}
+
+                {pageElements.map((element) => (
+                  <div
+                    key={element.id}
+                    onPointerDown={(event) => startMove(event, element)}
+                    className="absolute"
+                    style={{
+                      left: `${element.x * 100}%`,
+                      top: `${element.y * 100}%`,
+                      width: `${element.width * 100}%`,
+                      height: `${element.height * 100}%`,
+                    }}
+                  >
+                    <ElementView element={element} scale={scale} selected={element.id === selectedId} interactive={false} />
+                  </div>
+                ))}
+
+                {selected && (
+                  <>
+                    {(["nw", "ne", "sw", "se"] as const).map((corner) => (
                       <span
-                        key={annotation.id}
-                        className="pointer-events-none absolute whitespace-pre"
+                        key={corner}
+                        role="presentation"
+                        onPointerDown={(event) => startResize(event, selected, corner)}
+                        className={cn(
+                          "absolute z-10 h-3 w-3 rounded-full border-2 border-brand-500 bg-white",
+                          corner === "nw" && "-translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
+                          corner === "ne" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
+                          corner === "sw" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
+                          corner === "se" && "translate-x-1/2 translate-y-1/2 cursor-nwse-resize",
+                        )}
                         style={{
-                          left: `${annotation.x * 100}%`,
-                          top: `${annotation.y * 100}%`,
-                          color: annotation.color,
-                          fontSize: `${(annotation.fontSize ?? 14) * 0.62}px`,
-                        }}
-                      >
-                        {annotation.text}
-                      </span>
-                    );
-                  }
-                  if (annotation.kind === "image" && annotation.previewUrl) {
-                    return (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={annotation.id}
-                        src={annotation.previewUrl}
-                        alt=""
-                        className="pointer-events-none absolute object-contain"
-                        style={{
-                          left: `${annotation.x * 100}%`,
-                          top: `${annotation.y * 100}%`,
-                          width: `${annotation.width * 100}%`,
-                          height: `${annotation.height * 100}%`,
+                          left: `${(corner === "ne" || corner === "se" ? selected.x + selected.width : selected.x) * 100}%`,
+                          top: `${(corner === "sw" || corner === "se" ? selected.y + selected.height : selected.y) * 100}%`,
                         }}
                       />
-                    );
-                  }
-                  return (
-                    <span
-                      key={annotation.id}
-                      className="pointer-events-none absolute"
-                      style={{
-                        left: `${annotation.x * 100}%`,
-                        top: `${annotation.y * 100}%`,
-                        width: `${annotation.width * 100}%`,
-                        height: `${annotation.height * 100}%`,
-                        backgroundColor:
-                          annotation.kind === "highlight"
-                            ? `${annotation.color}55`
-                            : annotation.kind === "whiteout"
-                              ? "#ffffff"
-                              : "transparent",
-                        border: annotation.kind === "rect" ? `2px solid ${annotation.color}` : undefined,
-                      }}
-                    />
-                  );
-                })}
+                    ))}
+                  </>
+                )}
 
-                {drawing && drawing.kind !== "draw" && (
-                  <span
-                    className="pointer-events-none absolute border-2 border-dashed border-brand-500 bg-brand-500/10"
-                    style={{
-                      left: `${drawing.x * 100}%`,
-                      top: `${drawing.y * 100}%`,
-                      width: `${drawing.width * 100}%`,
-                      height: `${drawing.height * 100}%`,
-                    }}
-                  />
+                {draft && <ElementView element={draft} scale={scale} selected={false} interactive={false} />}
+
+                {!blank && !activeThumb && !preview.loading && (
+                  <div className="pointer-events-none absolute inset-0 bg-white/95 p-4 text-[12px] text-subtle">
+                    Preview unavailable — objects you add are still written into the exported PDF.
+                  </div>
                 )}
               </div>
             </div>
-          ) : (
-            <ProgressBar value={preview.progress} label="Rendering the page" />
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[12.5px] text-subtle">
-              {annotations.length} annotation{annotations.length === 1 ? "" : "s"} · {pageAnnotations.length} on this page
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAnnotations((current) => current.filter((item) => item.pageIndex !== pageIndex))}
-                disabled={!pageAnnotations.length}
-                className="btn-secondary min-h-[38px] px-3 text-[12.5px]"
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                Clear this page
-              </button>
-              <button
-                type="button"
-                onClick={() => setAnnotations([])}
-                disabled={!annotations.length}
-                className="btn-secondary min-h-[38px] px-3 text-[12.5px]"
-              >
-                Clear all
-              </button>
-            </div>
           </div>
 
-          <Notice tone="warning" className="mt-4">
-            White-out covers text visually but does not remove it from the file. Never use it for confidential data —
-            that needs real redaction.
-          </Notice>
-
-          {info.error && <Notice tone="danger" className="mt-4">{info.error}</Notice>}
-          {error && (
-            <Notice tone="danger" className="mt-4" onDismiss={() => setError(null)}>
-              {error}
-            </Notice>
-          )}
-          {busy && <ProgressBar value={0.6} label="Writing annotations into the pages" />}
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={run} disabled={busy || !annotations.length} className="btn-primary w-full sm:w-auto">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <PenTool className="h-4 w-4" aria-hidden="true" />}
-              {busy ? "Exporting…" : "Export PDF"}
+          {/* page strip */}
+          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1">
+            {pages.map((page, index) => {
+              const thumb = page.sourceIndex != null ? preview.thumbs.find((item) => item.pageIndex === page.sourceIndex) : null;
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  onClick={() => setActivePage(index)}
+                  aria-pressed={index === activePage}
+                  className={cn(
+                    "relative h-12 w-9 shrink-0 overflow-hidden rounded border bg-white text-[10px] font-semibold",
+                    index === activePage ? "border-brand-500 ring-1 ring-brand-500" : "border-line",
+                  )}
+                  aria-label={`Go to page ${index + 1}`}
+                >
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumb.url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-subtle">{index + 1}</span>
+                  )}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={addPage}
+              className="grid h-12 w-9 shrink-0 place-items-center rounded border border-dashed border-line text-subtle hover:border-primary/40 hover:text-body"
+              aria-label="Add a blank page"
+              title="Add a blank page"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
             </button>
-            <p className="inline-flex items-center gap-1.5 text-[12.5px] text-subtle">
-              <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
-              Existing text is not reflowed — this editor annotates the page.
-            </p>
           </div>
-        </>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+            <button type="button" onClick={() => movePage(activePage, -1)} disabled={activePage === 0} className="rounded border border-line bg-raised px-2 py-1 text-subtle disabled:opacity-40">
+              <ArrowUp className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">Move page earlier</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => movePage(activePage, 1)}
+              disabled={activePage === pages.length - 1}
+              className="rounded border border-line bg-raised px-2 py-1 text-subtle disabled:opacity-40"
+            >
+              <ArrowDown className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">Move page later</span>
+            </button>
+            <button type="button" onClick={() => duplicatePage(activePage)} className="rounded border border-line bg-raised px-2 py-1 text-subtle hover:text-body">
+              <Copy className="mr-1 inline h-3 w-3" aria-hidden="true" />
+              Duplicate page
+            </button>
+            <button type="button" onClick={() => deletePage(activePage)} className="rounded border border-line bg-raised px-2 py-1 text-subtle hover:text-danger">
+              <Trash2 className="mr-1 inline h-3 w-3" aria-hidden="true" />
+              Delete page
+            </button>
+          </div>
+        </div>
+
+        {/* Inspector */}
+        <div className="order-3 space-y-3">
+          {selected ? (
+            <>
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-subtle">{selected.kind}</p>
+                <div className="flex items-center gap-1">
+                  <ToggleButton active={false} onClick={() => reorder("up")} label="Bring forward">
+                    <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                  </ToggleButton>
+                  <ToggleButton active={false} onClick={() => reorder("down")} label="Send backward">
+                    <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  </ToggleButton>
+                  <ToggleButton active={false} onClick={duplicateSelected} label="Duplicate">
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  </ToggleButton>
+                  <ToggleButton active={false} onClick={removeSelected} label="Delete">
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </ToggleButton>
+                </div>
+              </div>
+
+              {selected.kind === "text" && (
+                <>
+                  <div>
+                    <label htmlFor="el-text" className="mb-1 block text-[12px] font-semibold text-ink">
+                      Text
+                    </label>
+                    <textarea
+                      id="el-text"
+                      value={selected.text ?? ""}
+                      onChange={(event) => updateSelected({ text: event.target.value }, "text")}
+                      rows={4}
+                      className="w-full resize-y rounded-lg border border-line bg-raised px-2 py-1.5 text-[12px] leading-relaxed text-ink outline-none focus:border-brand-400"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Font" htmlFor="el-font">
+                      <select
+                        id="el-font"
+                        className="h-9 w-full rounded-lg border border-line bg-raised px-2 text-[12px] text-ink"
+                        value={selected.fontFamily ?? "sans"}
+                        onChange={(event) => updateSelected({ fontFamily: event.target.value as FontFamily }, "font")}
+                      >
+                        <option value="sans">Sans</option>
+                        <option value="serif">Serif</option>
+                        <option value="mono">Mono</option>
+                      </select>
+                    </Field>
+                    <NumberField
+                      label="Size (pt)"
+                      value={selected.fontSize ?? 14}
+                      min={4}
+                      max={200}
+                      onChange={(value) => updateSelected({ fontSize: value }, "size")}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <ToggleButton active={Boolean(selected.bold)} onClick={() => updateSelected({ bold: !selected.bold }, "bold")} label="Bold">
+                      B
+                    </ToggleButton>
+                    <ToggleButton active={Boolean(selected.italic)} onClick={() => updateSelected({ italic: !selected.italic }, "italic")} label="Italic">
+                      <span className="italic">I</span>
+                    </ToggleButton>
+                    {(["left", "center", "right"] as TextAlign[]).map((align) => (
+                      <ToggleButton
+                        key={align}
+                        active={(selected.align ?? "left") === align}
+                        onClick={() => updateSelected({ align }, "align")}
+                        label={`Align ${align}`}
+                      >
+                        <span className="text-[11px] font-semibold">{align === "left" ? "L" : align === "center" ? "C" : "R"}</span>
+                      </ToggleButton>
+                    ))}
+                  </div>
+
+                  <SliderField
+                    label="Line spacing"
+                    value={Math.round((selected.lineHeight ?? 1.3) * 100)}
+                    min={90}
+                    max={220}
+                    onChange={(value) => updateSelected({ lineHeight: value / 100 }, "lineHeight")}
+                    format={(value) => `${(value / 100).toFixed(2)}×`}
+                  />
+                </>
+              )}
+
+              {(selected.kind === "rect" ||
+                selected.kind === "roundrect" ||
+                selected.kind === "ellipse" ||
+                selected.kind === "triangle" ||
+                selected.kind === "image" ||
+                selected.kind === "whiteout" ||
+                selected.kind === "highlight") && (
+                <ColorField
+                  label="Fill"
+                  value={selected.fill ?? null}
+                  allowNone
+                  onChange={(value) => updateSelected({ fill: value }, "fill")}
+                />
+              )}
+
+              {(selected.kind === "rect" ||
+                selected.kind === "roundrect" ||
+                selected.kind === "ellipse" ||
+                selected.kind === "triangle" ||
+                selected.kind === "line" ||
+                selected.kind === "arrow" ||
+                selected.kind === "draw" ||
+                selected.kind === "text") && (
+                <ColorField
+                  label={selected.kind === "text" ? "Text colour" : "Line / outline"}
+                  value={selected.stroke ?? null}
+                  allowNone={selected.kind !== "text"}
+                  onChange={(value) =>
+                    updateSelected(selected.kind === "text" ? { stroke: value, fill: value } : { stroke: value }, "stroke")
+                  }
+                />
+              )}
+
+              {(selected.kind === "rect" ||
+                selected.kind === "line" ||
+                selected.kind === "arrow" ||
+                selected.kind === "draw" ||
+                selected.kind === "roundrect" ||
+                selected.kind === "ellipse" ||
+                selected.kind === "triangle") && (
+                <NumberField
+                  label="Outline width"
+                  value={selected.strokeWidth ?? 2}
+                  min={0}
+                  max={24}
+                  step={0.5}
+                  suffix="pt"
+                  onChange={(value) => updateSelected({ strokeWidth: value }, "strokeWidth")}
+                />
+              )}
+
+              <SliderField
+                label="Opacity"
+                value={Math.round((selected.opacity ?? 1) * 100)}
+                onChange={(value) => updateSelected({ opacity: value / 100 }, "opacity")}
+                format={(value) => `${value}%`}
+              />
+
+              <SliderField
+                label="Rotation"
+                value={Math.round(selected.rotation ?? 0)}
+                min={-180}
+                max={180}
+                onChange={(value) => updateSelected({ rotation: value }, "rotation")}
+                format={(value) => `${value}°`}
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField label="X" value={Math.round(selected.x * 1000) / 10} min={0} max={100} step={0.5} suffix="%" onChange={(value) => updateSelected({ x: value / 100 }, "x")} />
+                <NumberField label="Y" value={Math.round(selected.y * 1000) / 10} min={0} max={100} step={0.5} suffix="%" onChange={(value) => updateSelected({ y: value / 100 }, "y")} />
+                <NumberField label="Width" value={Math.round(selected.width * 1000) / 10} min={1} max={100} step={0.5} suffix="%" onChange={(value) => updateSelected({ width: value / 100 }, "width")} />
+                <NumberField label="Height" value={Math.round(selected.height * 1000) / 10} min={1} max={100} step={0.5} suffix="%" onChange={(value) => updateSelected({ height: value / 100 }, "height")} />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-subtle">New object style</p>
+              <p className="text-[11.5px] leading-relaxed text-subtle">
+                {tool === "select"
+                  ? "Pick a tool on the left, then click or drag on the page. Select an object to edit it."
+                  : tool === "text"
+                    ? "Click the page to place a text box, then type here."
+                    : SHAPE_TOOLS.has(tool)
+                      ? "Click the page for a default size, or drag to draw the exact box."
+                      : "Draw on the page with the mouse or a finger."}
+              </p>
+              <ColorField label="Fill" value={style.fill} onChange={(value) => setStyle((current) => ({ ...current, fill: value ?? "#2563EB" }))} />
+              <ColorField label="Line / text" value={style.stroke} onChange={(value) => setStyle((current) => ({ ...current, stroke: value ?? "#0F172A" }))} />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField label="Outline" value={style.strokeWidth} min={0} max={24} step={0.5} suffix="pt" onChange={(value) => setStyle((current) => ({ ...current, strokeWidth: value }))} />
+                <NumberField label="Text size" value={style.fontSize} min={4} max={200} step={1} suffix="pt" onChange={(value) => setStyle((current) => ({ ...current, fontSize: value }))} />
+              </div>
+              <SliderField label="Opacity" value={Math.round(style.opacity * 100)} onChange={(value) => setStyle((current) => ({ ...current, opacity: value / 100 }))} format={(value) => `${value}%`} />
+            </>
+          )}
+
+          <div className="border-t border-line pt-3">
+            <label htmlFor="doc-title" className="mb-1 block text-[12px] font-semibold text-ink">
+              Document title <span className="font-normal text-subtle">(optional)</span>
+            </label>
+            <input
+              id="doc-title"
+              value={docTitle}
+              onChange={(event) => setDocTitle(event.target.value)}
+              placeholder="Invoice 2026-04"
+              className="h-9 w-full rounded-lg border border-line bg-raised px-2 text-[12px] text-ink outline-none focus:border-brand-400"
+            />
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <Notice tone="warning" className="mt-3" onDismiss={() => setError(null)}>
+          {error}
+        </Notice>
       )}
+
+      {preview.truncated && (
+        <Notice tone="info" className="mt-3">
+          This document has more pages than the preview renders. You can still add objects to every page and export.
+        </Notice>
+      )}
+
+      <Notice tone="warning" className="mt-3">
+        White-out covers text visually but leaves it extractable in the file. It is not redaction, and existing text
+        cannot be retyped in a browser — cover and retype, or rebuild the page.
+      </Notice>
+
+      {busy && <ProgressBar value={0.7} label="Writing your document" />}
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={exportPdf} disabled={busy} className="btn-primary w-full sm:w-auto">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+          {busy ? "Building the PDF…" : "Download PDF"}
+        </button>
+        <p className="text-[12px] text-subtle">
+          Text stays selectable in the exported PDF. Everything is written in your browser.
+        </p>
+      </div>
     </ToolFrame>
   );
 }
