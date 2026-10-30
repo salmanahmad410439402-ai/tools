@@ -91,8 +91,20 @@ export interface Tool {
     imageInput?: "jpg" | "png" | "webp";
     /** Open the metadata editor ready to wipe every field. */
     clearMetadata?: boolean;
-    /** Which annotation tool the PDF editor starts with. */
-    editorTool?: "text" | "highlight" | "rect" | "whiteout" | "draw" | "image";
+    /** Which tool the PDF editor starts with. */
+    editorTool?:
+      | "select"
+      | "text"
+      | "highlight"
+      | "rect"
+      | "roundrect"
+      | "ellipse"
+      | "triangle"
+      | "line"
+      | "arrow"
+      | "whiteout"
+      | "draw"
+      | "image";
   };
 }
 

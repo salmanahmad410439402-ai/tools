@@ -26,6 +26,7 @@ import {
   writeMetadata,
 } from "../lib/pdf/ops.ts";
 import { renderBlocksToPdf } from "../lib/pdf/text-pdf.ts";
+import { EDITOR_PAGE_SIZES, hexToRgbColor, isWinAnsi, renderEditorPdf, rotatePoint, wrapText } from "../lib/pdf/editor.ts";
 import { docxToBlocks } from "../lib/convert/docx.ts";
 import { detectDelimiter, htmlToBlocks, markdownToBlocks, parseCsv, rowsToBlocks, textToBlocks } from "../lib/convert/text-sources.ts";
 import JSZip from "jszip";
@@ -811,6 +812,116 @@ console.log("\nQR codes");
   }
   check("qr: empty input is refused", emptyRejected);
 }
+
+/* ───────────────────────── document editor ─────────────────────────── */
+
+async function testEditor() {
+  // A blank document is created, not copied, so its size comes straight from
+  // the format table.
+  const blank = await renderEditorPdf({
+    source: { kind: "blank", pages: 2, size: "a4", orientation: "portrait" },
+    elements: [],
+  });
+  const blankDoc = await PDFDocument.load(blank.bytes);
+  check("blank document gets the requested page count", blankDoc.getPageCount() === 2, `${blankDoc.getPageCount()} pages`);
+  check(
+    "blank pages use the A4 format",
+    Math.round(blankDoc.getPage(0).getWidth()) === Math.round(EDITOR_PAGE_SIZES.a4.width) &&
+      Math.round(blankDoc.getPage(0).getHeight()) === Math.round(EDITOR_PAGE_SIZES.a4.height),
+  );
+
+  const landscape = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "letter", orientation: "landscape" },
+    elements: [],
+  });
+  const landscapePage = (await PDFDocument.load(landscape.bytes)).getPage(0);
+  check("landscape swaps the page axes", landscapePage.getWidth() > landscapePage.getHeight());
+
+  // Every element kind the palette offers is drawn at least once.
+  const elements = [
+    { id: "t", kind: "text", pageIndex: 0, x: 0.1, y: 0.1, width: 0.4, height: 0.1, text: "Hello editor", fontSize: 18, fill: "#111827" },
+    { id: "r", kind: "rect", pageIndex: 0, x: 0.1, y: 0.3, width: 0.2, height: 0.1, fill: "#645CFF", stroke: "#111827", strokeWidth: 2 },
+    { id: "rr", kind: "roundrect", pageIndex: 0, x: 0.4, y: 0.3, width: 0.2, height: 0.1, fill: "#12D393" },
+    { id: "e", kind: "ellipse", pageIndex: 0, x: 0.1, y: 0.5, width: 0.2, height: 0.1, fill: "#F97316", rotation: 30 },
+    { id: "tr", kind: "triangle", pageIndex: 0, x: 0.4, y: 0.5, width: 0.2, height: 0.1, fill: "#0EA5E9" },
+    { id: "l", kind: "line", pageIndex: 0, x: 0.1, y: 0.7, width: 0.4, height: 0, stroke: "#111827", strokeWidth: 2 },
+    { id: "a", kind: "arrow", pageIndex: 0, x: 0.1, y: 0.75, width: 0.4, height: 0.05, stroke: "#DC2626", strokeWidth: 2 },
+    { id: "h", kind: "highlight", pageIndex: 0, x: 0.1, y: 0.85, width: 0.4, height: 0.03, fill: "#FDE68A" },
+    { id: "w", kind: "whiteout", pageIndex: 0, x: 0.6, y: 0.85, width: 0.2, height: 0.03 },
+    { id: "d", kind: "draw", pageIndex: 1, x: 0, y: 0, width: 1, height: 1, stroke: "#111827", strokeWidth: 2, points: [{ x: 0.2, y: 0.2 }, { x: 0.3, y: 0.4 }, { x: 0.5, y: 0.35 }] },
+  ];
+  const drawn = await renderEditorPdf({
+    source: { kind: "blank", pages: 2, size: "a4", orientation: "portrait" },
+    elements,
+    title: "Editor test",
+  });
+  check("every element is drawn", drawn.elements === elements.length, `${drawn.elements}/${elements.length}`);
+  check("the drawn document still opens", (await PDFDocument.load(drawn.bytes)).getPageCount() === 2);
+  check("the document title is written", (await PDFDocument.load(drawn.bytes)).getTitle() === "Editor test");
+  check("the export is a real PDF", Buffer.from(drawn.bytes.slice(0, 5)).toString() === "%PDF-");
+
+  // Elements pointing at a page that no longer exists must be counted, not drawn.
+  const orphan = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "a5", orientation: "portrait" },
+    elements: [{ id: "x", kind: "rect", pageIndex: 4, x: 0.1, y: 0.1, width: 0.2, height: 0.2, fill: "#000000" }],
+  });
+  check("elements on a missing page are dropped", orphan.dropped === 1 && orphan.elements === 0);
+
+  // Reordering, deleting and inserting pages in an existing document.
+  const sourceDoc = await PDFDocument.create();
+  sourceDoc.addPage([500, 700]);
+  sourceDoc.addPage([400, 400]);
+  sourceDoc.addPage([300, 300]);
+  const sourceBytes = await sourceDoc.save();
+  const reordered = await renderEditorPdf({
+    source: { kind: "pdf", bytes: sourceBytes.buffer.slice(sourceBytes.byteOffset, sourceBytes.byteOffset + sourceBytes.byteLength) },
+    pages: [{ sourceIndex: 2 }, { sourceIndex: null }, { sourceIndex: 0 }],
+    elements: [],
+  });
+  const reorderedDoc = await PDFDocument.load(reordered.bytes);
+  check("page order follows the strip", reorderedDoc.getPageCount() === 3);
+  check(
+    "reordered and inserted pages keep their sizes",
+    [reorderedDoc.getPage(0), reorderedDoc.getPage(1), reorderedDoc.getPage(2)]
+      .map((page) => Math.round(page.getWidth()))
+      .join(",") === "300,500,500",
+    [0, 1, 2].map((index) => Math.round(reorderedDoc.getPage(index).getWidth())).join(","),
+  );
+
+  // Text layout uses real glyph metrics, so no wrapped line may exceed its box.
+  const measureDoc = await PDFDocument.create();
+  const font = await measureDoc.embedFont(StandardFonts.Helvetica);
+  const wrapped = wrapText(
+    "The quick brown fox jumps over the lazy dog while the editor measures every single word against the box it was given.",
+    font,
+    11,
+    120,
+    true,
+  );
+  check("long text wraps onto several lines", wrapped.lines.length > 1, `${wrapped.lines.length} lines`);
+  check("no wrapped line overflows its width", wrapped.widths.every((width) => width <= 120.5), wrapped.widths.join(","));
+  const unwrapped = wrapText("one two three four five six seven eight nine ten", font, 11, 20, false);
+  check("wrapping can be switched off", unwrapped.lines.length === 1);
+
+  // Rotation is clockwise-positive about a centre point.
+  const rotated = rotatePoint({ x: 10, y: 0 }, { x: 0, y: 0 }, 90);
+  check("rotatePoint turns a point clockwise", Math.abs(rotated.x) < 1e-9 && Math.abs(rotated.y - 10) < 1e-9, JSON.stringify(rotated));
+
+  // Character coverage decides between the built-in font and DejaVu.
+  check("accented Latin stays on the built-in font", isWinAnsi("Crème brûlée — naïve"));
+  check("Cyrillic needs the fallback font", !isWinAnsi("Привет"));
+  check("Japanese needs the fallback font", !isWinAnsi("こんにちは"));
+
+  const unicodeDoc = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+    elements: [{ id: "u", kind: "text", pageIndex: 0, x: 0.1, y: 0.1, width: 0.6, height: 0.1, text: "Привет мир", fontSize: 16, fill: "#111827" }],
+  });
+  check("non-Latin text still produces a valid PDF", (await PDFDocument.load(unicodeDoc.bytes)).getPageCount() === 1);
+
+  check("hex colours accept three digits", hexToRgbColor("#0f8") !== undefined);
+}
+
+await testEditor();
 
 /* ─────────────────────── registry counts stay honest ───────────────────── */
 

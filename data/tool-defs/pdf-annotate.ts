@@ -58,7 +58,7 @@ export const pdfAnnotateTools: Tool[] = [
       },
       {
         title: "Click where it should go",
-        text: "Click on the page and the text appears at that point. Add more notes the same way, or remove one with Clear this page.",
+        text: "Click on the page and the text appears at that point. Add more notes the same way, or select one and press Delete (or Ctrl+Z to undo).",
       },
       {
         title: "Export",
@@ -112,7 +112,7 @@ export const pdfAnnotateTools: Tool[] = [
       },
       {
         q: "How do I remove text I placed?",
-        a: "Use “Clear this page” to remove the annotations on the current page, or “Clear all” to start over. Nothing is written to the file until you press Export.",
+        a: "Select the note and press Delete, or use Undo (Ctrl+Z) while you are still on the page. Nothing is written to the file until you press Download PDF.",
       },
       {
         q: "Can I add text to several pages?",
@@ -124,7 +124,7 @@ export const pdfAnnotateTools: Tool[] = [
       },
       {
         q: "Can I move text after I place it?",
-        a: "Not in this version. A placement is fixed at the point you clicked, so if it lands badly, use Clear this page and click again. Nothing is written to the file until you export, which makes redoing a placement a two-second correction rather than a permanent mistake.",
+        a: "Yes, before you export. A placed note is an object like any other: select it and drag it where you want it, or delete it and click again. Nothing is written to the file until you press Download PDF, so a bad placement is a two-second correction rather than a permanent mistake.",
       },
     ],
     related: ["highlight-pdf", "draw-on-pdf", "pdf-editor"],
@@ -237,7 +237,7 @@ export const pdfAnnotateTools: Tool[] = [
     faqs: [
       {
         q: "Can I remove a highlight later?",
-        a: "Before exporting, yes: use Clear this page or Clear all and place it again. Once exported, the highlight is part of the page content and needs a PDF editor to cover or rebuild — so check the preview before you download.",
+        a: "Before exporting, yes: select it, drag it, or delete it and draw again. Once exported, the highlight is part of the page content and needs an editor to cover or rebuild — so check the preview before you download.",
       },
       {
         q: "Will the recipient see my highlights without special software?",
@@ -327,7 +327,7 @@ export const pdfAnnotateTools: Tool[] = [
       },
       {
         title: "Export",
-        text: "Press Export PDF once everything is drawn. Use Clear this page to start a page again.",
+        text: "Press Download PDF once everything is drawn. Objects can be selected, moved and deleted until you do.",
       },
     ],
     limits: [
@@ -373,7 +373,7 @@ export const pdfAnnotateTools: Tool[] = [
     faqs: [
       {
         q: "Can I undo a stroke?",
-        a: "Not individually. “Clear this page” removes everything you have added to the current page since the file was opened, and Clear all empties the whole document's annotations. Nothing reaches the file until you export.",
+        a: "Yes, individually now. Click an object to select it and press Delete, or use Undo (Ctrl+Z) to step back. Nothing reaches the file until you press Download PDF.",
       },
       {
         q: "Does drawing work on a phone?",
