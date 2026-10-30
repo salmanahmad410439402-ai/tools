@@ -27,6 +27,18 @@ import {
 } from "../lib/pdf/ops.ts";
 import { renderBlocksToPdf } from "../lib/pdf/text-pdf.ts";
 import { EDITOR_PAGE_SIZES, hexToRgbColor, isWinAnsi, renderEditorPdf, rotatePoint, wrapText } from "../lib/pdf/editor.ts";
+import { looksEncrypted, protectPdf, unlockPdf } from "../lib/pdf/security.ts";
+import { buildDocx } from "../lib/convert/docx-write.ts";
+import { buildXlsx, safeSheetName } from "../lib/convert/xlsx-write.ts";
+import {
+  cellValue,
+  findRepeatingLines,
+  isRepeating,
+  itemsToLines,
+  linesToParagraphs,
+  linesToTable,
+} from "../lib/convert/pdf-layout.ts";
+import { parsePptx, renderPptxToPdf } from "../lib/convert/pptx.ts";
 import { docxToBlocks } from "../lib/convert/docx.ts";
 import { detectDelimiter, htmlToBlocks, markdownToBlocks, parseCsv, rowsToBlocks, textToBlocks } from "../lib/convert/text-sources.ts";
 import JSZip from "jszip";
@@ -922,6 +934,258 @@ async function testEditor() {
 }
 
 await testEditor();
+
+/* ─────────────────────── pdf passwords (protect / unlock) ───────────────── */
+
+async function testProtection() {
+  const source = await PDFDocument.create();
+  source.setTitle("Payroll summary");
+  const font = await source.embedFont(StandardFonts.Helvetica);
+  for (let index = 0; index < 3; index += 1) {
+    source.addPage([420, 520]).drawText(`page ${index + 1}`, { x: 40, y: 400, size: 14, font });
+  }
+  const plain = await source.save();
+  const plainBuffer = plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength);
+  check("a normal PDF is not flagged as encrypted", !looksEncrypted(plainBuffer));
+
+  const encrypted = await protectPdf(plainBuffer, {
+    userPassword: "correct horse",
+    ownerPassword: "owner-key",
+    allowPrinting: true,
+    allowCopying: false,
+    allowModifying: false,
+    allowAnnotating: false,
+  });
+  const encryptedBuffer = encrypted.buffer.slice(encrypted.byteOffset, encrypted.byteOffset + encrypted.byteLength);
+  check("the protected file is flagged as encrypted", looksEncrypted(encryptedBuffer));
+  check("the protected file uses AES-256 (/V 5)", Buffer.from(encrypted).toString("latin1").includes("/V 5"));
+  check("the protected file is bigger than the plain one", encrypted.length > plain.length);
+
+  let refused = false;
+  try {
+    await PDFDocument.load(encryptedBuffer);
+  } catch {
+    refused = true;
+  }
+  check("plain pdf-lib refuses to open it without the password", refused);
+
+  const unlocked = await unlockPdf(encryptedBuffer, "correct horse");
+  const unlockedBuffer = unlocked.bytes.buffer.slice(unlocked.bytes.byteOffset, unlocked.bytes.byteOffset + unlocked.bytes.byteLength);
+  check("unlocking keeps every page", unlocked.pages === 3, `${unlocked.pages} pages`);
+  check("the unlocked file has no encryption marker", !looksEncrypted(unlockedBuffer));
+  const reopened = await PDFDocument.load(unlockedBuffer);
+  check("the unlocked file opens in a plain reader", reopened.getPageCount() === 3);
+
+  const byOwner = await unlockPdf(encryptedBuffer, "owner-key");
+  check("the owner password also unlocks the file", byOwner.pages === 3);
+
+  let wrongPassword = "";
+  try {
+    await unlockPdf(encryptedBuffer, "nope");
+  } catch (error) {
+    wrongPassword = error instanceof Error ? error.message : String(error);
+  }
+  check("a wrong password gets a plain-English message", /does not open this file/i.test(wrongPassword), wrongPassword.slice(0, 60));
+
+  let alreadyEncrypted = "";
+  try {
+    await protectPdf(encryptedBuffer, {
+      userPassword: "x",
+      allowPrinting: true,
+      allowCopying: true,
+      allowModifying: true,
+      allowAnnotating: true,
+    });
+  } catch (error) {
+    alreadyEncrypted = error instanceof Error ? error.message : String(error);
+  }
+  check("protecting an already-protected file explains itself", /already password-protected/i.test(alreadyEncrypted));
+
+  let emptyPassword = "";
+  try {
+    await protectPdf(plainBuffer, { userPassword: "", allowPrinting: true, allowCopying: true, allowModifying: true, allowAnnotating: true });
+  } catch (error) {
+    emptyPassword = error instanceof Error ? error.message : String(error);
+  }
+  check("an empty password is rejected", /type a password/i.test(emptyPassword));
+}
+
+await testProtection();
+
+/* ───────────────────────── pdf → word (docx writer) ─────────────────────── */
+
+async function testDocxWriter() {
+  const bytes = await buildDocx({
+    title: "Quarterly & annual",
+    paragraphs: [
+      { text: "Quarterly report", style: "Title" },
+      { text: "Revenue grew 24% in Q3 — ahead of plan.", style: "Normal" },
+      { text: "Highlights", style: "Heading2" },
+      { text: "Two new markets opened in <May>.", style: "Normal", pageBreakBefore: true },
+    ],
+  });
+  check("the docx starts with a ZIP header", bytes[0] === 0x50 && bytes[1] === 0x4b);
+
+  const zip = await JSZip.loadAsync(bytes);
+  const document = await zip.file("word/document.xml").async("string");
+  check("the docx carries every paragraph", (document.match(/<w:p>/g) ?? []).length === 4);
+  check("heading styles are written", document.includes('w:val="Heading2"'));
+  check("page breaks are written", document.includes("<w:pageBreakBefore/>"));
+  check("XML special characters are escaped", document.includes("&lt;May&gt;") && !document.includes("<May>"));
+  check("the styles part exists", Boolean(zip.file("word/styles.xml")));
+  check("the content-types part exists", Boolean(zip.file("[Content_Types].xml")));
+
+  // Mammoth is the reader this project already uses for Word → PDF, so a
+  // round trip through it proves the file is a valid .docx and not just XML.
+  const mammoth = await import("mammoth");
+  const parsed = await mammoth.convertToHtml({ buffer: Buffer.from(bytes) });
+  check("mammoth reads the heading back", /<h2>Highlights<\/h2>/.test(parsed.value), parsed.value.slice(0, 80));
+  check("mammoth reads the paragraph text back", parsed.value.includes("Revenue grew 24% in Q3"));
+}
+
+await testDocxWriter();
+
+/* ─────────────────────────── pdf → excel (xlsx) ─────────────────────────── */
+
+async function testXlsxWriter() {
+  const used = new Set();
+  const first = safeSheetName("Page 1", used);
+  const second = safeSheetName("Page 1", used);
+  check("duplicate sheet names are made unique", first === "Page 1" && second === "Page 1 (2)", `${first} / ${second}`);
+  check("illegal sheet characters are stripped", !/[[]:[*?/\\]/.test(safeSheetName("a[b]:c*d?e/f\\g", new Set())));
+
+  const bytes = await buildXlsx(
+    [
+      { name: "Page 1", rows: [["Region", "Sales"], ["EMEA", 120], ["APAC", 98.5]] },
+      { name: "Page 2", rows: [["Region", "Sales"], ["Americas", 240]] },
+    ],
+    "Report",
+  );
+  check("the workbook starts with a ZIP header", bytes[0] === 0x50 && bytes[1] === 0x4b);
+
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(bytes, { type: "array" });
+  check("both sheets are in the workbook", workbook.SheetNames.join(",") === "Page 1,Page 2", workbook.SheetNames.join(","));
+  const sheet = workbook.Sheets["Page 1"];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  check("rows survive the round trip", rows.length === 3 && rows[1][0] === "EMEA");
+  check("numbers stay numeric", sheet.B2?.t === "n" && sheet.B2?.v === 120, JSON.stringify(sheet.B2));
+  const sheetXml = await (await JSZip.loadAsync(bytes)).file("xl/worksheets/sheet1.xml").async("string");
+  check("column widths are written", sheetXml.includes("<cols>"), sheetXml.slice(0, 120));
+}
+
+await testXlsxWriter();
+
+/* ─────────────────── pdf text layout (word + excel scaffolding) ─────────── */
+
+function testPdfLayout() {
+  const items = [
+    { str: "Invoice", transform: [12, 0, 0, 12, 50, 700], width: 40, height: 12 },
+    { str: "Number", transform: [12, 0, 0, 12, 100, 700], width: 40, height: 12 },
+    { str: "12345", transform: [12, 0, 0, 12, 400, 700], width: 30, height: 12 },
+    { str: "Item", transform: [10, 0, 0, 10, 50, 660], width: 22, height: 10 },
+    { str: "Qty", transform: [10, 0, 0, 10, 300, 660], width: 18, height: 10 },
+    { str: "Widget", transform: [10, 0, 0, 10, 50, 640], width: 32, height: 10 },
+    { str: "4", transform: [10, 0, 0, 10, 300, 640], width: 6, height: 10 },
+  ];
+  const lines = itemsToLines(items);
+  check("fragments on one baseline become one line", lines.length === 3, `${lines.length} lines`);
+  check("fragments are joined with a space, not glued", lines[0].text === "Invoice Number 12345", lines[0].text);
+  check("lines are ordered top to bottom", lines[1].text.startsWith("Item"), lines[1].text);
+
+  const table = linesToTable(lines);
+  check("cells are split at the gaps", table[0][0] === "Invoice Number" && table[0][2] === "12345", JSON.stringify(table[0]));
+  check("columns align across rows", table[1][0] === "Item" && table[1][1] === "Qty", JSON.stringify(table[1]));
+  check("numbers become numeric cells", cellValue("1,234.50") === 1234.5 && cellValue("Widget") === "Widget");
+
+  const structured = itemsToLines([
+    { str: "Annual Report", transform: [24, 0, 0, 24, 50, 760], width: 160, height: 24 },
+    { str: "This is a paragraph of body text that runs", transform: [11, 0, 0, 11, 50, 720], width: 230, height: 11 },
+    { str: "across two lines in the original PDF.", transform: [11, 0, 0, 11, 50, 706], width: 200, height: 11 },
+    { str: "Second heading", transform: [16, 0, 0, 16, 50, 660], width: 110, height: 16 },
+    { str: "Another paragraph here.", transform: [11, 0, 0, 11, 50, 630], width: 120, height: 11 },
+  ]);
+  const paragraphs = linesToParagraphs(structured);
+  check("large text becomes a level-1 heading", paragraphs[0].heading === 1, JSON.stringify(paragraphs[0]));
+  check("wrapped lines are joined into one paragraph", paragraphs[1].text.endsWith("original PDF."), paragraphs[1].text);
+  check("mid-size text becomes a level-2 heading", paragraphs[2].heading === 2, JSON.stringify(paragraphs[2]));
+
+  const hyphenated = linesToParagraphs(
+    itemsToLines([
+      { str: "This is a long sen-", transform: [11, 0, 0, 11, 50, 700], width: 100, height: 11 },
+      { str: "tence that wraps.", transform: [11, 0, 0, 11, 50, 688], width: 100, height: 11 },
+    ]),
+  );
+  check("a wrapped word is re-joined without the hyphen", hyphenated[0].text === "This is a long sentence that wraps.", hyphenated[0].text);
+
+  const pages = [1, 2, 3].map((number) => ({
+    pageNumber: number,
+    width: 595,
+    height: 842,
+    lines: itemsToLines([
+      { str: "Company confidential", transform: [9, 0, 0, 9, 40, 800], width: 90, height: 9 },
+      { str: `Body text page ${number}`, transform: [11, 0, 0, 11, 40, 700], width: 100, height: 11 },
+      { str: `${number}`, transform: [9, 0, 0, 9, 290, 30], width: 5, height: 9 },
+    ]),
+  }));
+  const repeats = findRepeatingLines(pages);
+  check("running headers are detected", isRepeating(pages[1].lines[0], repeats));
+  check("page numbers are detected", isRepeating(pages[1].lines[2], repeats));
+  check("body text is never treated as furniture", !isRepeating(pages[1].lines[1], repeats));
+}
+
+testPdfLayout();
+
+/* ───────────────────────── powerpoint → pdf ─────────────────────────────── */
+
+async function testPptx() {
+  const NS = 'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const emu = (points) => Math.round(points * 12700);
+  const zip = new JSZip();
+  zip.file("[Content_Types].xml", "<Types/>");
+  zip.file(
+    "ppt/presentation.xml",
+    `<p:presentation ${NS}><p:sldSz cx="${emu(960)}" cy="${emu(540)}"/><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst></p:presentation>`,
+  );
+  zip.file(
+    "ppt/_rels/presentation.xml.rels",
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="slide" Target="slides/slide1.xml"/></Relationships>`,
+  );
+  zip.file(
+    "ppt/slides/slide1.xml",
+    `<p:sld ${NS}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="102040"/></a:solidFill></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr/><p:grpSpPr/>` +
+      `<p:sp><p:nvSpPr><p:cNvPr id="2"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(60)}" y="${emu(50)}"/><a:ext cx="${emu(700)}" cy="${emu(90)}"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:p><a:r><a:rPr sz="3600" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>Quarterly review</a:t></a:r></a:p></p:txBody></p:sp>` +
+      `<p:sp><p:nvSpPr><p:cNvPr id="3"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr><p:txBody><a:bodyPr/><a:p><a:pPr><a:buChar char="•"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Revenue up 24%</a:t></a:r></a:p><a:p><a:pPr><a:buChar char="•"/></a:pPr><a:r><a:rPr sz="1800"/><a:t>Two new markets</a:t></a:r></a:p></p:txBody></p:sp>` +
+      `<p:sp><p:nvSpPr><p:cNvPr id="4"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(60)}" y="${emu(400)}"/><a:ext cx="${emu(300)}" cy="${emu(60)}"/></a:xfrm><a:solidFill><a:srgbClr val="12D393"/></a:solidFill></p:spPr></p:sp>` +
+      `</p:spTree></p:cSld></p:sld>`,
+  );
+  zip.file(
+    "ppt/slides/_rels/slide1.xml.rels",
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="layout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>`,
+  );
+  zip.file(
+    "ppt/slideLayouts/slideLayout1.xml",
+    `<p:sldLayout ${NS}><p:cSld><p:spTree><p:nvGrpSpPr/><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(60)}" y="${emu(170)}"/><a:ext cx="${emu(820)}" cy="${emu(220)}"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sldLayout>`,
+  );
+
+  const deck = await parsePptx(await zip.generateAsync({ type: "arraybuffer" }));
+  check("one slide is read from the deck", deck.slides.length === 1);
+  check("the slide size comes from the presentation", Math.round(deck.width) === 960 && Math.round(deck.height) === 540);
+  check("the slide background colour is read", deck.slides[0].background === "#102040", String(deck.slides[0].background));
+  const texts = deck.slides[0].elements.filter((element) => element.kind === "text");
+  check("both text boxes are found", texts.length === 2, `${texts.length} text boxes`);
+  const inherited = texts.find((element) => element.paragraphs.length === 2);
+  check("placeholder geometry is inherited from the layout", inherited && Math.round(inherited.y) === 170, inherited ? String(inherited.y) : "missing");
+  check("bullets are preserved as paragraphs", inherited && inherited.paragraphs.every((paragraph) => paragraph.bullet));
+  check("the solid shape keeps its fill", deck.slides[0].elements.some((element) => element.kind === "rect" && element.fill === "#12D393"));
+
+  const pdf = await renderPptxToPdf(deck, "Deck");
+  const rendered = await PDFDocument.load(pdf);
+  check("each slide becomes one PDF page", rendered.getPageCount() === 1);
+  check("the PDF page matches the slide size", Math.round(rendered.getPage(0).getWidth()) === 960 && Math.round(rendered.getPage(0).getHeight()) === 540);
+}
+
+await testPptx();
 
 /* ─────────────────────── registry counts stay honest ───────────────────── */
 

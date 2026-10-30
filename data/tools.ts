@@ -7,6 +7,7 @@ import { pdfExtractTools } from "./tool-defs/pdf-extract.ts";
 import { pdfPageTools } from "./tool-defs/pdf-pages.ts";
 import { pdfConvertTools } from "./tool-defs/pdf-convert.ts";
 import { pdfAnnotateTools } from "./tool-defs/pdf-annotate.ts";
+import { pdfSecurityTools } from "./tool-defs/pdf-security.ts";
 import { imageTools } from "./tool-defs/images.ts";
 import { utilityTools } from "./tool-defs/utilities.ts";
 
@@ -28,6 +29,7 @@ export const tools: Tool[] = [
   ...pdfConvertTools,
   ...pdfAnnotateTools,
   ...pdfExtractTools,
+  ...pdfSecurityTools,
   ...imageTools,
   ...utilityTools,
 ];
@@ -62,7 +64,7 @@ export const TOOL_GROUPS: { key: ToolGroup; label: string; description: string }
   {
     key: "security",
     label: "Security & privacy",
-    description: "Watermark a document or strip the properties that travel with it.",
+    description: "Lock a document with a password, remove one you know, watermark it or strip its properties.",
   },
 ];
 

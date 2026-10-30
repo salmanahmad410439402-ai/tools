@@ -14,9 +14,15 @@ there is no upload endpoint, no backend, no database and no account system.
 ## Quick start
 
 ```bash
-npm install          # also copies the pdf.js worker into /public via predev/prebuild
+npm install          # also copies the pdf.js worker and the OCR runtime into /public via predev/prebuild
 npm run dev          # http://localhost:3000
 ```
+
+Both generated asset sets are gitignored and rebuilt from `node_modules`:
+
+- `public/pdf.worker.min.mjs` — `scripts/copy-pdf-worker.mjs`
+- `public/ocr/` — `scripts/copy-ocr-assets.mjs`: the tesseract worker, the two LSTM WASM cores
+  (SIMD and plain) and the English language data. `npm run sync:ocr` re-runs just this step.
 
 Production build and local preview of the exported site:
 
@@ -140,6 +146,11 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 | Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
 | QR encoding | `qrcode-generator` 2.0.4 (MIT, no runtime deps) | only on the QR page |
+| PDF passwords (encrypt / decrypt) | `@cantoo/pdf-lib` 2.11.1 (MIT — a pdf-lib fork adding the standard security handler) | only on Protect PDF and Unlock PDF, and only when the button is pressed |
+| Writing `.docx` | our own OOXML writer in `lib/convert/docx-write.ts` | bundled, no dependency |
+| Writing `.xlsx` | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is downloaded |
+| OCR | `tesseract.js` 7 (Apache-2.0) + `tesseract.js-core` WASM + `@tesseract.js-data/eng` (MIT), all served from `/ocr/` | only on the OCR page, on first run (~7 MB, cached) |
+| PowerPoint parsing | `jszip` (MIT) + the DOM's `DOMParser` + local code in `lib/convert/pptx.ts` | only on the PowerPoint to PDF page |
 
 Analytics is opt-in and cookie-free. Two options, both off unless configured:
 
@@ -309,7 +320,13 @@ code, `kbd`, file sizes), all self-hosted through `@fontsource-variable/*`.
 `npm test` runs engines in Node with no browser: page geometry, image→PDF, the merge/split/
 extract/rotate/organise/page-number/watermark/metadata operations, the rebuild path used by
 Repair, DOCX → HTML → blocks → PDF via Mammoth, CSV/Markdown/HTML parsing, the custom image
-encoders and the canvas-limit guard. `jsdom` supplies `DOMParser` for the HTML/DOCX steps only.
+encoders and the canvas-limit guard. `jsdom` supplies `DOMParser` for the HTML/DOCX/PPTX steps.
+
+Step 6's engines are covered too: a real AES-256 encrypt → decrypt round trip (including a wrong
+password, an owner password and a refusal to re-encrypt an already-protected file), the .docx
+writer (validated by reading its own output back with Mammoth), the .xlsx writer (read back with
+SheetJS), the PDF text-layout heuristics (line grouping, heading detection, column clustering,
+running-header detection) and a synthetic .pptx parsed into a PDF page at the deck's size.
 
 Anything that needs a canvas, a camera or a worker is verified manually: PDF compression levels
 (the *strong* level rasterises), PDF → JPG/PNG/WebP rendering, the image converter and its AVIF
@@ -415,11 +432,44 @@ in Step 2, because they belong in the same PDF menu.
 - The content validator learned one exception: the lorem-ipsum page is *about* placeholder text,
   so its own copy is not flagged as unfinished placeholder copy (TODO/TBD/“coming soon” still are).
 
+**Step 6 (advanced tools) — done**
+
+- Six new tools, 48 in total, each with its own page, engine and Node assertions:
+  - **Protect PDF** (`/protect-pdf/`) — AES-256 encryption (`/V 5`, `/R 6`) with a user password,
+    an optional owner password and the five permission flags. Uses `@cantoo/pdf-lib` (MIT, an
+    API-compatible fork adding the standard security handler), imported dynamically so only this
+    page loads it.
+  - **Unlock PDF** (`/unlock-pdf/`) — decrypts with a password the user already knows, then copies
+    the pages into a brand-new document. Clearing the trailer is not enough: the fork's writer
+    still emits the original `/Encrypt` dictionary, so a fresh document is the only way to be sure.
+    The output is re-opened with plain `pdf-lib` (which refuses encrypted files) as proof.
+  - **OCR PDF** (`/ocr-pdf/`) — `tesseract.js` (Apache-2.0) compiled to WebAssembly in a worker,
+    with the engine, WASM cores and English `traineddata` self-hosted from `/ocr/`. Produces a
+    `.txt` transcript and a searchable PDF: the scan stays as an image and the recognised words go
+    underneath it as zero-alpha text, so find and copy work while the page still looks scanned.
+  - **PDF to Word** (`/pdf-to-word/`) — pdf.js text items → lines (by baseline) → paragraphs (by
+    gap, size and indent) → a real `.docx` written by `lib/convert/docx-write.ts`, a five-part
+    OOXML writer of our own instead of a 300 KB dependency. Running headers, footers and page
+    numbers are detected across pages and dropped; page breaks are optional.
+  - **PDF to Excel** (`/pdf-to-excel/`) — the same line model, split into cells at visible gaps and
+    aligned into columns by clustering their left edges, written with SheetJS (already a dependency
+    for CSV → PDF) as numeric-where-possible cells. One sheet per page or one long sheet.
+  - **PowerPoint to PDF** (`/powerpoint-to-pdf/`) — a .pptx is unzipped and parsed with `jszip` +
+    `DOMParser`: slide order, slide size, shape transforms, text runs (size, bold, colour,
+    alignment, bullets), pictures and solid fills are drawn into pdf-lib pages. Placeholder
+    geometry inherited from the slide layout and master is resolved, which is what makes
+    template-built decks land in the right place.
+- Engines: `lib/pdf/security.ts`, `lib/ocr.ts`, `lib/pdf/ocr-pdf.ts`, `lib/convert/pdf-layout.ts`,
+  `lib/convert/pdf-text.ts`, `lib/convert/docx-write.ts`, `lib/convert/xlsx-write.ts`,
+  `lib/convert/pptx.ts`. 60+ new assertions in `npm test`.
+- Copy that used to say “OCR is not built yet” now points at the OCR tool, and the roadmap is empty
+  apart from the remaining conversion and guide work.
+
 **Not built yet (next steps)**
 
 - Step 4 remainder: more conversion landing pages (e.g. PNG → WebP, WebP → JPG).
 - Step 5 remainder: the guide library (three are published; the plan called for more).
-- Step 6: protect/unlock, OCR, PDF→Word/Excel, PowerPoint to PDF, and the rest.
+- OCR languages beyond English, and a “searchable PDF” option on Scan to PDF.
 
 ---
 
@@ -431,6 +481,25 @@ in Step 2, because they belong in the same PDF menu.
   PDFs, large on scans.
 - **Compress PDF, Strong** rasterises pages at 150 DPI or lower → text is no longer selectable.
   This is stated in the UI before the user starts.
+- **Protect PDF** adds AES-256 with a user password, an optional owner password and the five
+  permission flags. The flags are a request the reader is asked to honour, not a lock: a viewer
+  that ignores them can still copy or print. There is no password recovery, by design.
+- **Unlock PDF** removes a password the user already knows, and never guesses. Certificate-based
+  encryption is not supported, and the document information dictionary is encrypted in the source
+  so the unlocked copy starts with empty properties rather than a partial guess.
+- **OCR PDF** recognises English printed text with tesseract.js in a worker. Handwriting, stamps and
+  stylised display fonts are unreliable; accuracy depends on resolution, skew and contrast. The
+  searchable PDF keeps the scan as an image with a zero-alpha text layer underneath — it is not a
+  rebuilt document. About 7 MB of engine and language data is downloaded and cached on first use.
+- **PDF to Word** rebuilds paragraphs, headings and page order from text positions. Tables arrive as
+  text, images are not extracted, and inline bold/italic is often lost because a PDF stores a font
+  reference rather than a style name. Scans need OCR first.
+- **PDF to Excel** infers columns from the horizontal gaps between words. Merged cells, vertical
+  rules and wrapped cell text survive badly; numbers are written as numbers when they look numeric,
+  and anything with a currency symbol stays text so nothing is silently altered.
+- **PowerPoint to PDF** draws text, pictures, solid shapes and backgrounds at their slide positions,
+  at the deck's own page size. Animations, transitions, charts, SmartArt, gradients, shadows and
+  video cannot be reproduced; tables are flattened to aligned text; speaker notes are not included.
 - **PDF editor** either starts a blank document (A4/Letter/Legal/A5/A3/square, portrait or
   landscape, any page count up to 20 at creation) or opens an existing PDF and draws over it. It
   offers twelve tools — select, text, image, rectangle, rounded box, ellipse, triangle, line,
@@ -532,7 +601,29 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    with Word/Google Docs, then check a 300-character post against the X bar. Case converter: run
    each of the 13 buttons on text with existing capitals, and confirm “Use as input” chains. Lorem:
    change paragraph counts, switch to HTML and confirm the tags appear verbatim.
-7. **PDF editor (the creator)** — this is the largest widget on the site, so walk it end to end:
+7. **Passwords (step 6)** — Protect PDF: protect a 3-page file with a password, open it in Acrobat,
+   Preview and Chrome and confirm each asks for the password; try the wrong one (must fail with a
+   message, not a crash); then unlock it here with the right one and confirm the pages are intact
+   and no password is asked for. Repeat with an owner password and with permissions-only (empty
+   user password). Try a PDF that is already protected (must be refused with an explanation) and a
+   one-page file with a 40-character password.
+8. **OCR** — scan or photograph a page of printed text, then run it through OCR PDF. Expect a few
+   seconds per page; confirm the searchable PDF opens with the scan intact, that Ctrl+F finds a word
+   from the page, and that copying gives the recognised characters. Try a skewed photo and a
+   handwriting sample — both should produce visibly worse results and the confidence figure should
+   drop. Check the first run downloads ~7 MB from `/ocr/` (Network panel) and that a second run is
+   cached.
+9. **PDF → Word / Excel** — convert a text PDF with headings and a paragraph that wraps across
+   lines; open the .docx in Word and Google Docs and confirm real paragraphs (not one per line),
+   heading styles in the navigation pane, and no repeated header at the top of each page. Convert
+   an invoice or statement to .xlsx and check that numbers arrive as numbers (SUM works) and that
+   columns line up. Run both on a scanned PDF and confirm the message points at OCR instead of
+   producing an empty file.
+10. **PowerPoint → PDF** — convert a 16:9 deck with a title slide, bullets, a picture and a coloured
+   shape; confirm one page per slide at 960 × 540 points, text selectable, picture in place. Then try
+   a deck with a chart or SmartArt: the slide should still appear with its other elements, and the
+   warning list should say what was approximated. A .ppt file must be refused with the re-save hint.
+11. **PDF editor (the creator)** — this is the largest widget on the site, so walk it end to end:
    start a blank A4 document and add three pages; place text (type, change family, size, bold,
    italic, alignment and line spacing), a rectangle, an ellipse, a triangle, a line and an arrow;
    draw a freehand stroke; insert a PNG logo and resize it by a corner handle. Open every colour
@@ -545,8 +636,8 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    selectable, shapes must be in the same place as the preview, and the page order must match the
    strip. Also test on a phone: the palette, inspector and page strip must all be reachable at
    360 px without horizontal scroll, and drawing must work with a finger.
-8. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+12. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll; the crop handles must be draggable with a finger.
-9. **Network tab** — run any tool, including the editor export, and confirm no request carries
+13. **Network tab** — run any tool, including the editor export, and confirm no request carries
    file data. Note that the analytics script only loads after **Allow** in the consent panel.
-10. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+14. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

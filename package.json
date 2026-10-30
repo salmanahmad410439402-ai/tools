@@ -4,17 +4,19 @@
   "private": true,
   "description": "Free PDF and image tools that run privately in your browser.",
   "scripts": {
-    "predev": "node scripts/copy-pdf-worker.mjs",
+    "predev": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs",
     "build": "next build",
     "start": "node scripts/serve.mjs",
     "validate": "node --experimental-strip-types scripts/validate-content.ts",
     "test": "node --experimental-strip-types scripts/smoke-test.mjs",
     "check": "npm run typecheck && npm run validate && npm test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sync:ocr": "node scripts/copy-ocr-assets.mjs"
   },
   "dependencies": {
+    "@cantoo/pdf-lib": "^2.11.1",
     "@fontsource-variable/inter": "5.2.5",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@fontsource-variable/outfit": "5.3.0",
@@ -30,9 +32,11 @@
     "qrcode-generator": "2.0.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
     "@types/node": "22.10.2",
     "@types/react": "19.0.2",
     "@types/react-dom": "19.0.2",

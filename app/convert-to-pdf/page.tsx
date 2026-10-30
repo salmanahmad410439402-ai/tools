@@ -26,7 +26,7 @@ const faqs = [
   },
   {
     q: "What about scanned PDFs and OCR?",
-    a: "OCR is on the roadmap, not live yet. A scanned PDF contains pictures of words; turning those into selectable text needs a recognition engine and a language model for each script. We will ship it when English accuracy is genuinely good, then add more languages.",
+    a: "A scanned PDF contains pictures of words, so run it through OCR PDF first: the recognition happens in your browser and produces a searchable PDF plus a text file. English is supported, printed text works far better than handwriting, and the result is worth checking before you rely on it.",
   },
   {
     q: "Do these converters upload my documents?",

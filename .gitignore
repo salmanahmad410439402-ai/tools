@@ -27,3 +27,6 @@ yarn-error.log*
 
 # scratch files
 image-search/
+
+# generated OCR runtime (copied by scripts/copy-ocr-assets.mjs on install/build)
+public/ocr

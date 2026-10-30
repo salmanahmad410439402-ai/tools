@@ -79,6 +79,12 @@ const RepairPdf = dynamic(() => import("./pdf/RepairPdf").then((mod) => mod.Repa
 const PdfToTxt = dynamic(() => import("./pdf/PdfToTxt").then((mod) => mod.PdfToTxt), { loading: () => <WidgetSkeleton /> });
 const ScanToPdf = dynamic(() => import("./pdf/ScanToPdf").then((mod) => mod.ScanToPdf), { loading: () => <WidgetSkeleton /> });
 const TextToPdf = dynamic(() => import("./pdf/TextToPdf").then((mod) => mod.TextToPdf), { loading: () => <WidgetSkeleton /> });
+const PdfProtect = dynamic(() => import("./pdf/PdfProtect").then((mod) => mod.PdfProtect), { loading: () => <WidgetSkeleton /> });
+const PdfUnlock = dynamic(() => import("./pdf/PdfUnlock").then((mod) => mod.PdfUnlock), { loading: () => <WidgetSkeleton /> });
+const OcrPdf = dynamic(() => import("./pdf/OcrPdf").then((mod) => mod.OcrPdf), { loading: () => <WidgetSkeleton /> });
+const PdfToWord = dynamic(() => import("./pdf/PdfToWord").then((mod) => mod.PdfToWord), { loading: () => <WidgetSkeleton /> });
+const PdfToExcel = dynamic(() => import("./pdf/PdfToExcel").then((mod) => mod.PdfToExcel), { loading: () => <WidgetSkeleton /> });
+const PptxToPdf = dynamic(() => import("./PptxToPdf").then((mod) => mod.PptxToPdf), { loading: () => <WidgetSkeleton /> });
 
 export function ToolWidget({
   widget,
@@ -160,6 +166,18 @@ export function ToolWidget({
       return <PdfToTxt />;
     case "scan-to-pdf":
       return <ScanToPdf />;
+    case "protect-pdf":
+      return <PdfProtect />;
+    case "unlock-pdf":
+      return <PdfUnlock />;
+    case "ocr-pdf":
+      return <OcrPdf />;
+    case "pdf-to-word":
+      return <PdfToWord />;
+    case "pdf-to-excel":
+      return <PdfToExcel />;
+    case "pptx-to-pdf":
+      return <PptxToPdf />;
     case "txt-to-pdf":
       return <TextToPdf mode="txt" />;
     case "docx-to-pdf":
