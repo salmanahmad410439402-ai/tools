@@ -170,7 +170,7 @@ export const guides: Guide[] = [
       },
       {
         type: "p",
-        text: "There is one workaround and it is worth naming: OCR, which reads the shapes in an image and guesses the characters. This site does not ship OCR yet, and no OCR is perfect on small print, handwriting or mixed languages. If you need searchable text from a scan, that is a separate job from converting a page to a picture.",
+        text: "There is one workaround and it is worth naming: OCR, which reads the shapes in an image and guesses the characters. This site has an OCR PDF tool that runs the recognition in the browser, but no OCR is perfect on small print, handwriting or mixed languages. If you need searchable text from a scan, treat it as a separate job from converting a page to a picture.",
       },
       {
         type: "quote",

@@ -717,7 +717,7 @@ export const pdfConvertTools: Tool[] = [
     limits: [
       {
         title: "Scans contain no text",
-        text: "A photographed or scanned page is an image. Extracting from it returns nothing, because the characters were never stored — that is what OCR exists for, and it is not built yet.",
+        text: "A photographed or scanned page is an image. Extracting from it returns nothing, because the characters were never stored. Recognise it with OCR PDF first, then extract the text from the searchable copy.",
       },
       {
         title: "Layout is not preserved",
@@ -772,8 +772,8 @@ export const pdfConvertTools: Tool[] = [
         a: "No. The PDF engine runs in the tab and the text never leaves it. Nothing is logged, stored or transmitted.",
       },
       {
-        q: "Will OCR be added?",
-        a: "It is planned as a separate tool rather than bolted onto this one, because recognition has its own trade-offs — language models, accuracy expectations and much slower processing on long documents. This page will keep saying plainly when a file has no text.",
+        q: "Can it read a scan?",
+        a: "Not directly — there are no characters in a scan to extract. The OCR PDF tool recognises the words first and writes a searchable copy; extracting text from that copy works normally. This page keeps saying plainly when a file has no text layer.",
       },
       {
         q: "Does the text keep the original line breaks?",
@@ -893,7 +893,7 @@ export const pdfConvertTools: Tool[] = [
       },
       {
         q: "Is the scan searchable?",
-        a: "No. Without OCR the words are pixels. If you need searchable text from a scan, that is a separate recognition step and it is not built yet.",
+        a: "Not from this tool: the words stay pixels, because pages are embedded as images. Run the result through OCR PDF to add a text layer — that is a separate recognition step, and it is honest about its accuracy.",
       },
       {
         q: "Why is the camera button not working on my desktop?",
@@ -919,5 +919,150 @@ export const pdfConvertTools: Tool[] = [
     isNew: true,
     phase: 2,
     updated: "2026-10-27",
+  },
+  {
+    slug: "powerpoint-to-pdf",
+    name: "PowerPoint to PDF",
+    shortName: "PPT to PDF",
+    category: "pdf-tools",
+    group: "create",
+    widget: "pptx-to-pdf",
+    icon: "Presentation",
+    tagline: "Turn a .pptx deck into one PDF page per slide, text and pictures included.",
+    bestFor: "You need to send slides to somebody who does not have PowerPoint, or to keep a fixed copy of a deck.",
+    seoTitle: "PowerPoint to PDF — Convert a .pptx File",
+    metaDescription:
+      "Convert a PowerPoint .pptx file into a PDF in your browser: one page per slide at the deck's own size, text and images included. No upload, no account.",
+    h1: "PowerPoint to PDF — Convert a .pptx File in Your Browser",
+    intro: [
+      "Drop a .pptx in and get a PDF with one page per slide, at the presentation's own slide size (16:9, 4:3 or a custom canvas). Text stays selectable, pictures are embedded at their transformed position, and solid fills come through as real shapes rather than a screenshot.",
+      "A .pptx is a ZIP of XML, so everything can be read in the tab. Nothing is uploaded, and no PowerPoint, LibreOffice or Office 365 is involved — which also means the result is a faithful reconstruction rather than a pixel-perfect render.",
+      "That difference shows up in the corners of a slide: gradients, shadows, 3-D effects, charts, SmartArt, animations and video cannot be reproduced. If a deck leans on those, check the PDF page by page before you send it.",
+    ],
+    bullets: [
+      {
+        title: "One page per slide",
+        text: "The page size follows the deck's own slide size, so a 13.33 × 7.5 inch widescreen deck becomes a 960 × 540 pt PDF page with no letterboxing.",
+      },
+      {
+        title: "Selectable text",
+        text: "Slide text is written as real text with wrapping, bullets, alignment, bold and colour — not flattened into an image of a slide.",
+      },
+      {
+        title: "Pictures embedded",
+        text: "PNG and JPEG images are read out of the .pptx and placed at their slide position and size, including inside grouped shapes.",
+      },
+      {
+        title: "Template geometry resolved",
+        text: "Decks built from a template store almost no coordinates on the slides themselves, so inherited positions are read from the slide layout and the master and text lands where it belongs.",
+      },
+      {
+        title: "Shapes and backgrounds",
+        text: "Solid-filled shapes, outlines and slide background colours are drawn as vector shapes, so the deck keeps its colour scheme.",
+      },
+      {
+        title: "Honest conversion report",
+        text: "Before converting, the page lists what it found — slide count, size, shape count — and warns about tables or images it had to approximate or skip.",
+      },
+    ],
+    steps: [
+      {
+        title: "Drop the .pptx",
+        text: "PowerPoint 2007 or later, up to 150 MB. Legacy .ppt files (1997–2003) are a different format and must be re-saved as .pptx first.",
+      },
+      {
+        title: "Read what was found",
+        text: "The summary confirms the slide count, the page size and any tables that will be flattened to text before you commit.",
+      },
+      {
+        title: "Convert",
+        text: "Each slide is parsed and drawn onto a matching PDF page: backgrounds first, then shapes, then pictures, then text.",
+      },
+      {
+        title: "Check the deck",
+        text: "Open the PDF and flip through every slide. Anything relying on animation, a chart or SmartArt will look different, and this is the moment to notice.",
+      },
+    ],
+    limits: [
+      {
+        title: "No animations, transitions or video",
+        text: "A PDF has one static page per slide. Builds, transitions, auto-advance and embedded video are gone — that is a property of the format, not a shortcut taken here.",
+      },
+      {
+        title: "Charts and SmartArt are not drawn",
+        text: "A chart is a link to an embedded workbook with drawing instructions; SmartArt is a layout algorithm. Neither is reproduced, so allow a blank area on those slides.",
+      },
+      {
+        title: "Tables flatten to text",
+        text: "Table cells become aligned text rows inside the table's box. The values stay readable and selectable, but the cell borders and alignment are approximations.",
+      },
+      {
+        title: "Gradients and effects are simplified",
+        text: "Solid fills come through exactly. Gradients, shadows, glow, bevels, reflections and 3-D rotation are drawn flat or skipped.",
+      },
+      {
+        title: "Fonts are substituted",
+        text: "Text uses the standard PDF fonts, or the bundled DejaVu Sans when a character needs it. A deck set in a licensed corporate typeface will not carry that typeface unless it is available.",
+      },
+      {
+        title: "Speaker notes are not included",
+        text: "Only what is on the slide goes into the PDF. Notes, handouts and hidden slides are outside the output.",
+      },
+    ],
+    tips: [
+      {
+        title: "Flatten complex slides first",
+        text: "If one slide is a chart, export that slide as a PNG from PowerPoint and drop the picture in. It costs a minute and keeps the deck honest.",
+      },
+      {
+        title: "Check the master, not just the slides",
+        text: "Logos and rules usually live on the slide master. If they are set as a gradient or a group of images, check the first page of the result carefully.",
+      },
+      {
+        title: "Use it as a preview, not an archive",
+        text: "For a printable handout, this conversion is fine. For an archive of the deck, export a PDF from PowerPoint itself and compare the two.",
+      },
+      {
+        title: "Re-save old decks first",
+        text: "If the file is a .ppt, open it in PowerPoint or Impress and save a .pptx copy. Converting from an old format is not supported and the tool will say so.",
+      },
+    ],
+    faqs: [
+      {
+        q: "Will the PDF look exactly like my slides?",
+        a: "For text, pictures, solid shapes and backgrounds, yes in position and content. Effects such as gradients, shadows, charts and SmartArt are simplified or skipped, so a design-heavy deck will differ.",
+      },
+      {
+        q: "Can it convert .ppt files?",
+        a: "No. The pre-2007 binary format is a different container. Open it in PowerPoint, LibreOffice Impress or Keynote and save a .pptx, then convert that.",
+      },
+      {
+        q: "Are animations kept?",
+        a: "There is nowhere to keep them. A PDF page is static; builds, transitions and video cannot survive the format. The result is the final state of each slide.",
+      },
+      {
+        q: "Is the text selectable in the PDF?",
+        a: "Yes. Slide text is drawn as real text, so search, selection and copying work. It is not a picture of the slide.",
+      },
+      {
+        q: "What page size does the PDF get?",
+        a: "Exactly the deck's slide size. A 16:9 deck becomes 960 × 540 points, a 4:3 deck 720 × 540, and a custom canvas keeps its own measurements.",
+      },
+      {
+        q: "Are speaker notes included?",
+        a: "No. Only the visible slide content is converted. Notes live in a separate part of the file and are deliberately left out, because notes written for the presenter are usually not for the audience.",
+      },
+      {
+        q: "Is my presentation uploaded?",
+        a: "No. The .pptx is unzipped and parsed in the tab and the PDF is built there too. Nothing is sent to a server, which is why it also works offline.",
+      },
+    ],
+    related: ["word-to-pdf", "pdf-to-png", "jpg-to-pdf"],
+    inputFormats: ["PPTX"],
+    outputFormats: ["PDF"],
+    keywords: ["powerpoint to pdf", "pptx to pdf", "ppt to pdf", "convert slides to pdf", "presentation to pdf"],
+    isNew: true,
+    phase: 6,
+    updated: "2026-10-30",
   },
 ];

@@ -90,7 +90,7 @@ export function PdfToTxt() {
 
       if (characters === 0) {
         setNote(
-          "This PDF contains no readable text layer — every page is a picture. That happens with scans and phone photos. Converting to JPG and running OCR is the only route, and OCR is not built yet.",
+          "This PDF contains no readable text layer — every page is a picture. That happens with scans and phone photos. Run it through OCR PDF to recognise the words, then convert the searchable copy.",
         );
         setError("No text was found in the selected pages.");
         return;

@@ -68,7 +68,8 @@ export default function AboutPage() {
       <p>
         Writing the documentation is part of shipping the tool. Each live tool has a page with steps, limits and
         FAQ answers that match what the code actually does, including the jobs it cannot do well — a browser
-        cannot reflow a PDF's text, cannot run OCR on a scan, and cannot repair missing pages. Today{" "}
+        cannot reflow a PDF's existing text, OCR on a scan is a guess rather than a transcript, and no tool can
+        invent pages that were never written. Today{" "}
         {tools.length} tools are live and {roadmap.length} are on the roadmap; you can see both lists on the{" "}
         <Link href="/tools/">all tools page</Link>.
       </p>
