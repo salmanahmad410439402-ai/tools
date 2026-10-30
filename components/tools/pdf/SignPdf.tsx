@@ -9,6 +9,7 @@ import { cn, fileBaseName, outputName } from "@/lib/utils";
 import { Field, inputClass, Notice, ProgressBar, ResultsPanel, Segmented, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
+import { useAutoFocus } from "@/components/ToolFocusShell";
 
 type SignatureMode = "draw" | "type" | "upload";
 
@@ -64,6 +65,7 @@ export function SignPdf() {
   const [pageIndex, setPageIndex] = useState(0);
   const [width, setWidth] = useState(28);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,8 @@ export function SignPdf() {
   const drawing = useRef(false);
   const uploaded = useRef<HTMLImageElement | null>(null);
   const info = usePdfInfo(file);
+  // A page being open is the cue to give the preview the whole width.
+  useAutoFocus(Boolean(file) && Boolean(info.pages));
   const preview = usePageThumbs(file, { maxWidth: 620, maxPages: 30 });
 
   // Keep the pad blank and the placement cleared when the file changes.
@@ -367,31 +371,56 @@ export function SignPdf() {
 
           {currentThumb && (
             <div className="mt-4">
-              <p className="mb-1.5 text-[12.5px] font-semibold text-ink">Click where the signature should go</p>
-              <div
-                onClick={place}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") setPosition({ x: 0.55, y: 0.2 });
-                }}
-                className="relative mx-auto w-full max-w-sm cursor-crosshair overflow-hidden rounded-xl border border-line bg-raised shadow-card"
-                aria-label="Page preview — click to place the signature"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={currentThumb.url} alt={`Page ${pageIndex + 1}`} className="block w-full" />
-                {position && (
-                  <span
-                    className="pointer-events-none absolute -translate-y-1/2 rounded border-2 border-dashed border-brand-500 bg-brand-500/15"
-                    style={{
-                      left: `${position.x * 100}%`,
-                      top: `${(1 - position.y) * 100}%`,
-                      width: `${width}%`,
-                      height: "8%",
-                    }}
-                    aria-hidden="true"
-                  />
-                )}
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[12.5px] font-semibold text-ink">Click where the signature should go</p>
+                <div
+                  className="inline-flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5"
+                  role="group"
+                  aria-label="Zoom the page preview"
+                >
+                  {[1, 1.5, 2].map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setZoom(level)}
+                      aria-pressed={zoom === level}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-[11.5px] font-semibold tabular-nums transition-colors",
+                        zoom === level ? "bg-primary/10 text-brand-700" : "text-subtle hover:text-ink",
+                      )}
+                    >
+                      {Math.round(level * 100)}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="overflow-auto rounded-xl" style={{ maxHeight: zoom > 1 ? "70vh" : undefined }}>
+                <div
+                  onClick={place}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") setPosition({ x: 0.55, y: 0.2 });
+                  }}
+                  className="relative mx-auto cursor-crosshair overflow-hidden rounded-xl border border-line bg-raised shadow-card"
+                  style={{ width: zoom === 1 ? "100%" : Math.round(384 * zoom), maxWidth: zoom === 1 ? 384 : undefined }}
+                  aria-label="Page preview — click to place the signature"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={currentThumb.url} alt={`Page ${pageIndex + 1}`} className="block w-full" />
+                  {position && (
+                    <span
+                      className="pointer-events-none absolute -translate-y-1/2 rounded border-2 border-dashed border-brand-500 bg-brand-500/15"
+                      style={{
+                        left: `${position.x * 100}%`,
+                        top: `${(1 - position.y) * 100}%`,
+                        width: `${width}%`,
+                        height: "8%",
+                      }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
               </div>
               <p className="mt-2 text-center text-[11.5px] text-subtle">
                 {position ? "Placed. Adjust the width or click again to move it." : "No position chosen yet — the default is lower right."}

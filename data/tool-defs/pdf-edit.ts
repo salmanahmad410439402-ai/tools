@@ -535,6 +535,10 @@ export const pdfEditTools: Tool[] = [
         text: "A large diagonal word at 10–15% opacity makes a convincing draft or confidential watermark without hiding the content beneath it. Rotate it to about −35°.",
       },
       {
+        title: "Zoom in for exact placement",
+        text: "As soon as a file is open — or a blank page started — the editor takes the full width of the window and the sidebar steps out of the way. Use the − and + buttons above the page, or Ctrl/⌘ with − + 0, to work anywhere from 50% to 300%; the objects, the text and the corner handles all scale with the page, so a caption can be lined up to the pixel. Fit width returns to 100%, and Full width switches the wide view on or off by hand.",
+      },
+      {
         title: "Nudge instead of dragging",
         text: "Select an object and use the arrow keys for one-pixel movements, or Shift plus arrow for bigger steps. It is far quicker than trying to drag something into exact alignment.",
       },
