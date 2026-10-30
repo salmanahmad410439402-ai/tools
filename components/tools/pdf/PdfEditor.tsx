@@ -12,6 +12,8 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  Maximize2,
+  Minimize2,
   Minus,
   MousePointer2,
   PenTool,
@@ -40,6 +42,7 @@ import {
 import { track } from "@/lib/analytics";
 import { makePreviewUrl, revokeResults, type ResultFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
+import { useAutoFocus, useToolFocus } from "@/components/ToolFocusShell";
 import { Field, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
@@ -113,6 +116,9 @@ interface DragState {
   moved: boolean;
 }
 
+/** Zoom stops. 1 is fit-to-width; the text on the page scales with it. */
+const ZOOM_LEVELS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -121,6 +127,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const [file, setFile] = useState<File | null>(null);
   const [bytes, setBytes] = useState<ArrayBuffer | null>(null);
   const [blank, setBlank] = useState<{ size: PageSizeKey; orientation: "portrait" | "landscape" } | null>(null);
+  // The start screen keeps its own copy of the choices: writing them straight
+  // into `blank` would count as "a document is open" before the visitor has
+  // asked for one.
+  const [newSheet, setNewSheet] = useState<{ size: PageSizeKey; orientation: "portrait" | "landscape" }>({
+    size: "a4",
+    orientation: "portrait",
+  });
   const [blankPages, setBlankPages] = useState("1");
   const [pages, setPages] = useState<PageEntry[]>([]);
   const [pageSizes, setPageSizes] = useState<{ width: number; height: number }[]>([]);
@@ -148,14 +161,20 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const drag = useRef<DragState | null>(null);
   const lastRecord = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const [stageWidth, setStageWidth] = useState(640);
+  const [zoom, setZoom] = useState(1);
+  const { focused, setFocused } = useToolFocus();
 
   const info = usePdfInfo(file);
   const preview = usePageThumbs(file, { maxWidth: 900, maxPages: 60 });
 
-  /* ── measuring the stage so the preview matches PDF points ─────────────── */
+  /* ── measuring the frame so the preview matches PDF points ─────────────── */
+  // The observer watches the frame around the page, never the page itself:
+  // the page is as wide as `zoom` says, so measuring it here would feed the
+  // zoom back into its own input and the stage would grow on every frame.
   useEffect(() => {
-    const node = stageRef.current;
+    const node = frameRef.current;
     if (!node) return undefined;
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width;
@@ -205,6 +224,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       setPast([]);
       setFuture([]);
       setActivePage(0);
+      setZoom(1);
       track("tool_started", { tool: toolSlug, files: 1 });
     } catch {
       setError("That file could not be read. Try choosing it again.");
@@ -221,7 +241,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
   const startBlank = () => {
     const count = Math.max(1, Math.min(20, Number(blankPages) || 1));
-    setBlank((current) => current ?? { size: "a4", orientation: "portrait" });
+    setBlank(newSheet);
     setPages(Array.from({ length: count }, () => ({ id: uid("p"), sourceIndex: null })));
     setElements([]);
     setSelectedId(null);
@@ -230,6 +250,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     setActivePage(0);
     setFile(null);
     setBytes(null);
+    setZoom(1);
     track("tool_started", { tool: toolSlug });
   };
 
@@ -253,6 +274,22 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   };
 
   const documentOpen = Boolean(blank || file);
+
+  /* ── zoom ─────────────────────────────────────────────────────────────── */
+  // A document being open is the cue to give the stage the whole page: the
+  // sidebar and the hero header collapse and never come back until the visitor
+  // asks for them, or closes the document.
+  useAutoFocus(documentOpen);
+
+  const zoomStep = (direction: 1 | -1) => {
+    setZoom((current) => {
+      if (direction === 1) {
+        return ZOOM_LEVELS.find((level) => level > current + 0.001) ?? ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+      }
+      const lower = [...ZOOM_LEVELS].reverse().find((level) => level < current - 0.001);
+      return lower ?? ZOOM_LEVELS[0];
+    });
+  };
 
   /* ── history helpers ──────────────────────────────────────────────────── */
   const snapshot = useCallback(() => ({ elements, pages }), [elements, pages]);
@@ -569,6 +606,12 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       const target = event.target as HTMLElement | null;
       if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
 
+      if ((event.metaKey || event.ctrlKey) && ["=", "+", "-", "_", "0"].includes(event.key)) {
+        event.preventDefault();
+        if (event.key === "0") setZoom(1);
+        else zoomStep(event.key === "-" || event.key === "_" ? -1 : 1);
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
         if (event.shiftKey) redo();
@@ -716,7 +759,11 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   }, [toolSearch]);
 
   const pageSize = pageSizes[activePage] ?? pageSizes[0] ?? null;
-  const scale = pageSize ? stageWidth / pageSize.width : 1;
+  // 100 % is fit-to-width, capped so an ultra-wide monitor does not render a
+  // billboard. Anything above that scrolls inside the frame.
+  const fitWidth = Math.min(stageWidth, 760);
+  const renderWidth = Math.max(160, Math.round(fitWidth * zoom));
+  const scale = pageSize ? renderWidth / pageSize.width : 1;
   const pageElements = elements.filter((element) => element.pageIndex === activePage);
   const activeThumb = pages[activePage]?.sourceIndex != null
     ? preview.thumbs.find((thumb) => thumb.pageIndex === pages[activePage].sourceIndex)
@@ -755,8 +802,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                 <select
                   id="new-size"
                   className={selectClass}
-                  value={blank?.size ?? "a4"}
-                  onChange={(event) => setBlank({ size: event.target.value as PageSizeKey, orientation: blank?.orientation ?? "portrait" })}
+                  value={newSheet.size}
+                  onChange={(event) => setNewSheet({ size: event.target.value as PageSizeKey, orientation: newSheet.orientation })}
                 >
                   {Object.entries(EDITOR_PAGE_SIZES).map(([key, value]) => (
                     <option key={key} value={key}>
@@ -770,9 +817,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   <select
                     id="new-orientation"
                     className={selectClass}
-                    value={blank?.orientation ?? "portrait"}
+                    value={newSheet.orientation}
                     onChange={(event) =>
-                      setBlank({ size: blank?.size ?? "a4", orientation: event.target.value as "portrait" | "landscape" })
+                      setNewSheet({ size: newSheet.size, orientation: event.target.value as "portrait" | "landscape" })
                     }
                   >
                     <option value="portrait">Portrait</option>
@@ -923,72 +970,138 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
         {/* Stage */}
         <div className="order-1 lg:order-2">
-          <div className="rounded-xl border border-line bg-[#0b1020] p-2">
-            <div className="mx-auto" style={{ maxWidth: 560 }}>
-              <div
-                ref={stageRef}
-                onPointerDown={onStagePointerDown}
-                onPointerMove={onStagePointerMove}
-                onPointerUp={onStagePointerUp}
-                onPointerLeave={onStagePointerUp}
-                className="relative w-full touch-none select-none overflow-hidden rounded bg-white shadow-card"
-                style={{ aspectRatio: `1 / ${aspect}`, cursor: tool === "select" ? "default" : tool === "text" ? "text" : "crosshair" }}
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <div
+              className="inline-flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5"
+              role="group"
+              aria-label="Zoom the page"
+            >
+              <button
+                type="button"
+                onClick={() => zoomStep(-1)}
+                disabled={zoom <= ZOOM_LEVELS[0]}
+                aria-label="Zoom out"
+                title="Zoom out (Ctrl or ⌘ and −)"
+                className="grid h-7 w-7 place-items-center rounded-md text-body transition-colors hover:bg-raised disabled:opacity-40"
               >
-                {activeThumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activeThumb.url} alt={`Page ${activePage + 1}`} className="pointer-events-none absolute inset-0 h-full w-full object-fill" draggable={false} />
-                ) : blank ? null : (
-                  <div className="absolute inset-0 grid place-items-center text-[11px] text-subtle">
-                    {preview.loading ? "Rendering the page…" : "This page could not be previewed"}
-                  </div>
-                )}
+                <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+              <output aria-live="polite" className="min-w-[44px] text-center text-[11.5px] font-semibold tabular-nums text-ink">
+                {Math.round(zoom * 100)}%
+              </output>
+              <button
+                type="button"
+                onClick={() => zoomStep(1)}
+                disabled={zoom >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1]}
+                aria-label="Zoom in"
+                title="Zoom in (Ctrl or ⌘ and +)"
+                className="grid h-7 w-7 place-items-center rounded-md text-body transition-colors hover:bg-raised disabled:opacity-40"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
 
-                {pageElements.map((element) => (
-                  <div
-                    key={element.id}
-                    onPointerDown={(event) => startMove(event, element)}
-                    className="absolute"
-                    style={{
-                      left: `${element.x * 100}%`,
-                      top: `${element.y * 100}%`,
-                      width: `${element.width * 100}%`,
-                      height: `${element.height * 100}%`,
-                    }}
-                  >
-                    <ElementView element={element} scale={scale} selected={element.id === selectedId} interactive={false} />
-                  </div>
-                ))}
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className={cn(
+                "rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold transition-colors",
+                zoom === 1
+                  ? "border-line bg-surface text-subtle"
+                  : "border-primary/45 bg-primary/10 text-brand-700 hover:border-primary/60",
+              )}
+              title="Back to the page filling the width (Ctrl or ⌘ and 0)"
+            >
+              Fit width
+            </button>
 
-                {selected && (
-                  <>
-                    {(["nw", "ne", "sw", "se"] as const).map((corner) => (
-                      <span
-                        key={corner}
-                        role="presentation"
-                        onPointerDown={(event) => startResize(event, selected, corner)}
-                        className={cn(
-                          "absolute z-10 h-3 w-3 rounded-full border-2 border-brand-500 bg-white",
-                          corner === "nw" && "-translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
-                          corner === "ne" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
-                          corner === "sw" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
-                          corner === "se" && "translate-x-1/2 translate-y-1/2 cursor-nwse-resize",
-                        )}
-                        style={{
-                          left: `${(corner === "ne" || corner === "se" ? selected.x + selected.width : selected.x) * 100}%`,
-                          top: `${(corner === "sw" || corner === "se" ? selected.y + selected.height : selected.y) * 100}%`,
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
+            <button
+              type="button"
+              onClick={() => setFocused(!focused)}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[11.5px] font-semibold text-body transition-colors hover:border-primary/45 hover:text-brand-600"
+              title={focused ? "Bring the sidebar and page header back" : "Hide the sidebar and page header to work wider"}
+            >
+              {focused ? (
+                <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {focused ? "Normal width" : "Full width"}
+            </button>
+          </div>
 
-                {draft && <ElementView element={draft} scale={scale} selected={false} interactive={false} />}
+          <div className="rounded-xl border border-line bg-[#0b1020] p-2">
+            <div
+              ref={frameRef}
+              className="overflow-auto"
+              style={{ maxHeight: zoom > 1 ? "74vh" : undefined }}
+            >
+              <div className="mx-auto" style={{ width: renderWidth }}>
+                <div
+                  ref={stageRef}
+                  onPointerDown={onStagePointerDown}
+                  onPointerMove={onStagePointerMove}
+                  onPointerUp={onStagePointerUp}
+                  onPointerLeave={onStagePointerUp}
+                  className="relative w-full touch-none select-none overflow-hidden rounded bg-white shadow-card"
+                  style={{ aspectRatio: `1 / ${aspect}`, cursor: tool === "select" ? "default" : tool === "text" ? "text" : "crosshair" }}
+                >
+                  {activeThumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={activeThumb.url} alt={`Page ${activePage + 1}`} className="pointer-events-none absolute inset-0 h-full w-full object-fill" draggable={false} />
+                  ) : blank ? null : (
+                    <div className="absolute inset-0 grid place-items-center text-[11px] text-subtle">
+                      {preview.loading ? "Rendering the page…" : "This page could not be previewed"}
+                    </div>
+                  )}
 
-                {!blank && !activeThumb && !preview.loading && (
-                  <div className="pointer-events-none absolute inset-0 bg-white/95 p-4 text-[12px] text-subtle">
-                    Preview unavailable — objects you add are still written into the exported PDF.
-                  </div>
-                )}
+                  {pageElements.map((element) => (
+                    <div
+                      key={element.id}
+                      onPointerDown={(event) => startMove(event, element)}
+                      className="absolute"
+                      style={{
+                        left: `${element.x * 100}%`,
+                        top: `${element.y * 100}%`,
+                        width: `${element.width * 100}%`,
+                        height: `${element.height * 100}%`,
+                      }}
+                    >
+                      <ElementView element={element} scale={scale} selected={element.id === selectedId} interactive={false} />
+                    </div>
+                  ))}
+
+                  {selected && (
+                    <>
+                      {(["nw", "ne", "sw", "se"] as const).map((corner) => (
+                        <span
+                          key={corner}
+                          role="presentation"
+                          onPointerDown={(event) => startResize(event, selected, corner)}
+                          className={cn(
+                            "absolute z-10 h-3 w-3 rounded-full border-2 border-brand-500 bg-white",
+                            corner === "nw" && "-translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
+                            corner === "ne" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
+                            corner === "sw" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
+                            corner === "se" && "translate-x-1/2 translate-y-1/2 cursor-nwse-resize",
+                          )}
+                          style={{
+                            left: `${(corner === "ne" || corner === "se" ? selected.x + selected.width : selected.x) * 100}%`,
+                            top: `${(corner === "sw" || corner === "se" ? selected.y + selected.height : selected.y) * 100}%`,
+                          }}
+                        />
+                      ))}
+                    </>
+                  )}
+
+                  {draft && <ElementView element={draft} scale={scale} selected={false} interactive={false} />}
+
+                  {!blank && !activeThumb && !preview.loading && (
+                    <div className="pointer-events-none absolute inset-0 bg-white/95 p-4 text-[12px] text-subtle">
+                      Preview unavailable — objects you add are still written into the exported PDF.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -505,7 +505,11 @@ in Step 2, because they belong in the same PDF menu.
   offers twelve tools — select, text, image, rectangle, rounded box, ellipse, triangle, line,
   arrow, highlight, white-out and pen — with a searchable palette, a full colour wheel/hex/swatch
   picker, opacity, rotation, layer order, undo/redo and a page strip for adding, duplicating,
-  reordering and deleting pages. Text is written as real selectable text. It still cannot rewrite
+  reordering and deleting pages. The stage zooms from 50 % to 300 % with fit-width (buttons or
+  Ctrl/⌘ plus − + 0) and scrolls inside its frame instead of stretching the page, and opening a
+  document — here and in every tool with a page preview — collapses the sidebar and the page header
+  into one sticky line, so the working area gets the full width; "Exit full-width view" brings the
+  rest back. Text is written as real selectable text. It still cannot rewrite
   existing body text: a PDF stores positioned glyphs, not paragraphs, and no browser library can
   reflow them. White-out covers text visually but leaves the original characters in the file, so
   it is explicitly *not* redaction.
@@ -636,8 +640,17 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    selectable, shapes must be in the same place as the preview, and the page order must match the
    strip. Also test on a phone: the palette, inspector and page strip must all be reachable at
    360 px without horizontal scroll, and drawing must work with a finger.
-12. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
+12. **Full-width view and zoom** — open a PDF in the editor (or any of the annotate, sign, watermark,
+   page-number, rotate or organise tools): the sidebar and the page header must collapse the moment
+   the file is read, leaving the stage the full container width, with a small sticky bar carrying the
+   H1 and an "Exit full-width view" button. Zoom the editor page with the − / + buttons and with
+   Ctrl/⌘ + − 0 from 50% to 300%; drag, resize and type at 300% and confirm objects land under the
+   cursor and that the exported PDF matches the preview at every zoom level. Check "Fit width" and
+   the "Full width"/"Normal width" toggle, then Sign PDF's 100/150/200% preview: the click position
+   must still be accurate at 200%. Confirm the page still scrolls (no horizontal page scroll) and that
+   the rail, ads and header come back when the view is exited or the document closed.
+13. **Mobile at 360 px** — dropzone tappable, options readable, buttons reachable, no horizontal
    scroll; the crop handles must be draggable with a finger.
-13. **Network tab** — run any tool, including the editor export, and confirm no request carries
+14. **Network tab** — run any tool, including the editor export, and confirm no request carries
    file data. Note that the analytics script only loads after **Allow** in the consent panel.
-14. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.
+15. **Lighthouse mobile** — target 90+ on Performance, Accessibility, Best Practices, SEO.

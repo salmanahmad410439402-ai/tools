@@ -8,6 +8,7 @@ import { revokeResults, type ResultFile } from "@/lib/download";
 import { cn, fileBaseName, formatBytes, outputName } from "@/lib/utils";
 import { Dropzone, Notice, ProgressBar, ResultsPanel, ToolFrame } from "../kit";
 import { usePageThumbs } from "./usePageThumbs";
+import { useAutoFocus } from "@/components/ToolFocusShell";
 
 interface Entry extends PageEdit {
   key: string;
@@ -25,6 +26,8 @@ export function OrganizePdf() {
   const [results, setResults] = useState<ResultFile[]>([]);
   const dragKey = useRef<string | null>(null);
   const thumbs = usePageThumbs(file);
+  // A page being open is the cue to give the preview the whole width.
+  useAutoFocus(Boolean(file));
 
   // Build the working list whenever thumbnails finish rendering.
   const [builtFor, setBuiltFor] = useState<File | null>(null);

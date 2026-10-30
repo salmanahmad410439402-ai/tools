@@ -9,6 +9,7 @@ import { revokeResults, type ResultFile } from "@/lib/download";
 import { fileBaseName, outputName } from "@/lib/utils";
 import { Field, inputClass, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
+import { useAutoFocus } from "@/components/ToolFocusShell";
 
 const POSITIONS: { value: NumberPosition; label: string }[] = [
   { value: "bottom-center", label: "Bottom centre" },
@@ -32,6 +33,8 @@ export function PageNumbers() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ResultFile[]>([]);
   const info = usePdfInfo(file);
+  // A page being open is the cue to give the preview the whole width.
+  useAutoFocus(Boolean(file) && Boolean(info.pages));
 
   const reset = () => {
     revokeResults(results);

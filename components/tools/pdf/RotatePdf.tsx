@@ -9,6 +9,7 @@ import { revokeResults, type ResultFile } from "@/lib/download";
 import { fileBaseName, outputName } from "@/lib/utils";
 import { Field, Notice, ProgressBar, ResultsPanel, Segmented, ToolFrame } from "../kit";
 import { PageSelection, PdfSource, usePdfInfo } from "./PdfSource";
+import { useAutoFocus } from "@/components/ToolFocusShell";
 
 type Angle = "90" | "180" | "270";
 
@@ -20,6 +21,8 @@ export function RotatePdf() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ResultFile[]>([]);
   const info = usePdfInfo(file);
+  // A page being open is the cue to give the preview the whole width.
+  useAutoFocus(Boolean(file) && Boolean(info.pages));
 
   const reset = () => {
     revokeResults(results);
