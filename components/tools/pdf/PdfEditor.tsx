@@ -21,6 +21,8 @@ import {
   Search,
   Square,
   SquareDashed,
+  Star,
+  Hexagon,
   Trash2,
   Triangle,
   Type,
@@ -32,6 +34,7 @@ import { PDFDocument } from "pdf-lib";
 import {
   EDITOR_PAGE_SIZES,
   renderEditorPdf,
+  rotatePoint,
   strokeBox,
   textBoxHeight,
   type EditorElement,
@@ -48,7 +51,15 @@ import { useAutoFocus, useToolFocus } from "@/components/ToolFocusShell";
 import { Field, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
-import { ColorField, ElementView, InlineTextEditor, NumberField, SliderField, ToggleButton } from "./editor/ui";
+import {
+  ColorField,
+  ElementView,
+  InlineTextEditor,
+  NumberField,
+  SliderField,
+  ToggleButton,
+  measuredTextHeight,
+} from "./editor/ui";
 
 type Tool = "select" | EditorElementKind;
 
@@ -68,6 +79,8 @@ const TOOLS: ToolSpec[] = [
   { key: "roundrect", label: "Rounded box", keywords: "rounded corner box card", icon: SquareDashed, group: "Shapes" },
   { key: "ellipse", label: "Ellipse", keywords: "circle oval ellipse round", icon: Circle, group: "Shapes" },
   { key: "triangle", label: "Triangle", keywords: "triangle arrow head shape", icon: Triangle, group: "Shapes" },
+  { key: "polygon", label: "Polygon", keywords: "polygon pentagon hexagon octagon sides", icon: Hexagon, group: "Shapes" },
+  { key: "star", label: "Star", keywords: "star badge burst sparkle points", icon: Star, group: "Shapes" },
   { key: "line", label: "Line", keywords: "line rule divider stroke", icon: Minus, group: "Shapes" },
   { key: "arrow", label: "Arrow", keywords: "arrow direction pointer callout", icon: CornerDownRight, group: "Shapes" },
   { key: "highlight", label: "Highlight", keywords: "highlight marker emphasis yellow", icon: Wand2, group: "Annotate" },
@@ -75,7 +88,36 @@ const TOOLS: ToolSpec[] = [
   { key: "draw", label: "Pen", keywords: "pen draw freehand sketch signature scribble", icon: PenTool, group: "Annotate" },
 ];
 
-const SHAPE_TOOLS = new Set<Tool>(["rect", "roundrect", "ellipse", "triangle", "line", "arrow", "highlight", "whiteout"]);
+const TOOL_GROUPS: ToolSpec["group"][] = ["Essentials", "Shapes", "Annotate", "Insert"];
+
+const SHAPE_TOOLS = new Set<Tool>([
+  "rect",
+  "roundrect",
+  "ellipse",
+  "triangle",
+  "polygon",
+  "star",
+  "line",
+  "arrow",
+  "highlight",
+  "whiteout",
+]);
+
+/**
+ * Illustrator-style defaults for the shape tools: a rectangle starts square-
+ * cornered, a rounded box starts at 8 pt, a polygon at six sides and a star at
+ * five points with a 45 % waist. The inspector tunes each one afterwards.
+ */
+const SHAPE_DEFAULTS = {
+  rectRadius: 0,
+  roundrectRadius: 8,
+  polygonSides: 6,
+  starPoints: 5,
+  starInner: 0.45,
+};
+
+/** The dummy copy a new text box starts with, like a design app's placeholder. */
+const PLACEHOLDER_TEXT = "Lorem ipsum dolor sit amet";
 
 interface Style {
   fill: string;
@@ -125,6 +167,8 @@ const KIND_LABELS: Record<EditorElementKind, string> = {
   roundrect: "Rounded box",
   ellipse: "Ellipse",
   triangle: "Triangle",
+  polygon: "Polygon",
+  star: "Star",
   line: "Line",
   arrow: "Arrow",
   highlight: "Highlight",
@@ -392,6 +436,21 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
           return { ...base, stroke: style.stroke, strokeWidth: style.strokeWidth, fill: null };
         case "draw":
           return { ...base, stroke: style.stroke, strokeWidth: style.strokeWidth, points: [] };
+        case "rect":
+          return { ...base, fill: style.fill, stroke: style.stroke, strokeWidth: style.strokeWidth, radius: SHAPE_DEFAULTS.rectRadius };
+        case "roundrect":
+          return { ...base, fill: style.fill, stroke: style.stroke, strokeWidth: style.strokeWidth, radius: SHAPE_DEFAULTS.roundrectRadius };
+        case "polygon":
+          return { ...base, fill: style.fill, stroke: style.stroke, strokeWidth: style.strokeWidth, sides: SHAPE_DEFAULTS.polygonSides };
+        case "star":
+          return {
+            ...base,
+            fill: style.fill,
+            stroke: style.stroke,
+            strokeWidth: style.strokeWidth,
+            sides: SHAPE_DEFAULTS.starPoints,
+            innerRatio: SHAPE_DEFAULTS.starInner,
+          };
         case "highlight":
           return { ...base, fill: "#FDE68A", stroke: null };
         case "whiteout":
@@ -487,12 +546,17 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       // Room for two lines at the current size plus a comfortable margin, so the
       // first keystroke is never clipped by the box it lives in.
       const height = textBoxHeight(style.fontSize, style.lineHeight, pageHeight);
-      const element = elementDefaults("text", {
-        x: Math.min(clamp01(start.x), 1 - width),
-        y: Math.min(clamp01(start.y), 1 - height),
-        width,
-        height,
-      });
+      const element = {
+        ...elementDefaults("text", {
+          x: Math.min(clamp01(start.x), 1 - width),
+          y: Math.min(clamp01(start.y), 1 - height),
+          width,
+          height,
+        }),
+        // Dummy copy, exactly like a design app: something visible lands on the
+        // page, and the first keystroke replaces it.
+        text: PLACEHOLDER_TEXT,
+      };
       addElement(element);
       setTool("select");
       setEditingId(element.id);
@@ -544,14 +608,28 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
     if (state.mode === "create") {
       state.moved = true;
+      const pageW = pageSizes[activePage]?.width ?? 595.28;
+      const pageH = pageSizes[activePage]?.height ?? 841.89;
+      let dx = current.x - state.origin.x;
+      let dy = current.y - state.origin.y;
+
+      // Shift draws a perfect square (or circle), exactly as design apps do.
+      if (event.shiftKey) {
+        const widthPt = Math.abs(dx) * pageW;
+        const heightPt = Math.abs(dy) * pageH;
+        const side = Math.max(widthPt, heightPt);
+        dx = (Math.sign(dx) || 1) * (side / pageW);
+        dy = (Math.sign(dy) || 1) * (side / pageH);
+      }
+
       setDraft((draftElement) =>
         draftElement
           ? {
               ...draftElement,
-              x: Math.min(state.origin.x, current.x),
-              y: Math.min(state.origin.y, current.y),
-              width: Math.abs(current.x - state.origin.x),
-              height: Math.abs(current.y - state.origin.y),
+              x: Math.min(state.origin.x, state.origin.x + dx),
+              y: Math.min(state.origin.y, state.origin.y + dy),
+              width: Math.abs(dx),
+              height: Math.abs(dy),
             }
           : draftElement,
       );
@@ -588,27 +666,94 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     if (state.mode === "resize" && state.id && state.element) {
       const element = state.element;
       state.moved = true;
-      const x2 = element.x + element.width;
-      const y2 = element.y + element.height;
-      let x = element.x;
-      let y = element.y;
-      let width = element.width;
-      let height = element.height;
+      const pageW = pageSizes[activePage]?.width ?? 595.28;
+      const pageH = pageSizes[activePage]?.height ?? 841.89;
+      const angle = element.rotation ?? 0;
+
+      // Work in PDF points: a 45° rotation is only 45° on screen if x and y are
+      // measured in the same unit, and a page is rarely square.
+      const centre = { x: (element.x + element.width / 2) * pageW, y: (element.y + element.height / 2) * pageH };
+      const pointer = { x: current.x * pageW, y: current.y * pageH };
+      const local = rotatePoint(pointer, centre, -angle);
+
+      const rect = {
+        x: element.x * pageW,
+        y: element.y * pageH,
+        width: element.width * pageW,
+        height: element.height * pageH,
+      };
+      const right = rect.x + rect.width;
+      const bottom = rect.y + rect.height;
+      const minSide = 6;
+
+      let x = rect.x;
+      let y = rect.y;
+      let width = rect.width;
+      let height = rect.height;
 
       if (state.corner === "nw" || state.corner === "sw") {
-        x = Math.min(current.x, x2 - 0.02);
-        width = x2 - x;
+        x = Math.min(local.x, right - minSide);
+        width = right - x;
       } else {
-        width = Math.max(0.02, current.x - element.x);
+        width = Math.max(minSide, local.x - rect.x);
       }
       if (state.corner === "nw" || state.corner === "ne") {
-        y = Math.min(current.y, y2 - 0.02);
-        height = y2 - y;
+        y = Math.min(local.y, bottom - minSide);
+        height = bottom - y;
       } else {
-        height = Math.max(0.02, current.y - element.y);
+        height = Math.max(minSide, local.y - rect.y);
       }
 
-      setElements((all) => all.map((entry) => (entry.id === state.id ? { ...entry, x, y, width, height } : entry)));
+      // Shift keeps the original proportions, like every design tool.
+      if (event.shiftKey && rect.width > 0 && rect.height > 0) {
+        const ratio = rect.width / rect.height;
+        if (width / ratio >= minSide) {
+          const fitted = width / ratio;
+          if (state.corner === "nw" || state.corner === "ne") {
+            y = bottom - fitted;
+            height = fitted;
+          } else {
+            height = fitted;
+          }
+        } else {
+          const fitted = height * ratio;
+          if (state.corner === "nw" || state.corner === "sw") {
+            x = right - fitted;
+            width = fitted;
+          } else {
+            width = fitted;
+          }
+        }
+      }
+
+      // The corner opposite the one being dragged must not move on screen, even
+      // when the box is rotated — so the centre shifts by the rotated delta.
+      const fixed = {
+        x: state.corner === "nw" || state.corner === "sw" ? right : rect.x,
+        y: state.corner === "nw" || state.corner === "ne" ? bottom : rect.y,
+      };
+      const oldOffset = { x: fixed.x - centre.x, y: fixed.y - centre.y };
+      const newOffset = { x: fixed.x - (x + width / 2), y: fixed.y - (y + height / 2) };
+      const shift = rotatePoint(
+        { x: oldOffset.x - newOffset.x, y: oldOffset.y - newOffset.y },
+        { x: 0, y: 0 },
+        angle,
+      );
+      const newCentre = { x: centre.x + shift.x, y: centre.y + shift.y };
+
+      setElements((all) =>
+        all.map((entry) =>
+          entry.id === state.id
+            ? {
+                ...entry,
+                x: (newCentre.x - width / 2) / pageW,
+                y: (newCentre.y - height / 2) / pageH,
+                width: width / pageW,
+                height: height / pageH,
+              }
+            : entry,
+        ),
+      );
     }
   };
 
@@ -649,7 +794,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       }
       if (finished.width < 0.01 || finished.height < 0.01) {
         // A click rather than a drag: give the shape a sensible default size.
-        addElement({ ...finished, width: 0.25, height: 0.12 });
+        // Polygons and stars start as true squares, not squashed rectangles.
+        const pageW = pageSizes[activePage]?.width ?? 595.28;
+        const pageH = pageSizes[activePage]?.height ?? 841.89;
+        const points = finished.kind === "polygon" || finished.kind === "star" || finished.kind === "ellipse";
+        const width = points ? 0.2 : 0.25;
+        const height = points ? (0.2 * pageW) / pageH : 0.12;
+        addElement({ ...finished, width, height });
         return;
       }
       addElement(finished);
@@ -679,6 +830,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
   const startResize = (event: React.PointerEvent, element: EditorElement, corner: "nw" | "ne" | "sw" | "se") => {
     event.stopPropagation();
+    setSelectedId(element.id);
+    try {
+      // Keep receiving moves when the pointer runs past the page edge.
+      stageRef.current?.setPointerCapture(event.pointerId);
+    } catch {
+      /* ignore */
+    }
     drag.current = { mode: "resize", id: element.id, corner, origin: point(event), element, moved: false };
   };
 
@@ -833,6 +991,30 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     }
   };
 
+  /* ── text boxes stay taller than their text ───────────────────────────── */
+  // Growing only: a box the user resized by hand is never yanked back, but a
+  // bigger font or narrower box can no longer leave text hanging outside the
+  // selection frame.
+  useEffect(() => {
+    if (!pageSizes.length) return;
+    setElements((current) => {
+      let changed = false;
+      const next = current.map((element) => {
+        if (element.kind !== "text" || element.id === editingId) return element;
+        const page = pageSizes[element.pageIndex] ?? pageSizes[0];
+        if (!page) return element;
+        const needed = (measuredTextHeight(element, element.width * page.width) + 2) / page.height;
+        const target = Math.min(1 - element.y, needed);
+        // Compare against the target, not the raw measurement, so a box that
+        // already reaches the page bottom cannot trigger another update.
+        if (target <= element.height + 0.004) return element;
+        changed = true;
+        return { ...element, height: target };
+      });
+      return changed ? next : current;
+    });
+  }, [elements, editingId, pageSizes]);
+
   /* ── derived ──────────────────────────────────────────────────────────── */
   const filteredTools = useMemo(() => {
     const query = toolSearch.trim().toLowerCase();
@@ -888,19 +1070,20 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       <InlineTextEditor
         element={editing}
         scale={scale}
+        selectAll={(editing.text ?? "") === PLACEHOLDER_TEXT}
         onInput={(text) =>
           setElements((current) => current.map((entry) => (entry.id === editing.id ? { ...entry, text } : entry)))
         }
+        // The box tracks the text in both directions, so the selection frame
+        // hugs the words instead of hanging below them.
         onGrow={(heightPx) => {
           const pageHeight = pageSizes[activePage]?.height ?? 842;
           const rendered = pageHeight * scale;
           if (!rendered) return;
-          const needed = Math.min(1, (heightPx + 4) / rendered);
-          if (needed <= editing.height + 0.002) return;
+          const needed = Math.min(1 - editing.y, Math.max(0.012, (heightPx + 2) / rendered));
+          if (Math.abs(needed - editing.height) < 0.002) return;
           setElements((current) =>
-            current.map((entry) =>
-              entry.id === editing.id ? { ...entry, height: Math.min(1 - entry.y, Math.max(entry.height, needed)) } : entry,
-            ),
+            current.map((entry) => (entry.id === editing.id ? { ...entry, height: needed } : entry)),
           );
         }}
         onDone={stopEditing}
@@ -1061,24 +1244,41 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
             />
           </div>
 
+          {/* Grouped like a design app's toolbox, so the shapes do not blur into
+              one long list once you are hunting for the star tool. */}
           <div className="mt-2 grid grid-cols-2 gap-1.5 lg:grid-cols-1">
-            {filteredTools.map((entry) => {
-              const Icon = entry.icon;
-              const active = tool === entry.key;
+            {TOOL_GROUPS.map((group) => {
+              const entries = filteredTools.filter((entry) => entry.group === group);
+              if (!entries.length) return null;
               return (
-                <button
-                  key={entry.key}
-                  type="button"
-                  onClick={() => setTool(entry.key)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[12px] font-semibold transition-colors",
-                    active ? "border-primary/45 bg-primary/10 text-brand-700" : "border-line bg-raised text-body hover:border-primary/30",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{entry.label}</span>
-                </button>
+                <div key={group} className="col-span-2 lg:col-span-1">
+                  <p className="mb-1 mt-1.5 px-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-subtle first:mt-0">
+                    {group}
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
+                    {entries.map((entry) => {
+                      const Icon = entry.icon;
+                      const active = tool === entry.key;
+                      return (
+                        <button
+                          key={entry.key}
+                          type="button"
+                          onClick={() => setTool(entry.key)}
+                          aria-pressed={active}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[12px] font-semibold transition-colors",
+                            active
+                              ? "border-primary/45 bg-primary/10 text-brand-700"
+                              : "border-line bg-raised text-body hover:border-primary/30",
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">{entry.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
             {!filteredTools.length && (
@@ -1223,27 +1423,35 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   ))}
                   {inlineEditor}
 
-                  {selected && (
-                    <>
+                  {/* Selection frame: the same box and the same rotation as the
+                      object itself, so the outline and the handles sit exactly on
+                      its edges instead of on an axis-aligned guess. */}
+                  {selected && !editing && (
+                    <div
+                      className="pointer-events-none absolute z-10 outline outline-1 outline-offset-0 outline-brand-500"
+                      style={{
+                        left: `${selected.x * 100}%`,
+                        top: `${selected.y * 100}%`,
+                        width: `${selected.width * 100}%`,
+                        height: `${selected.height * 100}%`,
+                        transform: selected.rotation ? `rotate(${selected.rotation}deg)` : undefined,
+                      }}
+                    >
                       {(["nw", "ne", "sw", "se"] as const).map((corner) => (
                         <span
                           key={corner}
                           role="presentation"
                           onPointerDown={(event) => startResize(event, selected, corner)}
                           className={cn(
-                            "absolute z-10 h-3 w-3 rounded-full border-2 border-brand-500 bg-white",
-                            corner === "nw" && "-translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
-                            corner === "ne" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
-                            corner === "sw" && "-translate-y-1/2 translate-x-1/2 cursor-nesw-resize",
-                            corner === "se" && "translate-x-1/2 translate-y-1/2 cursor-nwse-resize",
+                            "pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-brand-500 bg-white shadow-sm",
+                            corner === "nw" && "-left-1.5 -top-1.5 cursor-nwse-resize",
+                            corner === "ne" && "-right-1.5 -top-1.5 cursor-nesw-resize",
+                            corner === "sw" && "-bottom-1.5 -left-1.5 cursor-nesw-resize",
+                            corner === "se" && "-bottom-1.5 -right-1.5 cursor-nwse-resize",
                           )}
-                          style={{
-                            left: `${(corner === "ne" || corner === "se" ? selected.x + selected.width : selected.x) * 100}%`,
-                            top: `${(corner === "sw" || corner === "se" ? selected.y + selected.height : selected.y) * 100}%`,
-                          }}
                         />
                       ))}
-                    </>
+                    </div>
                   )}
 
                   {draft && <ElementView element={draft} scale={scale} selected={false} interactive={false} />}
@@ -1262,11 +1470,11 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
             {tool === "select"
               ? "Drag to move, corner handles to resize, double-click text to type in it, arrow keys to nudge."
               : tool === "text"
-                ? "Click the page and type straight onto it. Esc or a click outside finishes."
+                ? "Click the page: a Lorem ipsum box appears, already selected — type to replace it, Esc to finish."
                 : tool === "draw"
                   ? "Draw at any size — the stroke keeps the size and thickness you drew it with."
                   : SHAPE_TOOLS.has(tool)
-                    ? "Click for a default size, or drag the exact box you want."
+                    ? "Click for a default size, drag for the exact box, or hold Shift for a square."
                     : "Choose an image in the tool panel, then click the page to place it."}
           </p>
 
@@ -1489,7 +1697,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                 selected.kind === "draw" ||
                 selected.kind === "roundrect" ||
                 selected.kind === "ellipse" ||
-                selected.kind === "triangle") && (
+                selected.kind === "triangle" ||
+                selected.kind === "polygon" ||
+                selected.kind === "star") && (
                 <NumberField
                   label="Outline width"
                   value={selected.strokeWidth ?? 2}
@@ -1499,6 +1709,66 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   suffix="pt"
                   onChange={(value) => updateSelected({ strokeWidth: value }, "strokeWidth")}
                 />
+              )}
+
+              {/* ── shape geometry, the same knobs a design app puts in its
+                     shape options ─────────────────────────────────────────── */}
+              {(selected.kind === "rect" || selected.kind === "roundrect" || selected.kind === "ellipse") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pageW = pageSizes[activePage]?.width ?? 595.28;
+                    const pageH = pageSizes[activePage]?.height ?? 841.89;
+                    const side = (selected.width * pageW) / pageH;
+                    updateSelected({ height: Math.min(1 - selected.y, side) }, "square");
+                  }}
+                  className="w-full rounded-lg border border-line bg-raised px-2 py-1.5 text-[11.5px] font-semibold text-body transition-colors hover:border-primary/45 hover:text-brand-600"
+                >
+                  {selected.kind === "ellipse" ? "Make it a circle" : "Make it a square"}
+                </button>
+              )}
+
+              {(selected.kind === "rect" || selected.kind === "roundrect") && (
+                <SliderField
+                  label="Corner radius"
+                  value={Math.round(selected.radius ?? (selected.kind === "roundrect" ? SHAPE_DEFAULTS.roundrectRadius : 0))}
+                  min={0}
+                  max={90}
+                  onChange={(value) => updateSelected({ radius: value }, "radius")}
+                  format={(value) => `${value} pt`}
+                />
+              )}
+
+              {selected.kind === "polygon" && (
+                <SliderField
+                  label="Sides"
+                  value={selected.sides ?? SHAPE_DEFAULTS.polygonSides}
+                  min={3}
+                  max={16}
+                  onChange={(value) => updateSelected({ sides: value }, "sides")}
+                  format={(value) => `${value}`}
+                />
+              )}
+
+              {selected.kind === "star" && (
+                <>
+                  <SliderField
+                    label="Points"
+                    value={selected.sides ?? SHAPE_DEFAULTS.starPoints}
+                    min={3}
+                    max={16}
+                    onChange={(value) => updateSelected({ sides: value }, "star-points")}
+                    format={(value) => `${value}`}
+                  />
+                  <SliderField
+                    label="Inner radius"
+                    value={Math.round((selected.innerRatio ?? SHAPE_DEFAULTS.starInner) * 100)}
+                    min={10}
+                    max={95}
+                    onChange={(value) => updateSelected({ innerRatio: value / 100 }, "inner")}
+                    format={(value) => `${value}%`}
+                  />
+                </>
               )}
 
               <SliderField
@@ -1533,7 +1803,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   : tool === "text"
                     ? "Click the page and type straight onto it — the box grows with your text. These settings apply to the next box."
                     : SHAPE_TOOLS.has(tool)
-                      ? "Click the page for a default size, or drag to draw the exact box."
+                      ? "Click the page for a default size, or drag the exact box — hold Shift for a perfect square or circle. Polygon sides, star points and corner radius are in the inspector once it is selected."
                       : "Draw on the page with the mouse or a finger."}
               </p>
               <ColorField label="Fill" value={style.fill} onChange={(value) => setStyle((current) => ({ ...current, fill: value ?? "#2563EB" }))} />

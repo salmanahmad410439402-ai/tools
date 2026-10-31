@@ -27,6 +27,8 @@ export type EditorElementKind =
   | "line"
   | "arrow"
   | "triangle"
+  | "polygon"
+  | "star"
   | "highlight"
   | "whiteout"
   | "draw"
@@ -67,6 +69,12 @@ export interface EditorElement {
   align?: TextAlign;
   /** Multiple of the font size, default 1.3. */
   lineHeight?: number;
+  /** Corner radius in PDF points, for `rect` and `roundrect`. */
+  radius?: number;
+  /** Side count for `polygon` and point count for `star` (3–24). */
+  sides?: number;
+  /** `star` only: inner radius as a fraction of the outer radius (0.1–0.95). */
+  innerRatio?: number;
   /** Wrap the text inside the element box (default true). */
   wrap?: boolean;
   points?: EditorPoint[];
@@ -234,6 +242,80 @@ export function wrapText(text: string, font: PDFFont, size: number, maxWidth: nu
   return { lines, widths: lines.map(measure) };
 }
 
+/* ────────────────────────── polygons and stars ──────────────────────────── */
+
+/**
+ * Corner points of a regular polygon — or of a star when `innerRatio` > 0 —
+ * laid out inside a `width` × `height` box with the first point at top centre.
+ *
+ * The preview and the PDF exporter both use this, so a six-pointed star looks
+ * identical on screen and on the page. Points are in the box's own coordinates
+ * (0,0 = top-left), which is the space `drawSvgPath` expects.
+ */
+export function polygonPoints(
+  width: number,
+  height: number,
+  sides: number,
+  innerRatio = 0,
+  centred = false,
+): EditorPoint[] {
+  const count = Math.max(3, Math.min(24, Math.round(sides)));
+  const outer = Math.max(0, width) / 2;
+  const outerY = Math.max(0, height) / 2;
+  const ratio = Math.min(0.95, Math.max(0, innerRatio));
+  const total = ratio > 0 ? count * 2 : count;
+  const points: EditorPoint[] = [];
+
+  // Centred coordinates put the shape around (0,0), which is what pdf-lib needs
+  // to rotate a path about its centre rather than its corner.
+  const originX = centred ? 0 : width / 2;
+  const originY = centred ? 0 : height / 2;
+
+  for (let index = 0; index < total; index += 1) {
+    const scale = ratio > 0 && index % 2 === 1 ? ratio : 1;
+    // −90° puts the first point straight up, like Illustrator's polygon tool.
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / total;
+    points.push({
+      x: originX + Math.cos(angle) * outer * scale,
+      y: originY + Math.sin(angle) * outerY * scale,
+    });
+  }
+
+  return points;
+}
+
+/** SVG path string for `polygonPoints` — used by the PDF writer. */
+export function polygonPath(width: number, height: number, sides: number, innerRatio = 0, centred = false): string {
+  return (
+    polygonPoints(width, height, sides, innerRatio, centred)
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ") + " Z"
+  );
+}
+
+/**
+ * Rounded-rectangle path with a real corner radius in points.
+ *
+ * `regexPath` handles the rectangle case; the radius is clamped to half the
+ * shorter side so a large radius cannot fold the shape inside out.
+ */
+export function roundedRectPath(width: number, height: number, radius: number, centred = false): string {
+  const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+  const ox = centred ? -width / 2 : 0;
+  const oy = centred ? -height / 2 : 0;
+  const x0 = ox;
+  const y0 = oy;
+  const x1 = ox + width;
+  const y1 = oy + height;
+  if (r <= 0.01) return `M ${x0} ${y0} H ${x1} V ${y1} H ${x0} Z`;
+  return (
+    `M ${x0 + r} ${y0} H ${x1 - r} A ${r} ${r} 0 0 1 ${x1} ${y0 + r} ` +
+    `V ${y1 - r} A ${r} ${r} 0 0 1 ${x1 - r} ${y1} ` +
+    `H ${x0 + r} A ${r} ${r} 0 0 1 ${x0} ${y1 - r} ` +
+    `V ${y0 + r} A ${r} ${r} 0 0 1 ${x0 + r} ${y0} Z`
+  );
+}
+
 /* ────────────────────────────── freehand ────────────────────────────────── */
 
 export interface StrokeBox {
@@ -294,6 +376,17 @@ export function textBoxHeight(fontSize: number, lineHeight: number, pageHeight: 
 /* ─────────────────────────────── rendering ──────────────────────────────── */
 
 const MM_TO_PT = 72 / 25.4;
+
+/**
+ * pdf-lib rotates rectangles, images and paths about the origin you pass it —
+ * a corner — while the editor (and every design app) rotates about the centre.
+ * This returns the origin that puts the pivot at the centre, so a rotated object
+ * lands where the preview shows it.
+ */
+export function centredOrigin(bottomLeft: EditorPoint, centre: EditorPoint, rotation: number): EditorPoint {
+  if (!rotation) return bottomLeft;
+  return rotatePoint(bottomLeft, centre, -rotation);
+}
 
 function pageDimensions(size: PageSizeKey, orientation: "portrait" | "landscape") {
   const { width, height } = EDITOR_PAGE_SIZES[size];
@@ -397,9 +490,26 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
     switch (element.kind) {
       case "rect": {
         if (element.fill === null && !element.stroke) break;
+        if ((element.radius ?? 0) > 0.01) {
+          // A rectangle with a corner radius is a rounded box; draw the path,
+          // defined around the centre so rotation pivots where the preview does.
+          page.drawSvgPath(roundedRectPath(boxWidth, boxHeight, element.radius ?? 0, true), {
+            x: left + boxWidth / 2,
+            y: pageHeight - top - boxHeight / 2,
+            color: fill,
+            borderColor: stroke,
+            borderWidth: stroke ? strokeWidth || 1 : 0,
+            opacity,
+            borderOpacity: opacity,
+            rotate: degrees(-rotation),
+          });
+          drawn += 1;
+          break;
+        }
+        const rectOrigin = centredOrigin({ x: left, y: pageHeight - top - boxHeight }, centre, rotation);
         page.drawRectangle({
-          x: left,
-          y: pageHeight - top - boxHeight,
+          x: rectOrigin.x,
+          y: rectOrigin.y,
           width: boxWidth,
           height: boxHeight,
           color: fill,
@@ -414,17 +524,10 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
       }
 
       case "roundrect": {
-        const radius = Math.max(0, Math.min(Math.min(boxWidth, boxHeight) / 2, (element.strokeWidth ?? 2) * 2));
-        const w = boxWidth;
-        const h = boxHeight;
-        const path =
-          `M ${radius} 0 H ${w - radius} A ${radius} ${radius} 0 0 1 ${w} ${radius} ` +
-          `V ${h - radius} A ${radius} ${radius} 0 0 1 ${w - radius} ${h} ` +
-          `H ${radius} A ${radius} ${radius} 0 0 1 0 ${h - radius} ` +
-          `V ${radius} A ${radius} ${radius} 0 0 1 ${radius} 0 Z`;
-        page.drawSvgPath(path, {
-          x: left,
-          y: pageHeight - top,
+        const radius = element.radius ?? 8;
+        page.drawSvgPath(roundedRectPath(boxWidth, boxHeight, radius, true), {
+          x: left + boxWidth / 2,
+          y: pageHeight - top - boxHeight / 2,
           color: fill,
           borderColor: stroke,
           borderWidth: stroke ? strokeWidth || 1 : 0,
@@ -484,13 +587,24 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
         break;
       }
 
-      case "triangle": {
-        const w = boxWidth;
-        const h = boxHeight;
-        const path = `M ${w / 2} 0 L ${w} ${h} L 0 ${h} Z`;
+      case "triangle":
+      case "polygon":
+      case "star": {
+        const halfW = boxWidth / 2;
+        const halfH = boxHeight / 2;
+        const path =
+          element.kind === "triangle"
+            ? `M 0 ${-halfH} L ${halfW} ${halfH} L ${-halfW} ${halfH} Z`
+            : polygonPath(
+                boxWidth,
+                boxHeight,
+                element.sides ?? (element.kind === "star" ? 5 : 6),
+                element.kind === "star" ? (element.innerRatio ?? 0.45) : 0,
+                true,
+              );
         page.drawSvgPath(path, {
-          x: left,
-          y: pageHeight - top,
+          x: left + boxWidth / 2,
+          y: pageHeight - top - boxHeight / 2,
           color: fill,
           borderColor: stroke,
           borderWidth: stroke ? strokeWidth || 1 : 0,
@@ -503,9 +617,10 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
       }
 
       case "highlight": {
+        const highlightOrigin = centredOrigin({ x: left, y: pageHeight - top - boxHeight }, centre, rotation);
         page.drawRectangle({
-          x: left,
-          y: pageHeight - top - boxHeight,
+          x: highlightOrigin.x,
+          y: highlightOrigin.y,
           width: boxWidth,
           height: boxHeight,
           color: fill ?? hexToRgbColor(element.stroke ?? "#FDE68A"),
@@ -518,9 +633,10 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
       }
 
       case "whiteout": {
+        const whiteOrigin = centredOrigin({ x: left, y: pageHeight - top - boxHeight }, centre, rotation);
         page.drawRectangle({
-          x: left,
-          y: pageHeight - top - boxHeight,
+          x: whiteOrigin.x,
+          y: whiteOrigin.y,
           width: boxWidth,
           height: boxHeight,
           color: rgb(1, 1, 1),
@@ -552,9 +668,10 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
         if (!element.imageBytes) break;
         const image = await embedImage(doc, element.imageBytes);
         if (!image) break;
+        const imageOrigin = centredOrigin({ x: left, y: pageHeight - top - boxHeight }, centre, rotation);
         page.drawImage(image, {
-          x: left,
-          y: pageHeight - top - boxHeight,
+          x: imageOrigin.x,
+          y: imageOrigin.y,
           width: boxWidth,
           height: boxHeight,
           opacity,
@@ -579,9 +696,14 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
           let offsetX = 0;
           if (align === "center") offsetX = (boxWidth - widths[index]) / 2;
           if (align === "right") offsetX = boxWidth - widths[index];
+          const baseline = centredOrigin(
+            { x: left + offsetX, y: pageHeight - top - size - index * lineHeight },
+            centre,
+            rotation,
+          );
           page.drawText(line, {
-            x: left + offsetX,
-            y: pageHeight - top - size - index * lineHeight,
+            x: baseline.x,
+            y: baseline.y,
             size,
             font,
             color: colour,

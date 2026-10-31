@@ -457,8 +457,12 @@ export const pdfEditTools: Tool[] = [
         text: "Pick Text, click where the words should go and start typing in place — the box grows as you type and the caret sits exactly where the printed text will. Double-click any text box to change it again, and choose the family, size (4–200 pt), bold, italic, alignment, spacing and colour in the inspector. The export writes real selectable text, not a picture of words.",
       },
       {
-        title: "Six shapes plus a pen",
-        text: "Rectangle, rounded box, ellipse, triangle, line and arrow, plus freehand drawing that keeps the size and thickness you drew it with — big letters or a small tick, exactly as drawn. Every shape has a fill colour, an outline colour, an outline width and its own opacity.",
+        title: "Eight shapes plus a pen",
+        text: "Rectangle, rounded box, ellipse, triangle, polygon, star, line and arrow, plus freehand drawing that keeps the size and thickness you drew it with — big letters or a small tick, exactly as drawn. Every shape has fill, outline, outline width and opacity, and the geometric ones carry real shape options: corner radius from 0 to 90 pt on rectangles, 3 to 16 sides on a polygon, and 3 to 16 points with an inner-radius slider on a star.",
+      },
+      {
+        title: "Drawn the way a design app draws",
+        text: "Hold Shift while dragging for a perfect square or circle, or press Make it a square / circle afterwards. A selection frame follows the object, including when it is rotated, so the handles always sit on its real edges and resizing moves the edge you grabbed.",
       },
       {
         title: "A real colour picker",
