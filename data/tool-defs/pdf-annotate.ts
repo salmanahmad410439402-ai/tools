@@ -436,8 +436,12 @@ export const pdfAnnotateTools: Tool[] = [
         text: "A crisp stroke rather than a filled block, so the content inside stays fully readable.",
       },
       {
-        title: "Five colours",
-        text: "Red draws attention, blue reads as internal markup, green as approved, dark as official. Yellow is useful for a softer callout.",
+        title: "Every colour you need",
+        text: "Sixteen ready swatches — red for attention, blue for internal markup, green for approved, dark for official — plus a hex field and your system colour wheel for an exact brand shade.",
+      },
+      {
+        title: "More than boxes",
+        text: "The same palette draws ellipses, triangles, polygons (3 to 16 sides), stars (3 to 16 points with an adjustable inner radius) and rounded boxes with a corner radius you control. Hold Shift while dragging for a perfect square or circle, and resize anything afterwards by its corner handles.",
       },
       {
         title: "Any page, many boxes",

@@ -9,7 +9,8 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PDFDocument, PDFName, StandardFonts, degrees } from "pdf-lib";
+import { inflateSync } from "node:zlib";
+import { PDFArray, PDFDocument, PDFName, PDFRawStream, StandardFonts, degrees } from "pdf-lib";
 import { buildImagePdf, computePlacement, PAGE_SIZES } from "../lib/pdf/image-to-pdf.ts";
 import { encodeBmp, encodeTiff, encodeGif, encodeIco, encodePpm, encodeSvg } from "../lib/images/codecs.ts";
 import { clampToCanvasLimits } from "../lib/images/index.ts";
@@ -27,10 +28,14 @@ import {
 } from "../lib/pdf/ops.ts";
 import { renderBlocksToPdf } from "../lib/pdf/text-pdf.ts";
 import {
+  centredOrigin,
   EDITOR_PAGE_SIZES,
   hexToRgbColor,
   isWinAnsi,
+  polygonPath,
+  polygonPoints,
   renderEditorPdf,
+  roundedRectPath,
   rotatePoint,
   strokeBox,
   textBoxHeight,
@@ -972,6 +977,90 @@ async function testEditor() {
     heights.every((px, index) => px >= [10, 18, 48][index] * 1.3 * 2),
     heights.map((px) => Math.round(px)).join(","),
   );
+
+  // Polygons and stars share their geometry with the preview.
+  const hexagon = polygonPoints(100, 100, 6);
+  check("a hexagon has six corners", hexagon.length === 6, `${hexagon.length}`);
+  check(
+    "the first polygon corner points straight up",
+    Math.abs(hexagon[0].x - 50) < 1e-9 && hexagon[0].y < 1e-9,
+    JSON.stringify(hexagon[0]),
+  );
+  check(
+    "every polygon corner sits on its box edge",
+    hexagon.every((corner) => corner.x >= -1e-9 && corner.x <= 100 + 1e-9 && corner.y >= -1e-9 && corner.y <= 100 + 1e-9),
+  );
+  const star = polygonPoints(100, 100, 5, 0.45);
+  check("a five-point star has ten alternating corners", star.length === 10);
+  const starRadii = star.map((corner) => Math.hypot(corner.x - 50, corner.y - 50));
+  check(
+    "the star alternates outer and inner radius",
+    Math.abs(starRadii[0] - 50) < 1e-9 && Math.abs(starRadii[1] - 22.5) < 1e-9,
+    starRadii.map((radius) => radius.toFixed(2)).join(","),
+  );
+  check("the polygon path closes itself", polygonPath(100, 100, 4).endsWith(" Z"));
+  check("a corner radius produces arcs", roundedRectPath(100, 50, 10).includes("A 10 10"));
+  check("a zero radius stays a plain rectangle", !roundedRectPath(100, 50, 0).includes("A "));
+
+  // Rotation must pivot on the object's centre, not a corner, or a rotated shape
+  // lands somewhere else in the PDF than it does on screen.
+  const pivot = centredOrigin({ x: 0, y: 0 }, { x: 50, y: 50 }, 90);
+  check(
+    "a 90° rotation pivots on the centre",
+    Math.abs(pivot.x) < 1e-9 && Math.abs(pivot.y - 100) < 1e-9,
+    JSON.stringify(pivot),
+  );
+  check("no rotation leaves the origin alone", centredOrigin({ x: 10, y: 20 }, { x: 0, y: 0 }, 0).x === 10);
+  check(
+    "the centred polygon path sits around zero",
+    polygonPath(100, 100, 4, 0, true).includes("M 0 -50") ||
+      polygonPoints(100, 100, 4, 0, true).every((corner) => Math.abs(corner.x) <= 50 + 1e-9),
+  );
+
+  // Where a rotated shape actually lands in the file: pdf-lib rotates about the
+  // origin it is given, so the exporter must hand it the centre. Read the content
+  // stream back and compare the translate operator with the expected centre.
+  const rotatedDoc = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+    elements: [
+      { id: "rot", kind: "rect", pageIndex: 0, x: 0.25, y: 0.25, width: 0.5, height: 0.25, fill: "#2563EB", rotation: 90 },
+    ],
+  });
+  const rotatedFile = await PDFDocument.load(rotatedDoc.bytes);
+  const rotatedPage = rotatedFile.getPage(0);
+  const contents = rotatedPage.node.normalizedEntries().Contents;
+  const streams = contents instanceof PDFArray
+    ? Array.from({ length: contents.size() }, (_, index) => rotatedFile.context.lookup(contents.get(index)))
+    : [rotatedFile.context.lookup(contents)];
+  const content = streams
+    .filter((stream) => stream instanceof PDFRawStream)
+    .map((stream) => inflateSync(Buffer.from(stream.getContents())).toString("latin1"))
+    .join("\n");
+  const translate = content.match(/1 0 0 1 ([-\d.]+) ([-\d.]+) cm/);
+  const pageWidth = rotatedPage.getWidth();
+  const pageHeight = rotatedPage.getHeight();
+  const expectedOrigin = centredOrigin(
+    { x: 0.25 * pageWidth, y: pageHeight - 0.5 * pageHeight },
+    { x: 0.5 * pageWidth, y: pageHeight - 0.375 * pageHeight },
+    90,
+  );
+  check(
+    "a rotated shape is placed around its centre",
+    translate !== null &&
+      Math.abs(Number(translate[1]) - expectedOrigin.x) < 0.01 &&
+      Math.abs(Number(translate[2]) - expectedOrigin.y) < 0.01,
+    translate ? `${translate[1]}, ${translate[2]} vs ${expectedOrigin.x}, ${expectedOrigin.y}` : "no cm operator",
+  );
+
+  const shapes = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+    elements: [
+      { id: "sq", kind: "rect", pageIndex: 0, x: 0.1, y: 0.1, width: 0.3, height: 0.1, fill: "#2563EB", radius: 12 },
+      { id: "pg", kind: "polygon", pageIndex: 0, x: 0.1, y: 0.3, width: 0.3, height: 0.2, fill: "#22C55E", sides: 8 },
+      { id: "st", kind: "star", pageIndex: 0, x: 0.5, y: 0.3, width: 0.3, height: 0.2, fill: "#F59E0B", sides: 6, innerRatio: 0.4 },
+    ],
+  });
+  check("rounded rects, polygons and stars all export", shapes.elements === 3, `${shapes.elements}`);
 
   // A freehand element built from the stroke box keeps its size on export.
   const penPdf = await renderEditorPdf({

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
-import type { EditorElement, FontFamily } from "@/lib/pdf/editor";
+import { polygonPoints, type EditorElement, type FontFamily } from "@/lib/pdf/editor";
 
 /* ───────────────────────────── colour control ───────────────────────────── */
 
@@ -226,6 +226,54 @@ export function ToggleButton({
   );
 }
 
+/* ───────────────────────────── text measuring ───────────────────────────── */
+
+let measureCanvas: HTMLCanvasElement | null = null;
+
+/**
+ * Height a text element needs, in PDF points, when its words are wrapped to the
+ * box width. Uses the browser's own text metrics with the same font stack the
+ * preview draws with, so a box never ends up shorter than the text inside it —
+ * which is what made the selection frame look like it did not fit.
+ */
+export function measuredTextHeight(element: EditorElement, boxWidthPt: number): number {
+  const text = (element.text ?? "").trim();
+  if (!text) return (element.fontSize ?? 14) * (element.lineHeight ?? 1.3);
+  const size = element.fontSize ?? 14;
+  const lineHeight = element.lineHeight ?? 1.3;
+
+  if (typeof document === "undefined") return size * lineHeight;
+  if (!measureCanvas) measureCanvas = document.createElement("canvas");
+  const context = measureCanvas.getContext("2d");
+  if (!context) return size * lineHeight;
+
+  context.font = `${element.italic ? "italic " : ""}${element.bold ? "700" : "400"} ${size}px ${textFontCss(element.fontFamily)}`;
+
+  const paragraphs = text.replace(/\r\n?/g, "\n").split("\n");
+  let lines = 0;
+
+  for (const paragraph of paragraphs) {
+    if (element.wrap === false || !boxWidthPt) {
+      lines += 1;
+      continue;
+    }
+    let current = "";
+    let used = 1;
+    for (const word of paragraph.split(/(\s+)/)) {
+      const candidate = current + word;
+      if (context.measureText(candidate).width > boxWidthPt && current.trim()) {
+        used += 1;
+        current = word.trimStart();
+      } else {
+        current = candidate;
+      }
+    }
+    lines += Math.max(1, used);
+  }
+
+  return Math.max(size * lineHeight, lines * size * lineHeight);
+}
+
 /* ─────────────────────────── inline text editing ────────────────────────── */
 
 /**
@@ -246,26 +294,38 @@ export function InlineTextEditor({
   onInput,
   onGrow,
   onDone,
+  selectAll = false,
 }: {
   element: EditorElement;
   /** CSS pixels per PDF point. */
   scale: number;
   onInput: (text: string) => void;
-  /** Reports the rendered height so the box can grow instead of clipping. */
+  /** Reports the height the text needs, so the box can hug it. */
   onGrow: (heightPx: number) => void;
   onDone: () => void;
+  /** Select the whole box on open — used for a freshly placed placeholder. */
+  selectAll?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+
+  /** Height of the text itself, independent of the box's min-height. */
+  const contentHeight = (node: HTMLElement) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rect = range.getBoundingClientRect();
+    const line = parseFloat(getComputedStyle(node).lineHeight) || (element.fontSize ?? 14) * scale * 1.3;
+    return Math.max(line, rect.height);
+  };
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     node.innerText = element.text ?? "";
-    onGrow(node.offsetHeight);
+    onGrow(contentHeight(node));
     node.focus({ preventScroll: true });
     const range = document.createRange();
     range.selectNodeContents(node);
-    range.collapse(false);
+    if (!selectAll) range.collapse(false);
     const selection = window.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(range);
@@ -287,7 +347,7 @@ export function InlineTextEditor({
       onInput={(event) => {
         const node = event.currentTarget;
         onInput(node.innerText.replace(/\u00a0/g, " ").replace(/\n$/, ""));
-        onGrow(node.offsetHeight);
+        onGrow(contentHeight(node));
       }}
       onKeyDown={(event) => {
         event.stopPropagation();
@@ -460,27 +520,45 @@ export function ElementView({
     );
   }
 
-  if (element.kind === "triangle") {
+  if (element.kind === "triangle" || element.kind === "polygon" || element.kind === "star") {
+    // The same geometry the exporter uses, expressed in the SVG's 100 × 100 box,
+    // so what you see is exactly the outline that lands in the PDF.
+    const corners =
+      element.kind === "triangle"
+        ? [
+            { x: 50, y: 0 },
+            { x: 100, y: 100 },
+            { x: 0, y: 100 },
+          ]
+        : polygonPoints(
+            100,
+            100,
+            element.sides ?? (element.kind === "star" ? 5 : 6),
+            element.kind === "star" ? (element.innerRatio ?? 0.45) : 0,
+          );
     return (
       <svg {...interaction} viewBox="0 0 100 100" preserveAspectRatio="none" style={style} className={outline} aria-hidden="true">
         <rect x="0" y="0" width="100" height="100" fill="transparent" />
         <polygon
-          points="50,0 100,100 0,100"
+          points={corners.map((corner) => `${corner.x},${corner.y}`).join(" ")}
           fill={element.fill ?? "transparent"}
           stroke={element.stroke ?? undefined}
           strokeWidth={Math.max(0.5, (element.strokeWidth ?? 2) * scale)}
           vectorEffect="non-scaling-stroke"
+          strokeLinejoin="round"
         />
       </svg>
     );
   }
 
   // rect / roundrect / ellipse / highlight / whiteout
+  // Corner radius is stored in PDF points, so it scales with the page exactly
+  // like it does in the exported file.
   const radius =
     element.kind === "ellipse"
       ? "50%"
-      : element.kind === "roundrect"
-        ? "10px"
+      : element.kind === "rect" || element.kind === "roundrect"
+        ? `${Math.max(0, element.radius ?? (element.kind === "roundrect" ? 8 : 0)) * scale}px`
         : "2px";
 
   return (

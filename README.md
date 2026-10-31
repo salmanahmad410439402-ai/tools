@@ -502,10 +502,14 @@ in Step 2, because they belong in the same PDF menu.
   video cannot be reproduced; tables are flattened to aligned text; speaker notes are not included.
 - **PDF editor** either starts a blank document (A4/Letter/Legal/A5/A3/square, portrait or
   landscape, any page count up to 20 at creation) or opens an existing PDF and draws over it. It
-  offers twelve tools — select, text, image, rectangle, rounded box, ellipse, triangle, line,
-  arrow, highlight, white-out and pen — with a searchable palette, a full colour wheel/hex/swatch
-  picker, opacity, rotation, layer order, undo/redo and a page strip for adding, duplicating,
-  reordering and deleting pages. Text is typed directly on the page in a box that grows with the
+  offers fourteen tools — select, text, image, rectangle, rounded box, ellipse, triangle, polygon,
+  star, line, arrow, highlight, white-out and pen — with a searchable, grouped palette, a full
+  colour wheel/hex/swatch picker, opacity, rotation, layer order, undo/redo and a page strip for
+  adding, duplicating, reordering and deleting pages. Shapes carry their own geometry: a corner
+  radius on rectangles (0–90 pt), 3–16 sides on polygons, and 3–16 points with an adjustable inner
+  radius on stars. Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
+  shape, and every object rotates and resizes about its own centre — the on-screen frame and the
+  exported PDF agree. Text is typed directly on the page in a box that grows with the
   words and is re-opened by double-clicking it (or with "Edit on page" in the inspector); the pen
   keeps the size and thickness it was drawn with rather than snapping to a default box. The stage
   zooms from 50 % to 300 % with fit-width (buttons or
@@ -642,7 +646,11 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    the box grows instead of clipping, that Esc/click-outside finishes, and that double-clicking the
    box (and "Edit on page") reopens it for editing; an empty box must disappear when you leave it.
    Draw a large freehand squiggle and a small tick and confirm both keep their drawn size, then
-   resize a drawing by its corner handle. Then open a PDF instead: add an inserted page, duplicate a
+   resize a drawing by its corner handle. Draw a rectangle, set a 20 pt corner radius, a hexagon
+   (6 sides) and a star (5 points, 45 % inner radius) and check the on-screen outline against the
+   exported PDF; hold Shift while dragging for a square and confirm it stays square. Rotate a shape
+   to 30° and confirm the selection frame turns with it, that dragging a corner keeps the opposite
+   corner still, and that the exported shape sits exactly where the preview shows it. Then open a PDF instead: add an inserted page, duplicate a
    page with its objects, reorder pages, delete one, and confirm the thumbnail strip follows. Use
    Ctrl+Z / Ctrl+Shift+Z through all of the above. Export and open the result in Acrobat, Preview and iOS Files: text must be
    selectable, shapes must be in the same place as the preview, and the page order must match the
