@@ -234,6 +234,63 @@ export function wrapText(text: string, font: PDFFont, size: number, maxWidth: nu
   return { lines, widths: lines.map(measure) };
 }
 
+/* ────────────────────────────── freehand ────────────────────────────────── */
+
+export interface StrokeBox {
+  /** Normalised bounding box of the stroke on its page. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** The same points, re-based inside that box (0–1 each). */
+  points: EditorPoint[];
+}
+
+/**
+ * Fits a freehand stroke to its own bounding box.
+ *
+ * Pen points arrive as absolute page fractions. Storing them against a box of
+ * their own bounds is what lets a stroke keep the size it was drawn at: the
+ * previous version kept the element at the box the *shape* drag would have
+ * made, so every stroke collapsed to a few pixels.
+ */
+export function strokeBox(points: EditorPoint[]): StrokeBox {
+  if (!points.length) return { x: 0, y: 0, width: 0, height: 0, points: [] };
+  let minX = points[0].x;
+  let maxX = points[0].x;
+  let minY = points[0].y;
+  let maxY = points[0].y;
+  for (const point of points) {
+    if (point.x < minX) minX = point.x;
+    if (point.x > maxX) maxX = point.x;
+    if (point.y < minY) minY = point.y;
+    if (point.y > maxY) maxY = point.y;
+  }
+  // A perfectly straight line has a zero-size axis; give it a hair of room so
+  // the preview and the exporter still have a box to work with.
+  const width = Math.max(maxX - minX, 0.001);
+  const height = Math.max(maxY - minY, 0.001);
+  return {
+    x: Math.min(1, Math.max(0, minX)),
+    y: Math.min(1, Math.max(0, minY)),
+    width: Math.min(1, width),
+    height: Math.min(1, height),
+    points: points.map((point) => ({
+      x: (point.x - minX) / width,
+      y: (point.y - minY) / height,
+    })),
+  };
+}
+
+/**
+ * Height a text box needs for the first lines of text, as a page fraction.
+ * Used when a text box is created so the very first keystroke is not clipped.
+ */
+export function textBoxHeight(fontSize: number, lineHeight: number, pageHeight: number, lines = 2): number {
+  const safePage = pageHeight > 0 ? pageHeight : 842;
+  return Math.min(0.6, Math.max(0.03, (fontSize * (lineHeight || 1.3) * (lines + 0.4)) / safePage));
+}
+
 /* ─────────────────────────────── rendering ──────────────────────────────── */
 
 const MM_TO_PT = 72 / 25.4;

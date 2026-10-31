@@ -1,8 +1,8 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
-import type { EditorElement } from "@/lib/pdf/editor";
+import type { EditorElement, FontFamily } from "@/lib/pdf/editor";
 
 /* ───────────────────────────── colour control ───────────────────────────── */
 
@@ -226,7 +226,109 @@ export function ToggleButton({
   );
 }
 
+/* ─────────────────────────── inline text editing ────────────────────────── */
+
+/**
+ * Type directly on the page.
+ *
+ * A contentEditable box is layered exactly over the text element, styled with
+ * the element's own font, size, weight, alignment and colour so the caret sits
+ * where the printed text will. The DOM text is never copied into the PDF — the
+ * element's `text` is updated as you type and the exporter lays it out again,
+ * which keeps the preview and the export in agreement.
+ *
+ * The initial value is written once, in an effect: passing it as React children
+ * would make every keystroke re-render the node and jump the caret to the start.
+ */
+export function InlineTextEditor({
+  element,
+  scale,
+  onInput,
+  onGrow,
+  onDone,
+}: {
+  element: EditorElement;
+  /** CSS pixels per PDF point. */
+  scale: number;
+  onInput: (text: string) => void;
+  /** Reports the rendered height so the box can grow instead of clipping. */
+  onGrow: (heightPx: number) => void;
+  onDone: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.innerText = element.text ?? "";
+    onGrow(node.offsetHeight);
+    node.focus({ preventScroll: true });
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    // Mount-only on purpose: re-running would reset the caret on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline="true"
+      aria-label="Type the text for this box"
+      spellCheck={false}
+      onPointerDown={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onInput={(event) => {
+        const node = event.currentTarget;
+        onInput(node.innerText.replace(/\u00a0/g, " ").replace(/\n$/, ""));
+        onGrow(node.offsetHeight);
+      }}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onDone();
+        }
+      }}
+      onBlur={onDone}
+      style={{
+        minHeight: "1em",
+        outline: "2px solid hsl(var(--primary))",
+        outlineOffset: "2px",
+        backgroundColor: "rgba(255,255,255,0.94)",
+        color: element.stroke ?? element.fill ?? "#000000",
+        fontSize: `${(element.fontSize ?? 14) * scale}px`,
+        lineHeight: element.lineHeight ?? 1.3,
+        fontWeight: element.bold ? 700 : 400,
+        fontStyle: element.italic ? "italic" : "normal",
+        fontFamily: textFontCss(element.fontFamily),
+        textAlign: element.align ?? "left",
+        whiteSpace: "pre-wrap",
+        overflowWrap: "break-word",
+        cursor: "text",
+      }}
+    />
+  );
+}
+
 /* ─────────────────────────── element rendering ──────────────────────────── */
+
+/**
+ * The CSS stack the on-screen preview uses for each family. The inline text
+ * editor and the auto-height measurement both use it too, so what you type and
+ * what you see are measured with the same font.
+ */
+export function textFontCss(family: FontFamily | undefined): string {
+  if (family === "serif") return "Georgia, 'Times New Roman', serif";
+  if (family === "mono") return "ui-monospace, 'JetBrains Mono', 'SF Mono', monospace";
+  return "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
+}
 
 const ELLIPSE_KINDS = new Set(["ellipse"]);
 
@@ -242,13 +344,19 @@ export function ElementView({
   scale,
   selected,
   interactive,
+  onPointerDown,
+  onDoubleClick,
 }: {
   element: EditorElement;
   /** CSS pixels per PDF point. */
   scale: number;
   selected: boolean;
   interactive: boolean;
+  /** Wired to the element's own box, so a click anywhere inside selects it. */
+  onPointerDown?: (event: React.PointerEvent) => void;
+  onDoubleClick?: (event: React.MouseEvent) => void;
 }) {
+  const interaction = { onPointerDown, onDoubleClick };
   const style: React.CSSProperties = {
     position: "absolute",
     left: `${element.x * 100}%`,
@@ -266,6 +374,7 @@ export function ElementView({
     const fontSize = (element.fontSize ?? 14) * scale;
     return (
       <div
+        {...interaction}
         style={{
           ...style,
           color: element.stroke ?? element.fill ?? "#000000",
@@ -273,27 +382,25 @@ export function ElementView({
           lineHeight: element.lineHeight ?? 1.3,
           fontWeight: element.bold ? 700 : 400,
           fontStyle: element.italic ? "italic" : "normal",
-          fontFamily:
-            element.fontFamily === "serif"
-              ? "Georgia, 'Times New Roman', serif"
-              : element.fontFamily === "mono"
-                ? "ui-monospace, 'JetBrains Mono', monospace"
-                : "Inter, system-ui, sans-serif",
+          fontFamily: textFontCss(element.fontFamily),
           textAlign: element.align ?? "left",
           whiteSpace: element.wrap === false ? "pre" : "pre-wrap",
-          overflow: "hidden",
-          wordBreak: "break-word",
+          overflowWrap: "break-word",
+          // The exported PDF wraps at the box width but never clips a line that
+          // runs past the box height, so neither does the preview. Before this,
+          // a box shorter than the first line looked completely empty.
+          overflow: "visible",
         }}
         className={outline}
       >
-        {element.text || "Text"}
+        {element.text || " "}
       </div>
     );
   }
 
   if (element.kind === "image") {
     return (
-      <div style={style} className={outline}>
+      <div {...interaction} style={style} className={outline}>
         {element.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={element.imageUrl} alt="" className="h-full w-full object-fill" draggable={false} />
@@ -308,17 +415,19 @@ export function ElementView({
     const points = element.points ?? [];
     return (
       <svg
+        {...interaction}
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         style={{ ...style, overflow: "visible" }}
         className={outline}
         aria-hidden="true"
       >
+        <rect x="0" y="0" width="100" height="100" fill="transparent" />
         <polyline
           points={points.map((point) => `${point.x * 100},${point.y * 100}`).join(" ")}
           fill="none"
           stroke={element.stroke ?? element.fill ?? "#000"}
-          strokeWidth={(element.strokeWidth ?? 2) * 0.35}
+          strokeWidth={Math.max(0.5, (element.strokeWidth ?? 2) * scale)}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -330,19 +439,20 @@ export function ElementView({
   if (element.kind === "line" || element.kind === "arrow") {
     const colour = element.stroke ?? element.fill ?? "#000";
     return (
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ ...style, overflow: "visible" }} className={outline} aria-hidden="true">
+      <svg {...interaction} viewBox="0 0 100 100" preserveAspectRatio="none" style={{ ...style, overflow: "visible" }} className={outline} aria-hidden="true">
         <defs>
           <marker id={`arrow-${element.id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" fill={colour} />
           </marker>
         </defs>
+        <rect x="0" y="0" width="100" height="100" fill="transparent" />
         <line
           x1="0"
           y1="0"
           x2="100"
           y2="100"
           stroke={colour}
-          strokeWidth={element.strokeWidth ?? 2}
+          strokeWidth={Math.max(0.5, (element.strokeWidth ?? 2) * scale)}
           vectorEffect="non-scaling-stroke"
           markerEnd={element.kind === "arrow" ? `url(#arrow-${element.id})` : undefined}
         />
@@ -352,12 +462,13 @@ export function ElementView({
 
   if (element.kind === "triangle") {
     return (
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={style} className={outline} aria-hidden="true">
+      <svg {...interaction} viewBox="0 0 100 100" preserveAspectRatio="none" style={style} className={outline} aria-hidden="true">
+        <rect x="0" y="0" width="100" height="100" fill="transparent" />
         <polygon
           points="50,0 100,100 0,100"
           fill={element.fill ?? "transparent"}
           stroke={element.stroke ?? undefined}
-          strokeWidth={(element.strokeWidth ?? 2) * 0.6}
+          strokeWidth={Math.max(0.5, (element.strokeWidth ?? 2) * scale)}
           vectorEffect="non-scaling-stroke"
         />
       </svg>
@@ -374,6 +485,7 @@ export function ElementView({
 
   return (
     <div
+      {...interaction}
       style={{
         ...style,
         backgroundColor:

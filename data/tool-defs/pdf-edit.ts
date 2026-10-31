@@ -453,12 +453,12 @@ export const pdfEditTools: Tool[] = [
         text: "Blank documents come in A4, US Letter, Legal, A5, A3 or square, portrait or landscape, with as many pages as you need. Or open an existing PDF and place objects on any of its pages.",
       },
       {
-        title: "Text that stays text",
-        text: "Text boxes support three font families, sizes from 4 to 200 pt, bold, italic, left/centre/right alignment and adjustable line spacing. The export writes real selectable text, not a picture of words.",
+        title: "Type onto the page, not into a form",
+        text: "Pick Text, click where the words should go and start typing in place — the box grows as you type and the caret sits exactly where the printed text will. Double-click any text box to change it again, and choose the family, size (4–200 pt), bold, italic, alignment, spacing and colour in the inspector. The export writes real selectable text, not a picture of words.",
       },
       {
         title: "Six shapes plus a pen",
-        text: "Rectangle, rounded box, ellipse, triangle, line and arrow, plus freehand drawing. Every shape has a fill colour, an outline colour, an outline width and its own opacity.",
+        text: "Rectangle, rounded box, ellipse, triangle, line and arrow, plus freehand drawing that keeps the size and thickness you drew it with — big letters or a small tick, exactly as drawn. Every shape has a fill colour, an outline colour, an outline width and its own opacity.",
       },
       {
         title: "A real colour picker",
