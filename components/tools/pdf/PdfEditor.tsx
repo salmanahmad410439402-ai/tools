@@ -1044,7 +1044,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[200px_1fr_240px]">
+      {/* Three columns only when there is room for a readable page; below that the
+          inspector moves under the stage instead of squeezing it to a strip. */}
+      <div className="grid gap-4 lg:grid-cols-[190px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_240px]">
         {/* Tools */}
         <div className="lg:order-1">
           <div className="relative">
@@ -1110,7 +1112,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         </div>
 
         {/* Stage */}
-        <div className="lg:order-2">
+        <div className="min-w-0 lg:order-2">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <div
               className="inline-flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5"
@@ -1174,7 +1176,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
           <div className="rounded-xl border border-line bg-[#0b1020] p-2">
             <div
               ref={frameRef}
-              className="overflow-auto"
+              className="w-full overflow-auto"
               style={{ maxHeight: zoom > 1 ? "74vh" : undefined }}
             >
               <div className="mx-auto" style={{ width: renderWidth }}>
@@ -1330,7 +1332,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         </div>
 
         {/* Inspector */}
-        <div className="order-3 space-y-3">
+        <div className="order-3 min-w-0 space-y-3 lg:col-span-2 lg:mx-auto lg:w-full lg:max-w-lg xl:col-span-1 xl:mx-0 xl:max-w-none">
           {selected ? (
             <>
               <div className="flex items-center justify-between gap-1">
