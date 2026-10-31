@@ -510,7 +510,10 @@ in Step 2, because they belong in the same PDF menu.
   radius on stars. Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
   shape, and every object rotates and resizes about its own centre — the on-screen frame and the
   exported PDF agree. Text is typed directly on the page in a box that grows with the
-  words and is re-opened by double-clicking it (or with "Edit on page" in the inspector); the pen
+  words — a new box starts with "Lorem ipsum" selected, so the first keystroke replaces it — and is
+  re-opened by double-clicking it (any tool) or with "Edit on page" in the inspector. The Text tool
+  stays in hand after placing a box, so consecutive notes do not need the tool re-selected. The
+  selection frame is the object's own box, handles centred on its corners; the pen
   keeps the size and thickness it was drawn with rather than snapping to a default box. The stage
   zooms from 50 % to 300 % with fit-width (buttons or
   Ctrl/⌘ plus − + 0) and scrolls inside its frame instead of stretching the page, and opening a
@@ -642,9 +645,11 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    field and confirm the system colour wheel opens, that a pasted hex code applies, that a swatch
    applies, and that "No colour" clears a fill. Drag an element, nudge it with the arrow keys,
    rotate it past 90°, change opacity, send it backward and forward, duplicate it and delete it.
-   Type on the page with the Text tool and confirm the caret sits where the printed text will, that
-   the box grows instead of clipping, that Esc/click-outside finishes, and that double-clicking the
-   box (and "Edit on page") reopens it for editing; an empty box must disappear when you leave it.
+   Type on the page with the Text tool: a Lorem ipsum box must appear under the caret with the dummy
+   words selected, the caret where the printed text will be, and typing must replace them. Confirm
+   the tool stays on Text so a second click makes a second box, that Esc/click-outside finishes, that
+   clicking a box (or double-clicking it with any tool, or "Edit on page") reopens it, and that an
+   emptied box disappears when you leave it.
    Draw a large freehand squiggle and a small tick and confirm both keep their drawn size, then
    resize a drawing by its corner handle. Draw a rectangle, set a 20 pt corner radius, a hexagon
    (6 sides) and a star (5 points, 45 % inner radius) and check the on-screen outline against the

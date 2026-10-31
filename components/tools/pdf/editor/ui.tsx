@@ -308,27 +308,56 @@ export function InlineTextEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  /** Writes the text as real nodes: contentEditable has no value attribute. */
+  const writeText = (node: HTMLElement, text: string) => {
+    node.textContent = "";
+    text
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .forEach((line, index) => {
+        if (index) node.appendChild(document.createElement("br"));
+        if (line) node.appendChild(document.createTextNode(line));
+      });
+  };
+
+  /** `innerText` keeps the line breaks a browser inserts; textContent is the fallback. */
+  const readText = (node: HTMLElement) =>
+    (node.innerText ?? node.textContent ?? "").replace(/\u00a0/g, " ").replace(/\n$/, "");
+
   /** Height of the text itself, independent of the box's min-height. */
   const contentHeight = (node: HTMLElement) => {
+    const line = parseFloat(getComputedStyle(node).lineHeight) || (element.fontSize ?? 14) * scale * 1.3;
     const range = document.createRange();
     range.selectNodeContents(node);
-    const rect = range.getBoundingClientRect();
-    const line = parseFloat(getComputedStyle(node).lineHeight) || (element.fontSize ?? 14) * scale * 1.3;
-    return Math.max(line, rect.height);
+    // Not every environment implements Range rects; the element's own height is
+    // a good enough fallback and never throws.
+    const rect = typeof range.getBoundingClientRect === "function" ? range.getBoundingClientRect() : null;
+    const height = rect && rect.height ? rect.height : node.getBoundingClientRect().height;
+    return Math.max(line, height || line);
   };
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    node.innerText = element.text ?? "";
+    writeText(node, element.text ?? "");
     onGrow(contentHeight(node));
-    node.focus({ preventScroll: true });
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    if (!selectAll) range.collapse(false);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+
+    const focus = () => {
+      node.focus({ preventScroll: true });
+      if (document.activeElement !== node) return false;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      if (!selectAll) range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      return true;
+    };
+
+    // Focus can be beaten by the browser's own handling of the click that
+    // created the box (it moves focus on mouseup). Retry once on the next frame
+    // so typing always lands in the new box.
+    if (!focus()) requestAnimationFrame(() => void focus());
     // Mount-only on purpose: re-running would reset the caret on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -346,7 +375,7 @@ export function InlineTextEditor({
       onDoubleClick={(event) => event.stopPropagation()}
       onInput={(event) => {
         const node = event.currentTarget;
-        onInput(node.innerText.replace(/\u00a0/g, " ").replace(/\n$/, ""));
+        onInput(readText(node));
         onGrow(contentHeight(node));
       }}
       onKeyDown={(event) => {
@@ -356,7 +385,12 @@ export function InlineTextEditor({
           onDone();
         }
       }}
-      onBlur={onDone}
+      onBlur={(event) => {
+        // Moving focus inside the wrapper (e.g. to the hint text) is not "done".
+        const next = event.relatedTarget as Node | null;
+        if (next && event.currentTarget.parentElement?.contains(next)) return;
+        onDone();
+      }}
       style={{
         minHeight: "1em",
         outline: "2px solid hsl(var(--primary))",
@@ -428,7 +462,11 @@ export function ElementView({
     pointerEvents: interactive ? "auto" : "none",
   };
 
-  const outline = selected ? "outline outline-2 outline-offset-1 outline-brand-500" : "";
+  // The selection frame is drawn by the editor (it rotates and carries the
+  // handles), so the element itself must not draw a second outline on top of it
+  // — two boxes a few pixels apart is exactly what makes a frame look wrong.
+  void selected;
+  const outline = "";
 
   if (element.kind === "text") {
     const fontSize = (element.fontSize ?? 14) * scale;
