@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { polygonPoints, type EditorElement, type FontFamily } from "@/lib/pdf/editor";
+import { roundedPath, shapePoints, type EditorElement, type FontFamily } from "@/lib/pdf/editor";
 
 /* ───────────────────────────── colour control ───────────────────────────── */
 
@@ -438,6 +438,7 @@ export function ElementView({
   scale,
   selected,
   interactive,
+  page,
   onPointerDown,
   onDoubleClick,
 }: {
@@ -446,6 +447,8 @@ export function ElementView({
   scale: number;
   selected: boolean;
   interactive: boolean;
+  /** Page size in points — lets polygons and stars be drawn at true scale. */
+  page?: { width: number; height: number };
   /** Wired to the element's own box, so a click anywhere inside selects it. */
   onPointerDown?: (event: React.PointerEvent) => void;
   onDoubleClick?: (event: React.MouseEvent) => void;
@@ -559,30 +562,33 @@ export function ElementView({
   }
 
   if (element.kind === "triangle" || element.kind === "polygon" || element.kind === "star") {
-    // The same geometry the exporter uses, expressed in the SVG's 100 × 100 box,
-    // so what you see is exactly the outline that lands in the PDF.
-    const corners =
-      element.kind === "triangle"
-        ? [
-            { x: 50, y: 0 },
-            { x: 100, y: 100 },
-            { x: 0, y: 100 },
-          ]
-        : polygonPoints(
-            100,
-            100,
-            element.sides ?? (element.kind === "star" ? 5 : 6),
-            element.kind === "star" ? (element.innerRatio ?? 0.45) : 0,
-          );
+    // Drawn in the box's own point space and stretched to the box, which is
+    // exactly how the exporter draws it — so corner rounding and stroke weight
+    // match the PDF instead of being eyeballed in a 100 × 100 box.
+    const boxW = (page?.width ?? 595.28) * element.width;
+    const boxH = (page?.height ?? 841.89) * element.height;
+    const points = shapePoints(
+      boxW,
+      boxH,
+      element.kind,
+      element.sides ?? (element.kind === "star" ? 5 : 6),
+      element.innerRatio ?? 0.45,
+    );
     return (
-      <svg {...interaction} viewBox="0 0 100 100" preserveAspectRatio="none" style={style} className={outline} aria-hidden="true">
-        <rect x="0" y="0" width="100" height="100" fill="transparent" />
-        <polygon
-          points={corners.map((corner) => `${corner.x},${corner.y}`).join(" ")}
+      <svg
+        {...interaction}
+        viewBox={`0 0 ${boxW || 1} ${boxH || 1}`}
+        preserveAspectRatio="none"
+        style={style}
+        className={outline}
+        aria-hidden="true"
+      >
+        <rect x="0" y="0" width={boxW || 1} height={boxH || 1} fill="transparent" />
+        <path
+          d={roundedPath(points, element.radius ?? 0)}
           fill={element.fill ?? "transparent"}
           stroke={element.stroke ?? undefined}
-          strokeWidth={Math.max(0.5, (element.strokeWidth ?? 2) * scale)}
-          vectorEffect="non-scaling-stroke"
+          strokeWidth={element.stroke ? Math.max(0.4, element.strokeWidth ?? 2) : 0}
           strokeLinejoin="round"
         />
       </svg>
@@ -590,13 +596,19 @@ export function ElementView({
   }
 
   // rect / roundrect / ellipse / highlight / whiteout
-  // Corner radius is stored in PDF points, so it scales with the page exactly
-  // like it does in the exported file.
+  // Corner radii are stored in PDF points, so they scale with the page exactly
+  // like they do in the exported file. `corners` (TL TR BR BL) wins over the
+  // uniform `radius`, matching CSS and Illustrator's corner widgets.
+  const uniformRadius = element.corners
+    ? null
+    : Math.max(0, element.radius ?? (element.kind === "roundrect" ? 8 : 0));
   const radius =
     element.kind === "ellipse"
       ? "50%"
       : element.kind === "rect" || element.kind === "roundrect"
-        ? `${Math.max(0, element.radius ?? (element.kind === "roundrect" ? 8 : 0)) * scale}px`
+        ? element.corners && element.corners.length === 4
+          ? element.corners.map((corner) => `${Math.max(0, corner) * scale}px`).join(" ")
+          : `${uniformRadius ?? 0}px`
         : "2px";
 
   return (

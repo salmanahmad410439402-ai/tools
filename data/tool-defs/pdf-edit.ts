@@ -458,11 +458,11 @@ export const pdfEditTools: Tool[] = [
       },
       {
         title: "Eight shapes plus a pen",
-        text: "Rectangle, rounded box, ellipse, triangle, polygon, star, line and arrow, plus freehand drawing that keeps the size and thickness you drew it with — big letters or a small tick, exactly as drawn. Every shape has fill, outline, outline width and opacity, and the geometric ones carry real shape options: corner radius from 0 to 90 pt on rectangles, 3 to 16 sides on a polygon, and 3 to 16 points with an inner-radius slider on a star.",
+        text: "Rectangle, rounded box, ellipse, triangle, polygon, star, line and arrow, plus freehand drawing that keeps the size and thickness you drew it with — big letters or a small tick, exactly as drawn. Every shape has fill, outline, outline width and opacity, and the geometric ones carry real shape options: corner radius from 0 to 120 pt on rectangles — all four corners together or each one separately — a live corner handle on the page to drag it by eye, 3 to 16 sides on a polygon, and 3 to 16 points with an inner-radius slider plus its own corner rounding on a star.",
       },
       {
         title: "Drawn the way a design app draws",
-        text: "Hold Shift while dragging for a perfect square or circle, or press Make it a square / circle afterwards. A selection frame follows the object, including when it is rotated, so the handles always sit on its real edges and resizing moves the edge you grabbed.",
+        text: "Hold Shift while dragging for a perfect square or circle, or press Make it a square / circle afterwards. A selection frame follows the object, including when it is rotated, so the handles always sit on its real edges and resizing moves the edge you grabbed. Images arrive at their real proportions and keep them while you drag a corner — hold Alt only if you deliberately want to stretch one.",
       },
       {
         title: "A real colour picker",

@@ -69,8 +69,10 @@ export interface EditorElement {
   align?: TextAlign;
   /** Multiple of the font size, default 1.3. */
   lineHeight?: number;
-  /** Corner radius in PDF points, for `rect` and `roundrect`. */
+  /** Corner radius in PDF points: rect/roundrect corners, or rounding for polygon/star/triangle. */
   radius?: number;
+  /** Per-corner radii (top-left, top-right, bottom-right, bottom-left) in points; wins over `radius`. */
+  corners?: number[];
   /** Side count for `polygon` and point count for `star` (3–24). */
   sides?: number;
   /** `star` only: inner radius as a fraction of the outer radius (0.1–0.95). */
@@ -316,6 +318,138 @@ export function roundedRectPath(width: number, height: number, radius: number, c
   );
 }
 
+/**
+ * Rounded rectangle with four independent radii, in the order
+ * top-left, top-right, bottom-right, bottom-left (the same order CSS uses).
+ *
+ * Each radius is clamped to half of the shorter side touching its corner, so a
+ * large radius on one corner can never fold the shape over itself.
+ */
+export function roundedRectPathCorners(
+  width: number,
+  height: number,
+  radii: number[],
+  centred = false,
+): string {
+  const w = Math.max(0, width);
+  const h = Math.max(0, height);
+  const cap = Math.min(w, h) / 2;
+  const [tl, tr, br, bl] = [0, 1, 2, 3].map((index) => Math.max(0, Math.min(radii[index] ?? 0, cap)));
+  const ox = centred ? -w / 2 : 0;
+  const oy = centred ? -h / 2 : 0;
+  const x0 = ox;
+  const y0 = oy;
+  const x1 = ox + w;
+  const y1 = oy + h;
+
+  if (tl + tr + br + bl <= 0.01) return `M ${x0} ${y0} H ${x1} V ${y1} H ${x0} Z`;
+
+  const arc = (radius: number, x: number, y: number) => `A ${radius} ${radius} 0 0 1 ${x} ${y}`;
+  return (
+    `M ${x0 + tl} ${y0} H ${x1 - tr} ` +
+    (tr ? `${arc(tr, x1, y0 + tr)} ` : `L ${x1} ${y0} `) +
+    `V ${y1 - br} ` +
+    (br ? `${arc(br, x1 - br, y1)} ` : `L ${x1} ${y1} `) +
+    `H ${x0 + bl} ` +
+    (bl ? `${arc(bl, x0, y1 - bl)} ` : `L ${x0} ${y1} `) +
+    `V ${y0 + tl} ` +
+    (tl ? `${arc(tl, x0 + tl, y0)} ` : `L ${x0} ${y0} `) +
+    "Z"
+  );
+}
+
+/**
+ * Corner points of a triangle, polygon or star inside its box, in the box's own
+ * coordinates (0,0 = top-left). Shared by the preview and the exporter so the two
+ * can never disagree.
+ */
+export function shapePoints(
+  width: number,
+  height: number,
+  kind: "triangle" | "polygon" | "star",
+  sides = 6,
+  innerRatio = 0,
+): EditorPoint[] {
+  if (kind === "triangle") {
+    return [
+      { x: width / 2, y: 0 },
+      { x: width, y: height },
+      { x: 0, y: height },
+    ];
+  }
+  return polygonPoints(width, height, sides, kind === "star" ? innerRatio : 0);
+}
+
+/**
+ * Path through `points` with the corners rounded off — Illustrator's "Round
+ * Corners" for polygons and stars. Each corner is replaced by a quadratic curve
+ * whose radius never exceeds half of either adjacent edge, so small stars stay
+ * legible instead of collapsing.
+ */
+export function roundedPath(points: EditorPoint[], radius: number): string {
+  if (!points.length) return "";
+  if (radius <= 0.01 || points.length < 3) {
+    return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ") + " Z";
+  }
+
+  const at = (index: number) => points[(index + points.length) % points.length];
+  const commands: string[] = [];
+
+  points.forEach((point, index) => {
+    const previous = at(index - 1);
+    const next = at(index + 1);
+    const inLength = Math.hypot(point.x - previous.x, point.y - previous.y) || 1;
+    const outLength = Math.hypot(next.x - point.x, next.y - point.y) || 1;
+    const limit = Math.min(inLength, outLength) / 2;
+    const r = Math.min(radius, limit);
+
+    const start = {
+      x: point.x + ((previous.x - point.x) / inLength) * r,
+      y: point.y + ((previous.y - point.y) / inLength) * r,
+    };
+    const end = {
+      x: point.x + ((next.x - point.x) / outLength) * r,
+      y: point.y + ((next.y - point.y) / outLength) * r,
+    };
+
+    commands.push(`${index === 0 ? "M" : "L"} ${start.x} ${start.y}`);
+    commands.push(`Q ${point.x} ${point.y} ${end.x} ${end.y}`);
+  });
+
+  return commands.join(" ") + " Z";
+}
+
+/* ─────────────────────────────── images ─────────────────────────────────── */
+
+/**
+ * Size an image should occupy on a page, in page fractions, keeping the
+ * picture's own proportions.
+ *
+ * The box is 40 % of the page width (or less for a portrait picture) and never
+ * taller than half the page, so a placed photo covers a sensible area without
+ * being cropped or squashed. `naturalWidth`/`naturalHeight` are the picture's
+ * pixel dimensions; if they are unknown (rare, e.g. a file the browser cannot
+ * decode) a 4:3 guess is used rather than a distorted box.
+ */
+export function imageBox(
+  naturalWidth: number,
+  naturalHeight: number,
+  pageWidth: number,
+  pageHeight: number,
+  maxWidth = 0.4,
+  maxHeight = 0.5,
+): { width: number; height: number } {
+  const ratio = naturalWidth > 0 && naturalHeight > 0 ? naturalHeight / naturalWidth : 0.75;
+  let width = maxWidth;
+  let height = (width * pageWidth * ratio) / pageHeight;
+  if (height > maxHeight) {
+    const fit = maxHeight / height;
+    width *= fit;
+    height *= fit;
+  }
+  return { width, height };
+}
+
 /* ────────────────────────────── freehand ────────────────────────────────── */
 
 export interface StrokeBox {
@@ -386,6 +520,13 @@ const MM_TO_PT = 72 / 25.4;
 export function centredOrigin(bottomLeft: EditorPoint, centre: EditorPoint, rotation: number): EditorPoint {
   if (!rotation) return bottomLeft;
   return rotatePoint(bottomLeft, centre, -rotation);
+}
+
+/** The four corner radii an element asks for, with `radius` as the uniform fallback. */
+function rectRadii(element: EditorElement): number[] {
+  if (element.corners && element.corners.length === 4) return element.corners;
+  const uniform = element.radius ?? 0;
+  return [uniform, uniform, uniform, uniform];
 }
 
 function pageDimensions(size: PageSizeKey, orientation: "portrait" | "landscape") {
@@ -490,10 +631,10 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
     switch (element.kind) {
       case "rect": {
         if (element.fill === null && !element.stroke) break;
-        if ((element.radius ?? 0) > 0.01) {
-          // A rectangle with a corner radius is a rounded box; draw the path,
+        if ((element.radius ?? 0) > 0.01 || (element.corners ?? []).some((value) => value > 0.01)) {
+          // A rectangle with corner radii is a rounded box; draw the path,
           // defined around the centre so rotation pivots where the preview does.
-          page.drawSvgPath(roundedRectPath(boxWidth, boxHeight, element.radius ?? 0, true), {
+          page.drawSvgPath(roundedRectPathCorners(boxWidth, boxHeight, rectRadii(element), true), {
             x: left + boxWidth / 2,
             y: pageHeight - top - boxHeight / 2,
             color: fill,
@@ -524,8 +665,8 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
       }
 
       case "roundrect": {
-        const radius = element.radius ?? 8;
-        page.drawSvgPath(roundedRectPath(boxWidth, boxHeight, radius, true), {
+        const radii = element.corners ?? [8, 8, 8, 8];
+        page.drawSvgPath(roundedRectPathCorners(boxWidth, boxHeight, radii, true), {
           x: left + boxWidth / 2,
           y: pageHeight - top - boxHeight / 2,
           color: fill,
@@ -590,18 +731,15 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
       case "triangle":
       case "polygon":
       case "star": {
-        const halfW = boxWidth / 2;
-        const halfH = boxHeight / 2;
-        const path =
-          element.kind === "triangle"
-            ? `M 0 ${-halfH} L ${halfW} ${halfH} L ${-halfW} ${halfH} Z`
-            : polygonPath(
-                boxWidth,
-                boxHeight,
-                element.sides ?? (element.kind === "star" ? 5 : 6),
-                element.kind === "star" ? (element.innerRatio ?? 0.45) : 0,
-                true,
-              );
+        const kind = element.kind as "triangle" | "polygon" | "star";
+        const points = shapePoints(
+          boxWidth,
+          boxHeight,
+          kind,
+          element.sides ?? (kind === "star" ? 5 : 6),
+          element.innerRatio ?? 0.45,
+        ).map((point) => ({ x: point.x - boxWidth / 2, y: point.y - boxHeight / 2 }));
+        const path = roundedPath(points, element.radius ?? 0);
         page.drawSvgPath(path, {
           x: left + boxWidth / 2,
           y: pageHeight - top - boxHeight / 2,

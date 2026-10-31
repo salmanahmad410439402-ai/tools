@@ -506,8 +506,11 @@ in Step 2, because they belong in the same PDF menu.
   star, line, arrow, highlight, white-out and pen — with a searchable, grouped palette, a full
   colour wheel/hex/swatch picker, opacity, rotation, layer order, undo/redo and a page strip for
   adding, duplicating, reordering and deleting pages. Shapes carry their own geometry: a corner
-  radius on rectangles (0–90 pt), 3–16 sides on polygons, and 3–16 points with an adjustable inner
-  radius on stars. Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
+  radius on rectangles (0–120 pt, all corners at once or each corner on its own, plus a live corner
+  handle to drag on the page), corner rounding on polygons and stars, 3–16 sides on polygons, and
+  3–16 points with an adjustable inner radius on stars. Placed images keep their own aspect ratio —
+  a photo is never stretched into a default box — and keep it while a corner is dragged (Alt frees
+  it deliberately). Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
   shape, and every object rotates and resizes about its own centre — the on-screen frame and the
   exported PDF agree. Text is typed directly on the page in a box that grows with the
   words — a new box starts with "Lorem ipsum" selected, so the first keystroke replaces it — and is
@@ -651,7 +654,11 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    clicking a box (or double-clicking it with any tool, or "Edit on page") reopens it, and that an
    emptied box disappears when you leave it.
    Draw a large freehand squiggle and a small tick and confirm both keep their drawn size, then
-   resize a drawing by its corner handle. Draw a rectangle, set a 20 pt corner radius, a hexagon
+   resize a drawing by its corner handle. Draw a rectangle, drag the round handle on its top-left
+   corner and watch the corners follow; switch to "Adjust corners separately" and give one corner a
+   different radius, then check the exported PDF matches. Place a wide photo and a tall photo and
+   confirm neither is stretched and that dragging a corner keeps the proportions (Alt stretches). Set
+   a star's corner rounding, then a hexagon
    (6 sides) and a star (5 points, 45 % inner radius) and check the on-screen outline against the
    exported PDF; hold Shift while dragging for a square and confirm it stays square. Rotate a shape
    to 30° and confirm the selection frame turns with it, that dragging a corner keeps the opposite
