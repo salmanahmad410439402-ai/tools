@@ -31,11 +31,15 @@ import {
   centredOrigin,
   EDITOR_PAGE_SIZES,
   hexToRgbColor,
+  imageBox,
   isWinAnsi,
   polygonPath,
   polygonPoints,
   renderEditorPdf,
+  roundedPath,
   roundedRectPath,
+  roundedRectPathCorners,
+  shapePoints,
   rotatePoint,
   strokeBox,
   textBoxHeight,
@@ -1052,15 +1056,47 @@ async function testEditor() {
     translate ? `${translate[1]}, ${translate[2]} vs ${expectedOrigin.x}, ${expectedOrigin.y}` : "no cm operator",
   );
 
+  // Four independent corner radii, the way Illustrator's corner widgets work.
+  const perCorner = roundedRectPathCorners(100, 60, [20, 0, 10, 0]);
+  check("each corner gets its own radius", perCorner.includes("A 20 20") && perCorner.includes("A 10 10"));
+  check("a square corner stays square", perCorner.split("A ").length - 1 === 2, perCorner.slice(0, 80));
+  const clamped = roundedRectPathCorners(100, 60, [500, 500, 500, 500]);
+  check("radii are clamped to half the shorter side", clamped.includes("A 30 30"));
+
+  // Rounded polygon corners: a star with depth and softened points.
+  const sharpPath = roundedPath(shapePoints(100, 100, "star", 5, 0.45), 0);
+  check("zero rounding keeps straight segments", !sharpPath.includes("Q") && sharpPath.endsWith(" Z"));
+  const softPath = roundedPath(shapePoints(100, 100, "star", 5, 0.45), 6);
+  check("rounding turns every corner into a curve", (softPath.match(/Q/g) ?? []).length === 10);
+  check("a huge radius cannot fold a star", !/NaN|Infinity/.test(roundedPath(shapePoints(40, 40, "star", 8, 0.4), 500)));
+
+  // A placed image keeps its own proportions.
+  const wideBox = imageBox(1600, 900, 595.28, 841.89);
+  const tallBox = imageBox(900, 1600, 595.28, 841.89);
+  check(
+    "a landscape photo is placed at 16:9",
+    Math.abs((wideBox.width * 595.28) / (wideBox.height * 841.89) - 1600 / 900) < 1e-6,
+    `${wideBox.width.toFixed(3)} x ${wideBox.height.toFixed(3)}`,
+  );
+  check("a portrait photo is placed upright", tallBox.height > tallBox.width);
+  check("a tall picture never fills more than half the page", tallBox.height <= 0.5 + 1e-9);
+  check(
+    "unknown dimensions fall back to 4:3",
+    Math.abs((imageBox(0, 0, 595.28, 841.89).width * 595.28) / (imageBox(0, 0, 595.28, 841.89).height * 841.89) - 4 / 3) < 1e-6,
+  );
+
   const shapes = await renderEditorPdf({
     source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
     elements: [
       { id: "sq", kind: "rect", pageIndex: 0, x: 0.1, y: 0.1, width: 0.3, height: 0.1, fill: "#2563EB", radius: 12 },
       { id: "pg", kind: "polygon", pageIndex: 0, x: 0.1, y: 0.3, width: 0.3, height: 0.2, fill: "#22C55E", sides: 8 },
       { id: "st", kind: "star", pageIndex: 0, x: 0.5, y: 0.3, width: 0.3, height: 0.2, fill: "#F59E0B", sides: 6, innerRatio: 0.4 },
+      { id: "pc", kind: "rect", pageIndex: 0, x: 0.5, y: 0.6, width: 0.3, height: 0.1, fill: "#0EA5E9", corners: [20, 0, 12, 4] },
+      { id: "rs", kind: "star", pageIndex: 0, x: 0.1, y: 0.6, width: 0.2, height: 0.15, fill: "#DB2777", sides: 6, innerRatio: 0.5, radius: 5 },
+      { id: "rt", kind: "triangle", pageIndex: 0, x: 0.1, y: 0.8, width: 0.2, height: 0.1, fill: "#22C55E", radius: 6 },
     ],
   });
-  check("rounded rects, polygons and stars all export", shapes.elements === 3, `${shapes.elements}`);
+  check("rounded rects, polygons, stars and softened corners all export", shapes.elements === 6, `${shapes.elements}`);
 
   // A freehand element built from the stroke box keeps its size on export.
   const penPdf = await renderEditorPdf({

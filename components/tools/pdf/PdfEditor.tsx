@@ -33,6 +33,7 @@ import {
 import { PDFDocument } from "pdf-lib";
 import {
   EDITOR_PAGE_SIZES,
+  imageBox,
   renderEditorPdf,
   rotatePoint,
   strokeBox,
@@ -149,7 +150,7 @@ interface PageEntry extends PageSlot {
   id: string;
 }
 
-type DragMode = "create" | "move" | "resize" | "draw";
+type DragMode = "create" | "move" | "resize" | "draw" | "radius";
 
 interface DragState {
   mode: DragMode;
@@ -180,6 +181,16 @@ const KIND_LABELS: Record<EditorElementKind, string> = {
 /** Zoom stops. 1 is fit-to-width; the text on the page scales with it. */
 const ZOOM_LEVELS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
+/** Reads an image's natural size so it can be placed without distortion. */
+function imageSize(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => resolve({ width: 0, height: 0 });
+    image.src = url;
+  });
+}
+
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -208,7 +219,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const [draft, setDraft] = useState<EditorElement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toolSearch, setToolSearch] = useState("");
-  const [imageBytes, setImageBytes] = useState<{ bytes: ArrayBuffer; url: string } | null>(null);
+  const [imageBytes, setImageBytes] = useState<{
+    bytes: ArrayBuffer;
+    url: string;
+    /** Natural pixel size, so a placed image keeps its proportions. */
+    width: number;
+    height: number;
+  } | null>(null);
 
   /* ── history ──────────────────────────────────────────────────────────── */
   const [past, setPast] = useState<{ elements: EditorElement[]; pages: PageEntry[] }[]>([]);
@@ -585,8 +602,14 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         setError("Choose an image in the Insert panel first.");
         return;
       }
-      addElement(elementDefaults("image", { x: clamp01(start.x), y: clamp01(start.y), width: 0.3, height: 0.2 }));
-      setTool("select");
+      const pageW = pageSizes[activePage]?.width ?? 595.28;
+      const pageH = pageSizes[activePage]?.height ?? 841.89;
+      // Placed at the picture's own proportions — never squashed into a default
+      // box. `imageBox` is shared with the tests.
+      const { width, height } = imageBox(imageBytes.width, imageBytes.height, pageW, pageH);
+      const x = Math.min(clamp01(start.x), Math.max(0, 1 - width));
+      const y = Math.min(clamp01(start.y), Math.max(0, 1 - height));
+      addElement(elementDefaults("image", { x, y, width, height }));
       return;
     }
 
@@ -680,6 +703,28 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       return;
     }
 
+    if (state.mode === "radius" && state.id && state.element) {
+      const element = state.element;
+      state.moved = true;
+      const pageW = pageSizes[activePage]?.width ?? 595.28;
+      const pageH = pageSizes[activePage]?.height ?? 841.89;
+      const maxRadius = Math.min(element.width * pageW, element.height * pageH) / 2;
+      const radius = Math.round(Math.min(maxRadius, Math.max(0, (current.x - element.x) * pageW)));
+      setElements((all) =>
+        all.map((entry) => {
+          if (entry.id !== state.id) return entry;
+          // With individual corners on, the widget drives the top-left one only.
+          if (entry.corners) {
+            const next = [...entry.corners];
+            next[0] = radius;
+            return { ...entry, corners: next };
+          }
+          return { ...entry, radius };
+        }),
+      );
+      return;
+    }
+
     if (state.mode === "resize" && state.id && state.element) {
       const element = state.element;
       state.moved = true;
@@ -721,8 +766,10 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         height = Math.max(minSide, local.y - rect.y);
       }
 
-      // Shift keeps the original proportions, like every design tool.
-      if (event.shiftKey && rect.width > 0 && rect.height > 0) {
+      // Images keep their own proportions while you drag a corner (hold Alt to
+      // stretch one); everything else follows Shift, like a design app.
+      const keepRatio = element.kind === "image" ? !event.altKey : event.shiftKey;
+      if (keepRatio && rect.width > 0 && rect.height > 0) {
         const ratio = rect.width / rect.height;
         if (width / ratio >= minSide) {
           const fitted = width / ratio;
@@ -826,7 +873,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       return;
     }
 
-    if (state.moved && (state.mode === "move" || state.mode === "resize")) {
+    if (state.moved && (state.mode === "move" || state.mode === "resize" || state.mode === "radius")) {
       // The geometry has already been applied live, so the undo entry is the
       // element as it was before the drag started.
       setPast((current) => [...current.slice(-49), { elements: elementsBeforeDrag(state, elements), pages }]);
@@ -845,6 +892,17 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     }
     if (tool !== "select") return;
     drag.current = { mode: "move", id: element.id, origin: point(event), element, moved: false };
+  };
+
+  const startRadius = (event: React.PointerEvent, element: EditorElement) => {
+    event.stopPropagation();
+    setSelectedId(element.id);
+    try {
+      stageRef.current?.setPointerCapture(event.pointerId);
+    } catch {
+      /* ignore */
+    }
+    drag.current = { mode: "radius", id: element.id, origin: point(event), element, moved: false };
   };
 
   const startResize = (event: React.PointerEvent, element: EditorElement, corner: "nw" | "ne" | "sw" | "se") => {
@@ -1052,6 +1110,15 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     ? preview.thumbs.find((thumb) => thumb.pageIndex === pages[activePage].sourceIndex)
     : null;
   const aspect = pageSize ? pageSize.height / pageSize.width : activeThumb ? activeThumb.height / activeThumb.width : 1.414;
+
+  // Where the live corner widget sits along the top edge: at the corner radius,
+  // as a percentage of the shape's own width.
+  const cornerWidgetLeft = (() => {
+    if (!selected) return 4;
+    const radius = selected.corners?.[0] ?? selected.radius ?? (selected.kind === "roundrect" ? 8 : 0);
+    const boxWidthPt = Math.max(1, selected.width * (pageSize?.width ?? 595.28));
+    return Math.min(46, Math.max(2, (radius / boxWidthPt) * 100));
+  })();
 
   /* ── inline text editing ──────────────────────────────────────────────── */
   // Typing happens on the page, in a box that matches the printed text — font,
@@ -1320,12 +1387,18 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   const picked = event.target.files?.[0];
                   if (!picked) return;
                   if (imageBytes) URL.revokeObjectURL(imageBytes.url);
-                  setImageBytes({ bytes: await picked.arrayBuffer(), url: makePreviewUrl(picked) });
+                  const url = makePreviewUrl(picked);
+                  const [bytes, size] = await Promise.all([picked.arrayBuffer(), imageSize(url)]);
+                  setImageBytes({ bytes, url, ...size });
                   setError(null);
                 }}
                 className="mt-1 block w-full cursor-pointer rounded-lg border border-line bg-raised px-2 py-1.5 text-[11.5px] file:mr-2 file:rounded file:border-0 file:bg-brand-50 file:px-2 file:py-1 file:text-[11px] file:font-semibold file:text-brand-700"
               />
-              <p className="mt-1 text-[10.5px] leading-snug text-subtle">PNG or JPG. Then click the page to place it.</p>
+              <p className="mt-1 text-[10.5px] leading-snug text-subtle">
+                {imageBytes
+                  ? `${imageBytes.width || "?"} × ${imageBytes.height || "?"} px — click the page to place it at its own proportions. Drag a corner to resize (hold Alt to stretch).`
+                  : "PNG or JPG. It is placed at its real aspect ratio, never stretched."}
+              </p>
             </div>
           )}
         </div>
@@ -1428,6 +1501,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                       key={element.id}
                       element={element.id === editingId ? { ...element, text: "" } : element}
                       scale={scale}
+                      page={pageSize ? { width: pageSize.width, height: pageSize.height } : undefined}
                       selected={element.id === selectedId}
                       interactive
                       onPointerDown={
@@ -1476,10 +1550,31 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                           )}
                         />
                       ))}
+
+                      {/* Live corner widget, like Illustrator's: sits just
+                          inside the top-left corner; drag it right to round the
+                          corners by eye. */}
+                      {(selected.kind === "rect" || selected.kind === "roundrect") && (
+                        <span
+                          role="presentation"
+                          onPointerDown={(event) => startRadius(event, selected)}
+                          title="Drag to round the corners"
+                          style={{ left: `${cornerWidgetLeft}%`, top: "0%" }}
+                          className="pointer-events-auto absolute h-2.5 w-2.5 -translate-y-1/2 translate-x-0 cursor-ew-resize rounded-[1px] border-2 border-brand-500 bg-white shadow-sm"
+                        />
+                      )}
                     </div>
                   )}
 
-                  {draft && <ElementView element={draft} scale={scale} selected={false} interactive={false} />}
+                  {draft && (
+                    <ElementView
+                      element={draft}
+                      scale={scale}
+                      page={pageSize ? { width: pageSize.width, height: pageSize.height } : undefined}
+                      selected={false}
+                      interactive={false}
+                    />
+                  )}
 
                   {!blank && !activeThumb && !preview.loading && (
                     <div className="pointer-events-none absolute inset-0 bg-white/95 p-4 text-[12px] text-subtle">
@@ -1754,12 +1849,100 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
               )}
 
               {(selected.kind === "rect" || selected.kind === "roundrect") && (
+                <>
+                  <SliderField
+                    label="Corner radius"
+                    value={Math.round(
+                      selected.radius ?? (selected.kind === "roundrect" ? SHAPE_DEFAULTS.roundrectRadius : 0),
+                    )}
+                    min={0}
+                    max={120}
+                    onChange={(value) => updateSelected({ radius: value, corners: undefined }, "radius")}
+                    format={(value) => `${value} pt`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateSelected(
+                        {
+                          corners: selected.corners ?? [
+                            selected.radius ?? 8,
+                            selected.radius ?? 8,
+                            selected.radius ?? 8,
+                            selected.radius ?? 8,
+                          ],
+                        },
+                        "corners",
+                      )
+                    }
+                    aria-pressed={Boolean(selected.corners)}
+                    className={cn(
+                      "w-full rounded-lg border px-2 py-1.5 text-[11.5px] font-semibold transition-colors",
+                      selected.corners
+                        ? "border-primary/45 bg-primary/10 text-brand-700"
+                        : "border-line bg-raised text-body hover:border-primary/45 hover:text-brand-600",
+                    )}
+                  >
+                    {selected.corners ? "Back to one radius" : "Adjust corners separately"}
+                  </button>
+                  {selected.corners && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["Top left", "Top right", "Bottom right", "Bottom left"] as const).map((label, index) => (
+                        <NumberField
+                          key={label}
+                          label={label}
+                          value={Math.round(selected.corners?.[index] ?? 0)}
+                          min={0}
+                          max={120}
+                          suffix="pt"
+                          onChange={(value) => {
+                            const next = [...(selected.corners ?? [0, 0, 0, 0])];
+                            next[index] = value;
+                            updateSelected({ corners: next }, `corner-${index}`);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[10.5px] leading-snug text-subtle">
+                    Drag the round handle on the top-left corner of the page to set the radius by eye.
+                  </p>
+                </>
+              )}
+
+              {selected.kind === "image" && (
+                <div className="rounded-lg border border-line bg-raised p-2">
+                  <p className="text-[11px] font-semibold text-ink">Proportions are locked</p>
+                  <p className="mt-1 text-[10.5px] leading-snug text-subtle">
+                    Drag a corner to resize without stretching. Hold Alt while dragging if you really want to distort
+                    it.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const url = selected.imageUrl;
+                      if (!url) return;
+                      const size = await imageSize(url);
+                      if (!size.width || !size.height) return;
+                      const pageW = pageSizes[activePage]?.width ?? 595.28;
+                      const pageH = pageSizes[activePage]?.height ?? 841.89;
+                      const height = Math.min(1 - selected.y, (selected.width * pageW * (size.height / size.width)) / pageH);
+                      updateSelected({ height }, "image-fit");
+                    }}
+                    className="mt-2 w-full rounded-md border border-line bg-surface px-2 py-1 text-[10.5px] font-semibold text-body transition-colors hover:border-primary/45 hover:text-brand-600"
+                  >
+                    Restore original proportions
+                  </button>
+                </div>
+              )}
+
+              {(selected.kind === "triangle" || selected.kind === "polygon" || selected.kind === "star") && (
                 <SliderField
-                  label="Corner radius"
-                  value={Math.round(selected.radius ?? (selected.kind === "roundrect" ? SHAPE_DEFAULTS.roundrectRadius : 0))}
+                  label="Corner rounding"
+                  value={Math.round(selected.radius ?? 0)}
                   min={0}
-                  max={90}
-                  onChange={(value) => updateSelected({ radius: value }, "radius")}
+                  max={40}
+                  onChange={(value) => updateSelected({ radius: value }, "corner-rounding")}
                   format={(value) => `${value} pt`}
                 />
               )}
