@@ -32,11 +32,39 @@ let fontkitPromise: Promise<unknown> | null = null;
  * "no fontkit instance was found" — which is exactly what happened before the
  * engine test in scripts/smoke-test.mjs existed.
  */
-async function registerFontkit(doc: PDFDocument) {
+export async function registerFontkit(doc: PDFDocument) {
   if (!fontkitPromise) {
     fontkitPromise = import("@pdf-lib/fontkit").then((mod) => (mod as { default?: unknown }).default ?? mod);
   }
   doc.registerFontkit((await fontkitPromise) as Parameters<PDFDocument["registerFontkit"]>[0]);
+}
+
+const coverageCache = new WeakMap<Uint8Array, { hasGlyphForCodePoint: (code: number) => boolean }>();
+
+/**
+ * True when the supplied TrueType file can draw every character in `text`.
+ *
+ * The editor's font library ships Latin-only subsets, so a Cyrillic or Greek
+ * character has to fall back to DejaVu instead of drawing a row of empty boxes.
+ * fontkit is already a dependency of the embedding path, so the check reuses it
+ * rather than parsing the cmap table a second time.
+ */
+export async function fontCovers(bytes: Uint8Array, text: string): Promise<boolean> {
+  let parsed = coverageCache.get(bytes);
+  if (!parsed) {
+    if (!fontkitPromise) {
+      fontkitPromise = import("@pdf-lib/fontkit").then((mod) => (mod as { default?: unknown }).default ?? mod);
+    }
+    const fontkit = (await fontkitPromise) as { create: (data: Uint8Array) => { hasGlyphForCodePoint: (code: number) => boolean } };
+    parsed = fontkit.create(bytes);
+    coverageCache.set(bytes, parsed);
+  }
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code < 0x20) continue;
+    if (!parsed.hasGlyphForCodePoint(code)) return false;
+  }
+  return true;
 }
 
 async function fetchFont(url: string): Promise<ArrayBuffer> {

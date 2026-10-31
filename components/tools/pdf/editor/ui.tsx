@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { roundedPath, shapePoints, type EditorElement, type FontFamily } from "@/lib/pdf/editor";
+import { fontCssStack } from "@/lib/pdf/font-library";
 
 /* ───────────────────────────── colour control ───────────────────────────── */
 
@@ -203,22 +204,29 @@ export function ToggleButton({
   onClick,
   children,
   label,
+  disabled = false,
+  title,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   label: string;
+  /** Turned off when the chosen font has no file for this style. */
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={active}
       aria-label={label}
-      title={label}
+      title={title ?? label}
       className={cn(
         "grid h-9 min-w-9 place-items-center rounded-lg border px-2 text-[12px] font-bold transition-colors",
         active ? "border-primary/45 bg-primary/10 text-brand-700" : "border-line bg-raised text-body hover:border-primary/30",
+        disabled && "cursor-not-allowed opacity-40 hover:border-line",
       )}
     >
       {children}
@@ -419,9 +427,7 @@ export function InlineTextEditor({
  * what you see are measured with the same font.
  */
 export function textFontCss(family: FontFamily | undefined): string {
-  if (family === "serif") return "Georgia, 'Times New Roman', serif";
-  if (family === "mono") return "ui-monospace, 'JetBrains Mono', 'SF Mono', monospace";
-  return "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  return fontCssStack(family);
 }
 
 const ELLIPSE_KINDS = new Set(["ellipse"]);
