@@ -4,11 +4,16 @@
 
 /*
  * ─────────────────────────────────────────────────────────────────────────────
- * Filecraft design system — dark-first midnight navy
+ * Filecraft design system — calm, dark-first ink
  * ─────────────────────────────────────────────────────────────────────────────
- * `:root` is the DEFAULT theme: deep midnight obsidian navy with ice-white text,
- * frosted navy glass and an electric indigo accent. `html.light` switches to the
- * crisp cool-alabaster theme. The toggle in the header only flips that class.
+ * `:root` is the DEFAULT theme: a deep neutral ink canvas, quiet surfaces and
+ * ONE accent — indigo — kept for actions, links and selection. `html.light`
+ * switches to the cool alabaster theme.
+ *
+ * The system is deliberately restrained: no gradients, no glowing shadows, no
+ * ambient orbs, no per-category colour. Colour carries meaning here — indigo
+ * means "you can act", green means "this worked", amber means "read this",
+ * red means "this failed" — and everything else is ink, surface and line.
  *
  * Colour format is the shadcn HSL triplet ("222 47% 5%") so Tailwind can do
  * `hsl(var(--token) / <alpha-value>)` — that is what makes `bg-primary/10`,
@@ -24,37 +29,37 @@
     color-scheme: dark;
 
     /* ── shadcn core tokens (dark = default) ───────────────────────────── */
-    --background: 222 47% 5%; /* #070B13 deep midnight navy */
-    --foreground: 210 40% 98%; /* #F8FAFC ice white */
-    --card: 222 47% 8%; /* #0B111E dark slate navy */
+    --background: 222 26% 7%; /* deep neutral ink, a hint of blue */
+    --foreground: 210 30% 97%; /* soft white */
+    --card: 222 22% 10%; /* raised surface */
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 243 75% 65%; /* #645CFF electric indigo-violet */
+    --primary: 243 63% 64%; /* the one accent: calm indigo */
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 47% 12%; /* #101A2D elevated navy */
+    --secondary: 222 20% 14%; /* second surface step */
     --secondary-foreground: 210 40% 90%;
-    --muted: 222 47% 12%;
-    --muted-foreground: 215 20% 65%; /* #93A2B7 readable cool slate */
-    --accent: 160 84% 45%; /* #12D393 mint emerald */
+    --muted: 222 20% 14%;
+    --muted-foreground: 215 14% 64%; /* readable cool grey */
+    --accent: 160 55% 45%; /* success only, never decoration */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%; /* #EF4444 coral crimson */
     --destructive-foreground: 210 30% 96%;
-    --border: 215 27% 16%; /* #1E2836 */
-    --input: 215 27% 16%;
-    --ring: 243 75% 65%;
-    --radius: 1rem;
+    --border: 220 16% 19%;
+    --input: 220 16% 19%;
+    --ring: 243 63% 64%;
+    --radius: 0.875rem;
 
     /* ── text hierarchy ────────────────────────────────────────────────── */
-    --text-primary: 243 75% 75%;
-    --text-secondary: 210 40% 85%;
-    --text-tertiary: 210 40% 70%;
-    --text-minimal: 210 40% 50%;
+    --text-primary: 243 55% 78%;
+    --text-secondary: 210 22% 84%;
+    --text-tertiary: 215 15% 68%;
+    --text-minimal: 215 12% 56%;
 
     /* Filled-button indigo, deepened from --primary so white text clears AA
        (white on #4F46E5 ≈ 6.3:1; on the lighter #645CFF it would be ≈ 3.7:1).
        Link/accent text uses the lighter --text-primary instead. */
-    --primary-strong: 243 75% 59%;
+    --primary-strong: 243 62% 56%;
 
     /* ── legacy aliases used by the components ─────────────────────────── */
     --page: var(--background);
@@ -65,42 +70,33 @@
     --body: var(--text-secondary);
     --subtle: var(--text-tertiary);
 
-    /* Brand ramp: 50–300 are the solid equivalents of indigo at 10/16/28/45%
-       over the card surface (so `bg-brand-50/40` still works), 500 is the solid
-       brand and 600/700 are the readable indigo *text* tones. */
-    --brand-50: 232 44% 14%;
-    --brand-100: 234 45% 18%;
-    --brand-200: 238 44% 25%;
-    --brand-300: 241 45% 42%;
+    /* Brand ramp. 50/100/200 are the quiet steps that icon tiles and chips sit
+       on — barely tinted, so a grid of them reads as one calm surface instead
+       of a rainbow. 400–700 are the accent itself and its readable text tones. */
+    --brand-50: 222 18% 13%;
+    --brand-100: 222 16% 17%;
+    --brand-200: 222 14% 24%;
+    --brand-300: 240 26% 44%;
     --brand-400: var(--text-primary);
     --brand-500: var(--primary);
     --brand-600: var(--text-primary);
-    --brand-700: 243 75% 82%;
-    --brand-800: 243 75% 88%;
-    --brand-900: 243 75% 93%;
+    --brand-700: 243 60% 84%;
+    --brand-800: 243 55% 90%;
+    --brand-900: 243 50% 94%;
 
-    --success: 160 84% 45%;
-    --warning: 38 92% 50%;
+    --success: 158 52% 46%;
+    --warning: 38 80% 55%;
     --danger: var(--destructive);
 
     /* ── surfaces, shadows, effects ────────────────────────────────────── */
     --focus-ring: hsl(var(--ring) / 0.35);
-    --shadow-card:
-      0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(215 27% 28% / 0.3),
-      inset 0 1px 0 hsl(215 27% 28% / 0.5);
-    --shadow-lift:
-      0 18px 48px -12px rgba(0, 0, 0, 0.8), 0 8px 32px hsl(243 75% 59% / 0.16),
-      inset 0 1px 0 hsl(215 27% 32% / 0.55);
-    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.4);
-    --shadow-glow-hover: 0 0 60px hsl(var(--primary) / 0.6);
+    /* Shadows separate layers; they are not decoration. */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-lift: 0 10px 24px -18px rgba(0, 0, 0, 0.8);
 
-    /* Resting surface is the card token (8%); hovering steps up to --secondary
-       (12%), which is the brightness change visible in the reference cards. */
-    --glass-bg: hsl(var(--card) / 0.92);
-    --glass-border: hsl(215 27% 24%);
-    --glass-shadow:
-      0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(215 27% 28% / 0.3),
-      inset 0 1px 0 hsl(215 27% 28% / 0.5);
+    --glass-bg: hsl(var(--card) / 0.96);
+    --glass-border: hsl(var(--border));
+    --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 
     --selection-bg: hsl(var(--primary) / 0.45);
     --selection-fg: #ffffff;
@@ -110,13 +106,6 @@
     --scrim: rgba(3, 6, 12, 0.84);
     --scrim-strong: rgba(2, 4, 9, 0.97);
 
-    /* Ambient page wash: indigo at the top, fading into the canvas. */
-    --glow: radial-gradient(60% 80% at 50% 0%, hsl(var(--primary) / 0.18), transparent 70%);
-
-    /* Signature three-stop flow: emerald → royal indigo → electric blue. */
-    --gradient-flow: linear-gradient(to right, #10b981, #4f46e5, #3b82f6);
-    --gradient-accent: linear-gradient(135deg, hsl(243 75% 65%) 0%, #10b981 100%);
-    --grid-line: rgba(79, 70, 229, 0.04);
   }
 
   /* ── Optional light theme ────────────────────────────────────────────── */
@@ -129,7 +118,7 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 243 75% 59%; /* #4F46E5 rich royal indigo */
+    --primary: 243 62% 55%; /* the one accent: calm indigo */
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -139,41 +128,39 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 243 75% 59%;
+    --border: 220 16% 89%;
+    --input: 220 16% 89%;
+    --ring: 243 62% 55%;
 
-    --text-primary: 243 75% 45%;
-    --text-secondary: 222 47% 30%;
-    --text-tertiary: 222 47% 40%;
-    --text-minimal: 222 47% 60%;
+    --text-primary: 243 60% 45%;
+    --text-secondary: 222 30% 28%;
+    --text-tertiary: 222 22% 40%;
+    --text-minimal: 222 18% 46%;
 
-    --primary-strong: 243 75% 55%;
+    --primary-strong: 243 62% 50%;
 
-    --brand-50: 244 73% 96%;
-    --brand-100: 245 76% 93%;
-    --brand-200: 244 76% 88%;
-    --brand-300: 243 75% 81%;
-    --brand-400: 243 75% 55%;
+    --brand-50: 220 20% 96%;
+    --brand-100: 220 18% 93%;
+    --brand-200: 222 16% 87%;
+    --brand-300: 240 40% 78%;
+    --brand-400: 243 62% 52%;
     --brand-500: var(--primary);
     --brand-600: var(--text-primary);
-    --brand-700: 243 75% 42%;
-    --brand-800: 243 75% 34%;
-    --brand-900: 243 75% 26%;
+    --brand-700: 243 60% 40%;
+    --brand-800: 243 58% 32%;
+    --brand-900: 243 55% 25%;
 
-    --success: 160 84% 39%;
-    --warning: 32 95% 44%;
+    --success: 158 55% 34%;
+    --warning: 32 85% 40%;
     --danger: var(--destructive);
 
     --focus-ring: hsl(var(--ring) / 0.28);
-    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
-    --shadow-lift: 0 18px 40px -18px hsl(243 75% 59% / 0.35), 0 2px 6px rgba(0, 0, 0, 0.06);
-    --shadow-glow: 0 0 32px hsl(var(--primary) / 0.28);
-    --shadow-glow-hover: 0 0 48px hsl(var(--primary) / 0.42);
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-lift: 0 10px 24px -20px rgba(15, 23, 42, 0.35);
 
     --glass-bg: #ffffff;
-    --glass-border: hsl(214 32% 86%);
-    --glass-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+    --glass-border: hsl(var(--border));
+    --glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 
     --selection-bg: hsl(var(--primary) / 0.22);
     --selection-fg: hsl(243 75% 25%);
@@ -182,13 +169,6 @@
     --scrim: rgba(15, 23, 42, 0.78);
     --scrim-strong: rgba(15, 23, 42, 0.96);
 
-    --glow: radial-gradient(60% 80% at 50% 0%, hsl(var(--primary) / 0.1), transparent 70%);
-    --gradient-accent: linear-gradient(135deg, hsl(243 75% 59%) 0%, hsl(160 84% 39%) 100%);
-    --grid-line: rgba(79, 70, 229, 0.06);
-    /* Same hue order, one step deeper: emerald at #10B981 is only 2.4:1 on an
-       alabaster page, so display text would disappear. Dark mode keeps the
-       brighter stops, where they read at 7.8:1. */
-    --gradient-flow: linear-gradient(to right, #059669, #4338ca, #2563eb);
   }
 
   html {
@@ -211,8 +191,8 @@
   h6 {
     @apply text-ink;
     font-family: theme("fontFamily.heading");
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    font-weight: 700;
+    letter-spacing: -0.022em;
     text-wrap: balance;
   }
 
@@ -273,51 +253,33 @@
     @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
+  /*
+   * One solid accent button. No glow, no shimmer, no gradient — the colour and
+   * weight are enough to say "this is the action", and a flat button is calmer
+   * when a page has two or three of them.
+   */
   .btn-primary {
-    @apply btn relative overflow-hidden text-white;
+    @apply btn text-white;
     background-color: hsl(var(--primary-strong));
-    box-shadow: var(--shadow-glow);
-  }
-
-  /* 105° white shimmer sweeping across the primary button on hover. */
-  .btn-primary::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 30%,
-      rgba(255, 255, 255, 0.12) 45%,
-      rgba(255, 255, 255, 0.12) 55%,
-      transparent 70%
-    );
-    transform: translateX(-120%);
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-    pointer-events: none;
   }
 
   .btn-primary:hover {
-    background-color: hsl(var(--primary));
-    box-shadow: var(--shadow-glow-hover);
-  }
-
-  .btn-primary:hover::after {
-    transform: translateX(120%);
+    background-color: hsl(var(--primary-strong) / 0.88);
   }
 
   .btn-primary:active {
-    background-color: hsl(var(--primary-strong));
+    background-color: hsl(var(--primary-strong) / 0.96);
   }
 
   .btn-secondary {
     @apply btn border text-ink;
     border-color: hsl(var(--border));
-    background-color: hsl(var(--card) / 0.72);
+    background-color: hsl(var(--card));
   }
 
   .btn-secondary:hover {
-    border-color: hsl(var(--primary) / 0.45);
-    background-color: hsl(var(--primary) / 0.08);
+    border-color: hsl(var(--foreground) / 0.22);
+    background-color: hsl(var(--secondary));
   }
 
   .btn-ghost {
@@ -326,24 +288,18 @@
 
   /* ── Surfaces ────────────────────────────────────────────────────────── */
   /*
-   * Frosted navy glass in dark mode, crisp white card in light mode.
-   * `.glass-panel` adds the real backdrop blur and is used on the few large
-   * surfaces (hero mock, CTA band, cookie notice, tool frame). `.card` is the
-   * same look without the blur, because a grid of thirty blurred cards is a
-   * measurable scroll cost on a phone.
+   * One card surface: a solid raised plane, a hairline border and a 1px shadow.
+   * `.glass-panel` keeps its name (it is used across the tools) but is no longer
+   * frosted — blur over a nearly opaque background bought nothing except paint
+   * cost on phones.
    */
   .glass-panel,
   .card {
     position: relative;
-    border-radius: 1rem;
+    border-radius: 0.875rem;
     border: 1px solid var(--glass-border);
     background: var(--glass-bg);
     box-shadow: var(--glass-shadow);
-  }
-
-  .glass-panel {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
   }
 
   .card {
@@ -359,33 +315,60 @@
     -webkit-backdrop-filter: none;
   }
 
-  /* ── Pills: translucent fill + border + saturated label ──────────────── */
+  /*
+   * Pills are neutral by default. The coloured variants keep their names so the
+   * markup did not have to change, but they now carry a 5px dot of the state
+   * colour instead of a saturated fill — a page with six badges stays quiet,
+   * and the colour still means something.
+   */
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-0.5 text-[11.5px] font-semibold text-body;
   }
 
-  .pill-indigo {
-    @apply pill border-primary/25 bg-primary/10 text-primary;
-  }
-
-  .pill-emerald {
-    @apply pill border-emerald-500/30 bg-emerald-500/15 text-emerald-500;
-  }
-
-  .pill-amber {
-    @apply pill border-amber-500/30 bg-amber-500/15 text-amber-500;
-  }
-
-  .pill-sky {
-    @apply pill border-sky-500/25 bg-sky-500/[0.12] text-sky-500;
-  }
-
+  .pill-indigo,
+  .pill-emerald,
+  .pill-amber,
+  .pill-sky,
   .pill-rose {
-    @apply pill border-rose-500/40 bg-rose-500/10 text-rose-500;
+    @apply pill;
   }
 
+  .pill-indigo::before,
+  .pill-emerald::before,
+  .pill-amber::before,
+  .pill-sky::before,
+  .pill-rose::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .pill-indigo::before {
+    background: hsl(var(--primary));
+  }
+
+  .pill-emerald::before {
+    background: hsl(var(--success));
+  }
+
+  .pill-amber::before {
+    background: hsl(var(--warning));
+  }
+
+  .pill-sky::before {
+    background: hsl(var(--primary) / 0.7);
+  }
+
+  .pill-rose::before {
+    background: hsl(var(--danger));
+  }
+
+  /* Section label above a heading: a quiet uppercase line, no tinted capsule. */
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600;
+    @apply inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-subtle;
   }
 
   .link {
@@ -470,194 +453,48 @@
 }
 
 @layer utilities {
-  /* Ambient wash behind the hero and section headers. */
-  .bg-glow {
-    background-image: var(--glow);
-  }
-
-  /* ── Signature gradients ─────────────────────────────────────────────── */
-  .text-gradient-flow,
-  .bg-gradient-flow {
-    background-image: var(--gradient-flow);
-    background-size: 200% auto;
-    animation: gradient-flow 4s linear infinite;
-  }
-
-  .text-gradient-flow {
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    /* Transparent fill hides the selection, so keep a visible highlight. */
-    -webkit-text-stroke: 0;
-  }
-
-  .text-gradient-flow::selection {
-    -webkit-text-fill-color: hsl(var(--foreground));
-    color: hsl(var(--foreground));
-    background: hsl(var(--primary) / 0.35);
-  }
-
-  .text-gradient {
-    background-image: var(--gradient-accent);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-  }
-
-  /* Flagship hero CTA: flowing gradient, white label, deep glow. */
-  .btn-gradient-flow {
-    @apply btn relative overflow-hidden font-bold text-white;
-    isolation: isolate;
-    box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
-  }
-
-  .btn-gradient-flow::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: var(--gradient-flow);
-    background-size: 200% auto;
-    animation: gradient-flow 4s linear infinite;
-    z-index: -1;
-  }
-
-  /* Deepen the gradient slightly under the label so white text keeps its
-     contrast (emerald is far too light for white on its own). */
-  .btn-gradient-flow::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, rgba(7, 11, 19, 0.3), rgba(7, 11, 19, 0.18));
-    pointer-events: none;
-  }
-
-  .btn-gradient-flow > * {
-    position: relative;
-    z-index: 1;
-  }
-
-  .btn-gradient-flow:hover {
-    box-shadow: 0 0 60px hsl(var(--primary) / 0.6);
-    transform: translateY(-1px);
-  }
-
-  /* ── Hero background: indigo grid + floating ambient orbs ────────────── */
-  .grid-bg {
-    background-image:
-      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
-    /* Fade the grid out so it never competes with the headline. */
-    mask-image: radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%);
-    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 78%);
-  }
-
-  .orb {
-    position: absolute;
-    border-radius: 9999px;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    filter: blur(120px);
-  }
-
-  .orb-1 {
-    width: 800px;
-    height: 800px;
-    background: hsl(var(--primary) / 0.2);
-    opacity: 0.6;
-    animation: orb-drift 22s ease-in-out infinite alternate;
-  }
-
-  .orb-2 {
-    width: 600px;
-    height: 600px;
-    background: rgba(99, 102, 241, 0.15);
-    filter: blur(100px);
-    opacity: 0.5;
-    animation: orb-drift 28s ease-in-out infinite alternate-reverse;
-  }
-
-  /* Screen blending bleaches a light page; light mode uses a soft tint instead. */
-  html.light .orb {
-    mix-blend-mode: normal;
-    opacity: 0.5;
-    filter: blur(90px);
-  }
-
-  html.light .orb-1 {
-    background: hsl(var(--primary) / 0.12);
-  }
-
-  html.light .orb-2 {
-    background: rgba(16, 185, 129, 0.1);
-  }
-
   /*
    * ── Interactive card ──────────────────────────────────────────────────────
-   * Hovering (or tabbing into) a card makes it pop: it lifts 6px and scales
-   * slightly, the surface brightens, the border turns indigo with a soft outer
-   * ring, and its title + icon light up. `:focus-within` gives keyboard users
-   * the same feedback as a mouse.
+   * Hovering (or tabbing into) a card lifts it by a pixel and firms the border.
+   * No scale, no coloured halo: with 48 cards on a page, restraint is the
+   * difference between "responsive" and "jumpy".
    */
   .card-hover {
     transition:
-      transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
-      border-color 0.25s ease,
-      background-color 0.25s ease,
-      box-shadow 0.25s ease;
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      background-color 0.2s ease;
   }
 
   .card-hover:hover,
   .card-hover:focus-within {
-    transform: translateY(-6px) scale(1.012);
-    border-color: hsl(var(--primary) / 0.45);
-    background-color: hsl(var(--secondary) / 0.96);
-    box-shadow:
-      0 0 0 1px hsl(var(--primary) / 0.25),
-      0 24px 60px -28px hsl(var(--primary) / 0.55),
-      0 10px 24px -18px rgba(0, 0, 0, 0.85),
-      inset 0 1px 0 hsl(215 27% 34% / 0.55);
+    transform: translateY(-1px);
+    border-color: hsl(var(--foreground) / 0.2);
+    background-color: hsl(var(--secondary));
   }
 
-  html.light .card-hover:hover,
-  html.light .card-hover:focus-within {
-    background-color: #ffffff;
-    box-shadow:
-      0 0 0 1px hsl(var(--primary) / 0.2),
-      0 18px 40px -22px hsl(var(--primary) / 0.45),
-      0 2px 6px rgba(0, 0, 0, 0.06);
-  }
-
-  /* The title of the hovered card takes the brand indigo, like the reference. */
+  /* The title gains weight rather than colour. */
   .card-hover .card-title {
     transition: color 0.2s ease;
   }
 
   .card-hover:hover .card-title,
   .card-hover:focus-within .card-title {
-    color: hsl(var(--brand-600));
+    color: hsl(var(--brand-700));
   }
 
-  /* Its icon tile brightens and grows a touch. */
+  /* Its icon tile stays exactly where it is. */
   .card-hover .card-icon {
-    transition:
-      background-color 0.25s ease,
-      border-color 0.25s ease,
-      color 0.25s ease,
-      transform 0.25s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
   }
 
   .card-hover:hover .card-icon,
   .card-hover:focus-within .card-icon {
-    border-color: hsl(var(--primary) / 0.5);
-    background-color: hsl(var(--primary) / 0.18);
-    color: hsl(var(--brand-700));
-    transform: scale(1.06);
+    border-color: hsl(var(--foreground) / 0.22);
+    background-color: hsl(var(--raised));
   }
 
-  /* Lift and scale are decoration; drop them for reduced-motion users. */
+  /* Lift is decoration; drop it for reduced-motion users. */
   @media (prefers-reduced-motion: reduce) {
     .card-hover:hover,
     .card-hover:focus-within {
@@ -679,40 +516,6 @@
 
   .bg-scrim-strong {
     background-color: var(--scrim-strong);
-  }
-}
-
-/* Windows high-contrast / forced colours: gradient text would vanish, so fall
-   back to the plain foreground colour. */
-@media (forced-colors: active) {
-  .text-gradient-flow,
-  .text-gradient {
-    -webkit-text-fill-color: currentColor;
-    color: CanvasText;
-    background-image: none;
-  }
-
-  .btn-gradient-flow::before,
-  .btn-gradient-flow::after {
-    display: none;
-  }
-}
-
-@keyframes gradient-flow {
-  from {
-    background-position: 0% center;
-  }
-  to {
-    background-position: 200% center;
-  }
-}
-
-@keyframes orb-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-4%, 6%, 0) scale(1.08);
   }
 }
 

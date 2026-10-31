@@ -71,7 +71,7 @@ export function ToolsExplorer({ tools }: { tools: Tool[] }) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by task: compress, jpg to png, heic, iphone…"
-              className="h-11 w-full rounded-xl border border-line bg-raised pl-9 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15"
+              className="h-11 w-full rounded-xl border border-line bg-raised pl-9 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-2 focus:ring-primary/20"
             />
             {query && (
               <button

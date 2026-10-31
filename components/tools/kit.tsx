@@ -32,7 +32,7 @@ export function ToolFrame({
     <section
       aria-labelledby={labelledBy}
       className={cn(
-        "glass-panel rounded-[22px] p-4 shadow-card sm:p-6",
+        "glass-panel rounded-card p-4 sm:p-6",
         className,
       )}
     >
@@ -180,17 +180,17 @@ export function Dropzone({
           if (!disabled) handleFiles(event.dataTransfer?.files ?? null);
         }}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 text-center transition-colors duration-150",
+          "group relative flex cursor-pointer flex-col items-center justify-center rounded-card border border-dashed px-4 text-center transition-colors duration-150",
           compact ? "py-6" : "py-10 sm:py-12",
           dragging
-            ? "border-brand-500 bg-brand-50"
-            : "border-line bg-surface hover:border-primary/50 hover:bg-primary/[0.07]",
+            ? "border-primary/60 bg-primary/[0.06]"
+            : "border-line bg-surface hover:border-foreground/25 hover:bg-raised",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
         <span
           className={cn(
-            "grid place-items-center rounded-2xl bg-raised text-brand-600 shadow-sm ring-1 ring-line transition-transform group-hover:scale-[1.03]",
+            "grid place-items-center rounded-xl border border-line bg-raised text-body",
             compact ? "h-10 w-10" : "h-14 w-14",
           )}
         >
@@ -245,13 +245,13 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
     <div className="mt-4" aria-live="polite">
       <div className="flex items-center justify-between text-[13px] font-medium text-body">
         <span className="inline-flex items-center gap-2">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-500" aria-hidden="true" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-subtle" aria-hidden="true" />
           {label}
         </span>
         <span className="tabular-nums text-subtle">{percent}%</span>
       </div>
       <div
-        className="mt-2 h-2 overflow-hidden rounded-full bg-brand-50"
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -259,7 +259,7 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
         aria-label={label}
       >
         <div
-          className="h-full rounded-full bg-brand-500 transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -270,7 +270,7 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
 /* ─────────────────────────────── Alerts ────────────────────────────────── */
 
 const toneStyles = {
-  info: { wrap: "border-brand-100 bg-brand-50 text-brand-700", icon: Info },
+  info: { wrap: "border-line bg-surface text-body", icon: Info },
   success: { wrap: "border-success/20 bg-success/5 text-success", icon: CheckCircle2 },
   warning: { wrap: "border-warning/25 bg-warning/5 text-warning", icon: AlertCircle },
   danger: { wrap: "border-danger/25 bg-danger/5 text-danger", icon: AlertCircle },
@@ -466,10 +466,10 @@ export function Field({
 }
 
 export const inputClass =
-  "h-11 w-full rounded-xl border border-line bg-raised px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
+  "h-11 w-full rounded-xl border border-line bg-raised px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-2 focus:ring-primary/20";
 
 export const selectClass =
-  "h-11 w-full appearance-none rounded-xl border border-line bg-raised bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748B%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat px-3 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15";
+  "h-11 w-full appearance-none rounded-xl border border-line bg-raised bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748B%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat px-3 pr-9 text-[14px] text-ink shadow-inset outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-primary/20";
 
 export function Segmented<T extends string>({
   options,
@@ -499,8 +499,8 @@ export function Segmented<T extends string>({
               className={cn(
                 "flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 transition-colors",
                 active
-                  ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
-                  : "border-line bg-raised hover:border-primary/40",
+                  ? "border-primary/60 bg-primary/[0.06]"
+                  : "border-line bg-raised hover:border-foreground/25",
               )}
             >
               <span className="flex items-center gap-2">
@@ -516,7 +516,7 @@ export function Segmented<T extends string>({
                   aria-hidden="true"
                   className={cn(
                     "grid h-4 w-4 place-items-center rounded-full border",
-                    active ? "border-brand-500 bg-brand-500" : "border-line bg-raised",
+                    active ? "border-primary bg-primary" : "border-line bg-raised",
                   )}
                 >
                   {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
@@ -536,7 +536,7 @@ export function Segmented<T extends string>({
 export function PendingBar({ label }: { label: string }) {
   return (
     <p className="mt-2 inline-flex items-center gap-2 text-[12.5px] text-subtle">
-      <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-500" aria-hidden="true" />
+      <Loader2 className="h-3.5 w-3.5 animate-spin text-subtle" aria-hidden="true" />
       {label}
     </p>
   );

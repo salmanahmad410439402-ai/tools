@@ -123,22 +123,16 @@ export default function HomePage() {
       <StructuredData data={[websiteJsonLd(), organizationJsonLd(), faqJsonLd(HOME_FAQ)]} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-line bg-page">
-        {/* Ambient layer: indigo grid, two drifting orbs, and a soft top wash. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-glow" />
-        <div aria-hidden="true" className="grid-bg pointer-events-none absolute inset-0" />
-        <div aria-hidden="true" className="orb orb-1 -left-40 -top-64" />
-        <div aria-hidden="true" className="orb orb-2 -right-32 top-16" />
-
-        <div className="container-page relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+      <section className="border-b border-line bg-page">
+        <div className="container-page grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
           <div>
             <p className="eyebrow">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               No upload · No sign-up · No watermark
             </p>
-            <h1 className="mt-4 max-w-2xl text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-ink sm:text-[46px] lg:text-[52px]">
+            <h1 className="mt-4 max-w-2xl text-[34px] font-bold leading-[1.1] tracking-[-0.024em] text-ink sm:text-[44px] lg:text-[50px]">
               Free PDF &amp; image tools that run{" "}
-              <span className="text-gradient-flow whitespace-nowrap">privately</span> in your browser
+              <span className="text-brand-600">privately</span> in your browser
             </h1>
             <p className="mt-5 max-w-xl text-[16.5px] leading-relaxed text-body sm:text-[17.5px]">
               Compress, merge and convert PDFs, and change image formats or sizes — all on your own device.
@@ -147,11 +141,9 @@ export default function HomePage() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href="/compress-pdf/" className="btn-gradient-flow h-12 px-6 text-[15px]">
-                <span className="inline-flex items-center gap-2">
-                  Compress a PDF free
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </span>
+              <Link href="/compress-pdf/" className="btn-primary h-12 px-6 text-[15px]">
+                Compress a PDF free
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <Link href="/tools/" className="btn-secondary h-12 px-6 text-[15px]">
                 Browse all {toolCount} tools
@@ -172,16 +164,16 @@ export default function HomePage() {
 
           {/* CSS-only product mock: no image request, so the LCP stays fast. */}
           <div className="relative">
-            <div className="glass-panel rounded-[22px] p-4 sm:p-5">
+            <div className="glass-panel p-4 sm:p-5">
               <div className="flex items-center justify-between border-b border-line pb-3">
                 <p className="text-[13px] font-bold text-ink">Compress PDF</p>
-                <span className="pill-emerald uppercase tracking-wide">In browser</span>
+                <span className="pill uppercase tracking-wide">In browser</span>
               </div>
-              <div className="mt-3 rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-6 text-center">
+              <div className="mt-3 rounded-xl border border-dashed border-line bg-surface px-4 py-6 text-center">
                 <p className="text-[13.5px] font-semibold text-ink">report-2026.pdf</p>
                 <p className="mt-1 text-[11.5px] text-subtle">3 pages · 12.4 MB</p>
-                <div className="mx-auto mt-3 h-1.5 w-32 overflow-hidden rounded-full bg-raised">
-                  <div className="h-full w-4/5 rounded-full bg-brand-500" />
+                <div className="mx-auto mt-3 h-1 w-32 overflow-hidden rounded-full bg-raised">
+                  <div className="h-full w-4/5 rounded-full bg-primary/70" />
                 </div>
               </div>
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -212,7 +204,7 @@ export default function HomePage() {
         <div className="container-page grid grid-cols-2 divide-line py-6 sm:grid-cols-4 sm:divide-x">
           {FACTS.map((fact) => (
             <div key={fact.label} className="px-2 py-3 text-center sm:px-4">
-              <p className="text-[26px] font-extrabold tracking-tight text-ink">{fact.value}</p>
+              <p className="text-[26px] font-bold tracking-tight text-ink">{fact.value}</p>
               <p className="text-[12.5px] font-semibold text-body">{fact.label}</p>
               <p className="mt-0.5 text-[11.5px] text-subtle">{fact.detail}</p>
             </div>
@@ -224,7 +216,7 @@ export default function HomePage() {
       <section className="container-page py-14 sm:py-16" aria-labelledby="which-tool">
         <div className="max-w-2xl">
           <p className="eyebrow">Start here</p>
-          <h2 id="which-tool" className="mt-3 text-[28px] font-extrabold tracking-[-0.02em] text-ink sm:text-[34px]">
+          <h2 id="which-tool" className="mt-3 text-[28px] font-bold tracking-[-0.02em] text-ink sm:text-[34px]">
             Which tool do you need?
           </h2>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">
@@ -242,10 +234,10 @@ export default function HomePage() {
         <div className="mt-6">
           <Link
             href="/tools/"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-primary/5"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors hover:border-foreground/25 hover:bg-raised"
           >
             See all {toolCount} tools
-            <ArrowRight className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <ArrowRight className="h-4 w-4 text-subtle" aria-hidden="true" />
           </Link>
         </div>
 
@@ -257,9 +249,9 @@ export default function HomePage() {
               <Link
                 key={category.slug}
                 href={`/${category.slug}/`}
-                className="group flex items-center gap-3 rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                className="group flex items-center gap-3 rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-foreground/25 hover:bg-raised"
               >
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-surface text-brand-600 ring-1 ring-line">
+                <span className="grid h-9 w-9 place-items-center rounded-lg border border-line bg-surface text-body">
                   <ToolIcon name={category.icon} className="h-4 w-4" />
                 </span>
                 <span className="min-w-0">
@@ -284,7 +276,7 @@ export default function HomePage() {
         <div className="container-page py-14 sm:py-16">
           <div className="max-w-2xl">
             <p className="eyebrow">How it works</p>
-            <h2 id="how-it-works" className="mt-3 text-[28px] font-extrabold tracking-[-0.02em] text-ink sm:text-[34px]">
+            <h2 id="how-it-works" className="mt-3 text-[28px] font-bold tracking-[-0.02em] text-ink sm:text-[34px]">
               Four steps, usually under 30 seconds
             </h2>
             <p className="mt-3 text-[15.5px] leading-relaxed text-body">
@@ -295,7 +287,7 @@ export default function HomePage() {
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
               <li key={step.title} className="glass-panel card-hover p-5">
-                <span className="card-icon inline-grid h-9 w-9 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-[14px] font-bold text-brand-600">
+                <span className="card-icon inline-grid h-9 w-9 place-items-center rounded-lg border border-line bg-surface text-[14px] font-bold text-body">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="card-title mt-3 text-[15.5px] font-bold text-ink">{step.title}</h3>
@@ -311,7 +303,7 @@ export default function HomePage() {
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <p className="eyebrow">Why these tools exist</p>
-            <h2 id="why-here" className="mt-3 text-[28px] font-extrabold tracking-[-0.02em] text-ink sm:text-[34px]">
+            <h2 id="why-here" className="mt-3 text-[28px] font-bold tracking-[-0.02em] text-ink sm:text-[34px]">
               Built the way file tools should be
             </h2>
             <p className="mt-3 text-[15.5px] leading-relaxed text-body">
@@ -332,7 +324,7 @@ export default function HomePage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {HIGHLIGHTS.map((highlight) => (
               <div key={highlight.title} className="glass-panel card-hover p-5">
-                <span className="card-icon grid h-9 w-9 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-brand-600">
+                <span className="card-icon grid h-9 w-9 place-items-center rounded-lg border border-line bg-surface text-body">
                   <highlight.icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <h3 className="card-title mt-3 text-[15px] font-bold text-ink">{highlight.title}</h3>
@@ -350,7 +342,7 @@ export default function HomePage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-xl">
             <p className="eyebrow">Popular conversions</p>
-            <h2 id="popular-conversions" className="mt-3 text-[28px] font-extrabold tracking-[-0.02em] text-ink sm:text-[34px]">
+            <h2 id="popular-conversions" className="mt-3 text-[28px] font-bold tracking-[-0.02em] text-ink sm:text-[34px]">
               The jobs people actually come here for
             </h2>
           </div>
@@ -367,7 +359,7 @@ export default function HomePage() {
             >
               <p className="card-title flex items-center gap-1.5 text-[14.5px] font-bold text-ink">
                 {conversion.from}
-                <ArrowRight className="h-3.5 w-3.5 text-brand-500" aria-hidden="true" />
+                <ArrowRight className="h-3.5 w-3.5 text-subtle" aria-hidden="true" />
                 {conversion.to}
               </p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-subtle">{conversion.note}</p>
@@ -386,7 +378,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-xl">
               <p className="eyebrow">Latest guides</p>
-              <h2 id="latest-guides" className="mt-3 text-[28px] font-extrabold tracking-[-0.02em] text-ink sm:text-[34px]">
+              <h2 id="latest-guides" className="mt-3 text-[28px] font-bold tracking-[-0.02em] text-ink sm:text-[34px]">
                 Practical writing about files
               </h2>
             </div>
@@ -417,14 +409,14 @@ export default function HomePage() {
         <div className="container-page grid gap-10 py-14 sm:py-16 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <p className="eyebrow">New in this release</p>
-            <h2 className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
+            <h2 className="mt-3 text-[24px] font-bold tracking-[-0.02em] text-ink sm:text-[28px]">
               Recently added tools
             </h2>
             <ul className="mt-4 divide-y divide-line overflow-hidden glass-panel">
               {newestTools.map((tool) => (
                 <li key={tool.slug}>
                   <Link href={`/${tool.slug}/`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-primary/[0.07]">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-surface text-body ring-1 ring-brand-100">
                       <ToolIcon name={tool.icon} className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -443,7 +435,7 @@ export default function HomePage() {
 
           <div>
             <p className="eyebrow">Quick answers</p>
-            <h2 id="faq-home" className="mt-3 text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
+            <h2 id="faq-home" className="mt-3 text-[24px] font-bold tracking-[-0.02em] text-ink sm:text-[28px]">
               Questions people ask first
             </h2>
             <div className="mt-4 divide-y divide-line overflow-hidden glass-panel">
@@ -467,18 +459,17 @@ export default function HomePage() {
 
       {/* ── Closing links ────────────────────────────────────────────────── */}
       <section className="container-page py-14">
-        <div className="glass-panel relative overflow-hidden rounded-[22px] p-6 sm:p-10">
-          <div aria-hidden="true" className="orb orb-2 -right-40 -top-40 opacity-40" />
-          <div className="relative max-w-2xl">
-            <h2 className="text-[24px] font-extrabold tracking-[-0.02em] text-ink sm:text-[28px]">
-              Pick a tool and <span className="text-gradient-flow">finish the job</span>
+        <div className="glass-panel p-6 sm:p-10">
+          <div className="max-w-2xl">
+            <h2 className="text-[24px] font-bold tracking-[-0.02em] text-ink sm:text-[28px]">
+              Pick a tool and finish the job
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed text-body">
               No account, no upload, no watermark. If something does not work on your file, tell us — the
               contact form reaches a real inbox.
             </p>
           </div>
-          <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { href: "/tools/", label: "All tools", detail: "Search and filter everything" },
               { href: "/pdf-tools/", label: "PDF tools", detail: "Compress, merge, split, edit" },
@@ -488,11 +479,11 @@ export default function HomePage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-primary/50"
+                className="group rounded-xl border border-line bg-raised px-4 py-3 transition-colors hover:border-foreground/20"
               >
                 <span className="flex items-center justify-between text-[14px] font-semibold text-ink">
                   {link.label}
-                  <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  <ArrowRight className="h-3.5 w-3.5 text-subtle transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                 </span>
                 <span className="mt-0.5 block text-[12px] text-subtle">{link.detail}</span>
               </Link>

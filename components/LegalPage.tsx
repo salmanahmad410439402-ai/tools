@@ -23,7 +23,7 @@ export function LegalPage({
       <div className="container-page pb-16 pt-6 sm:pt-8">
         <Breadcrumbs crumbs={crumbs} />
         <header className="max-w-prose">
-          <h1 className="text-[30px] font-extrabold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[38px]">{title}</h1>
+          <h1 className="text-[30px] font-bold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[38px]">{title}</h1>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">{intro}</p>
           <p className="mt-3 text-[12.5px] font-medium text-subtle">
             Last updated:{" "}

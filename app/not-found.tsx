@@ -14,10 +14,10 @@ export default function NotFound() {
   return (
     <div className="container-page py-16 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-body">
           <FileQuestion className="h-7 w-7" aria-hidden="true" />
         </span>
-        <h1 className="mt-5 text-[32px] font-extrabold tracking-tight text-ink sm:text-[40px]">
+        <h1 className="mt-5 text-[32px] font-bold tracking-tight text-ink sm:text-[40px]">
           This page does not exist
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-[15.5px] leading-relaxed text-body">
@@ -34,7 +34,7 @@ export default function NotFound() {
             >
               <span className="flex items-center justify-between text-[14px] font-semibold text-ink">
                 {tool.name}
-                <ArrowRight className="h-3.5 w-3.5 text-brand-500 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                <ArrowRight className="h-3.5 w-3.5 text-subtle transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>
               <span className="mt-0.5 block text-[12px] text-subtle">{tool.tagline}</span>
             </Link>

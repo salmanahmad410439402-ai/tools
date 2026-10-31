@@ -276,44 +276,48 @@ Two failure modes are handled explicitly:
   limit, so output is clamped to 40 MP on desktop and 16 MP on iOS (`clampToCanvasLimits()`), and
   the result note reports the scaled dimensions.
 
-## Design system (dark-first midnight navy)
+## Design system (calm, dark-first ink)
 
-`app/globals.css` is the single source of truth. `:root` is the **default** theme — deep midnight
-navy canvas (`#070B13`), ice-white type, frosted navy panels; `html.light` overrides the same
-variables with the cool-alabaster theme. `components/ThemeToggle.tsx` holds the button, the storage
-key (`filecraft-theme`) and the inline head script that picks the theme before first paint (stored
+`app/globals.css` is the single source of truth. `:root` is the **default** theme — a deep neutral
+ink canvas, quiet raised surfaces and one accent; `html.light` overrides the same variables with the
+cool-alabaster theme. `components/ThemeToggle.tsx` holds the button, the storage key
+(`filecraft-theme`) and the inline head script that picks the theme before first paint (stored
 choice, else an explicit light system preference; dark otherwise, so the site is complete with no
 JavaScript at all).
 
-Colour variables are shadcn-style HSL triplets (`222 47% 5%`) and every Tailwind token wraps them
-as `hsl(var(--token) / <alpha-value>)`, which is what makes `bg-primary/10`, `border-primary/25` and
-`text-emerald-500` work as translucent tints:
+The system is deliberately restrained. There is **no gradient anywhere** on the site or in the
+tools, no glowing shadows, no ambient orbs, no grid backdrop and no per-category colour. Colour is
+information: indigo means "you can act", green "this worked", amber "read this", red "this failed",
+and everything else is ink, surface and line.
+
+Colour variables are shadcn-style HSL triplets (`222 26% 7%`) and every Tailwind token wraps them
+as `hsl(var(--token) / <alpha-value>)`, which is what makes `bg-primary/10` and `border-line` work
+as translucent tints:
 
 | Purpose | Tokens |
 | --- | --- |
-| Surfaces | `background`, `card`, `popover`, `secondary`, `muted` |
+| Surfaces | `background`, `card`, `secondary`, `muted` |
 | Text | `foreground`, `text-secondary`, `text-tertiary`, `text-minimal` (via `ink` / `body` / `subtle` / `minimal`) |
-| Brand | `primary` `#645CFF` dark / `#4F46E5` light, `accent` mint `#12D393` |
+| Accent | `primary` (indigo) — actions, links, selection, focus |
 | Feedback | `destructive`, `success`, `warning` |
-| Chrome | `border`, `input`, `ring`, `--radius: 1rem` |
+| Chrome | `border`, `input`, `ring`, `--radius: 0.875rem` |
 
 The older names the components use (`page`, `raised`, `surface`, `line`, `ink`, `body`, `subtle`,
 `brand-50…900`) are aliases of those tokens, so ~60 files did not have to change and nothing can
-drift.
+drift. `brand-50/100/200` are barely tinted surface steps, so icon tiles and chips read as one calm
+plane instead of a rainbow.
 
-**Utilities** (all in `globals.css`): `.text-gradient-flow` and `.bg-gradient-flow` (emerald →
-indigo → blue, 4s linear loop), `.text-gradient` (2-stop 135°), `.glass-panel` (frosted, blurred),
-`.card` (glass look without the blur — a grid of blurred cards is a scroll cost on phones),
-`.grid-bg` (40px indigo grid with a radial fade), `.orb` / `.orb-1` / `.orb-2` (drifting blurred
-radials), `.card-hover` (4px lift + indigo border + coloured shadow) and the translucent pill set
-`.pill-indigo` / `.pill-emerald` / `.pill-amber` / `.pill-sky` / `.pill-rose`.
+**Utilities** (all in `globals.css`): `.card` / `.glass-panel` (one solid raised surface with a
+hairline border and a 1px shadow — the class name survives from the earlier glass look, the frosted
+blur does not), `.card-hover` (1px lift, border firms, no scale or halo), `.eyebrow` (quiet
+uppercase label), and `.pill` plus `.pill-indigo/emerald/amber/sky/rose`, which are all neutral
+capsules carrying a 5px dot of the state colour rather than a saturated fill.
 
-**Two deliberate deviations, both for legibility:** filled buttons use `--primary-strong` (a
-slightly deeper indigo) so white labels stay above 4.5:1, and the light theme deepens the flow
-gradient's emerald stop (`#059669`), because `#10B981` is only 2.4:1 on alabaster. Gradient text
-also falls back to `currentColor` under `forced-colors`.
+**Two deliberate decisions:** filled buttons use `--primary-strong`, a slightly deeper indigo, so
+white labels stay above 4.5:1; and the primary button is flat — no glow, no shimmer sweep — because
+a page can carry three of them.
 
-**Type:** Outfit (headings, 800, tracking `-0.03em`), Inter (body/UI), JetBrains Mono (counts,
+**Type:** Outfit (headings, 700, tracking `-0.022em`), Inter (body/UI), JetBrains Mono (counts,
 code, `kbd`, file sizes), all self-hosted through `@fontsource-variable/*`.
 
 ## Tests and what they do not cover

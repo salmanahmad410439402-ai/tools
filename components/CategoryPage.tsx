@@ -48,7 +48,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
             <ToolIcon name={category.icon} className="h-3.5 w-3.5" />
             {category.name}
           </p>
-          <h1 className="mt-3 text-[30px] font-extrabold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
+          <h1 className="mt-3 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
             {category.heading}
           </h1>
           <div className="mt-3 space-y-2.5 text-[15.5px] leading-relaxed text-body">
@@ -119,7 +119,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
                   <Link
                     key={slug}
                     href={`/${slug}/`}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body transition-colors hover:border-primary/40 hover:text-brand-600"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-raised px-3 text-[13.5px] font-medium text-body transition-colors hover:border-foreground/25 hover:text-ink"
                   >
                     <ToolIcon name={other.icon} className="h-4 w-4" />
                     {other.name}
@@ -129,7 +129,7 @@ export function CategoryPage({ category, intro, faqs }: Props) {
               })}
             <Link
               href="/tools/"
-              className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 text-[13.5px] font-semibold text-brand-700"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-line bg-surface px-3 text-[13.5px] font-semibold text-ink transition-colors hover:border-foreground/25"
             >
               Browse all {SITE_NAME} tools
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />

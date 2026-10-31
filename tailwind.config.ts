@@ -116,12 +116,12 @@ const config: Config = {
         prose: "760px",
       },
       borderRadius: {
-        /* --radius is 1rem: cards use rounded-2xl per the design system. */
-        card: "1rem",
+        /* Matches --radius: one card radius everywhere, 14px. */
+        card: "0.875rem",
       },
       boxShadow: {
-        card: "rgb(var(--shadow-card) / <alpha-value>)",
-        lift: "rgb(var(--shadow-lift) / <alpha-value>)",
+        card: "var(--shadow-card)",
+        lift: "var(--shadow-lift)",
         focus: "0 0 0 4px var(--focus-ring)",
         inset: "inset 0 1px 2px rgba(15, 23, 42, 0.06)",
       },
@@ -129,9 +129,6 @@ const config: Config = {
         "fade-up": {
           from: { opacity: "0", transform: "translateY(6px)" },
           to: { opacity: "1", transform: "translateY(0)" },
-        },
-        shimmer: {
-          "100%": { transform: "translateX(100%)" },
         },
       },
       animation: {

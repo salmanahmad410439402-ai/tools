@@ -40,8 +40,8 @@ export default function ToolsPage() {
         <Breadcrumbs crumbs={crumbs} />
 
         <header className="max-w-3xl">
-          <h1 className="text-[30px] font-extrabold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
-            All tools — search by the <span className="text-gradient-flow">job you need done</span>
+          <h1 className="text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
+            All tools — search by the <span className="text-brand-600">job you need done</span>
           </h1>
           <p className="mt-3 text-[15.5px] leading-relaxed text-body">
             {tools.length} tools are live today, split across four categories. Every one runs inside your

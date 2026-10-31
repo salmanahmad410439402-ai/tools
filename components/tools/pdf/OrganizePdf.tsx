@@ -138,7 +138,7 @@ export function OrganizePdf() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
                 <FileText className="h-4 w-4" aria-hidden="true" />
               </span>
               <div className="min-w-0">
