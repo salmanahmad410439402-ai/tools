@@ -504,7 +504,9 @@ export function ElementView({
       <div {...interaction} style={style} className={outline}>
         {element.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={element.imageUrl} alt="" className="h-full w-full object-fill" draggable={false} />
+          // `object-contain` shows the picture at its own proportions inside the
+          // frame, exactly like the exported PDF — never stretched to fill it.
+          <img src={element.imageUrl} alt="" className="h-full w-full object-contain" draggable={false} />
         ) : (
           <div className="grid h-full w-full place-items-center bg-surface text-[10px] text-subtle">image</div>
         )}

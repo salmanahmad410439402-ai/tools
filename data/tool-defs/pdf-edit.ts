@@ -462,7 +462,7 @@ export const pdfEditTools: Tool[] = [
       },
       {
         title: "Drawn the way a design app draws",
-        text: "Hold Shift while dragging for a perfect square or circle, or press Make it a square / circle afterwards. A selection frame follows the object, including when it is rotated, so the handles always sit on its real edges and resizing moves the edge you grabbed. Images arrive at their real proportions and keep them while you drag a corner — hold Alt only if you deliberately want to stretch one.",
+        text: "Hold Shift while dragging for a perfect square or circle, or press Make it a square / circle afterwards. A selection frame follows the object, including when it is rotated, so the handles always sit on its real edges and resizing moves the edge you grabbed. Images are read from the file header, placed at their real pixel proportions, and always fitted inside their frame on export, so a photo can never come out squashed or stretched.",
       },
       {
         title: "A real colour picker",
@@ -522,7 +522,7 @@ export const pdfEditTools: Tool[] = [
       },
       {
         title: "Images must be PNG or JPEG",
-        text: "SVG and HEIC are not embedded by the PDF writer. Convert them first with the image converter; the placement box keeps the aspect ratio you give it, so set the box roughly square before inserting a logo.",
+        text: "SVG and HEIC are not embedded by the PDF writer. Convert them first with the image converter. PNG and JPEG are placed at their own proportions and fitted inside their frame on export, so a logo or a photo cannot come out stretched — the frame only decides where it sits and how large it may be.",
       },
     ],
     tips: [

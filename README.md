@@ -509,8 +509,9 @@ in Step 2, because they belong in the same PDF menu.
   radius on rectangles (0–120 pt, all corners at once or each corner on its own, plus a live corner
   handle to drag on the page), corner rounding on polygons and stars, 3–16 sides on polygons, and
   3–16 points with an adjustable inner radius on stars. Placed images keep their own aspect ratio —
-  a photo is never stretched into a default box — and keep it while a corner is dragged (Alt frees
-  it deliberately). Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
+  a photo is never stretched into a default box — and stay at that ratio when a corner is dragged,
+  because the export places the picture *inside* its frame (like `object-fit: contain`) rather
+  than stretching it to fill the frame. Shift draws a perfect square or circle, "Make it a square/circle" snaps a selected
   shape, and every object rotates and resizes about its own centre — the on-screen frame and the
   exported PDF agree. Text is typed directly on the page in a box that grows with the
   words — a new box starts with "Lorem ipsum" selected, so the first keystroke replaces it — and is
@@ -657,7 +658,9 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    resize a drawing by its corner handle. Draw a rectangle, drag the round handle on its top-left
    corner and watch the corners follow; switch to "Adjust corners separately" and give one corner a
    different radius, then check the exported PDF matches. Place a wide photo and a tall photo and
-   confirm neither is stretched and that dragging a corner keeps the proportions (Alt stretches). Set
+   confirm neither is stretched, that the Insert panel shows their pixel sizes, that dragging a
+   corner only scales them, and that typing a deliberately wrong Width/Height in the inspector
+   still exports the picture undistorted (the frame goes off-shape, the photo does not). Set
    a star's corner rounding, then a hexagon
    (6 sides) and a star (5 points, 45 % inner radius) and check the on-screen outline against the
    exported PDF; hold Shift while dragging for a square and confirm it stays square. Rotate a shape

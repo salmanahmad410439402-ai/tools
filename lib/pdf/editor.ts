@@ -81,6 +81,9 @@ export interface EditorElement {
   wrap?: boolean;
   points?: EditorPoint[];
   imageBytes?: ArrayBuffer;
+  /** Intrinsic pixel size of `imageBytes`, used to keep it undistorted. */
+  imageWidth?: number;
+  imageHeight?: number;
   /**
    * Object URL used only to show an image in the on-screen preview. It is never
    * serialised into the PDF, which embeds `imageBytes` instead.
@@ -450,6 +453,110 @@ export function imageBox(
   return { width, height };
 }
 
+/* ────────────────────────── image dimensions ────────────────────────────── */
+
+export interface ImageSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * Reads an image's pixel size straight out of its file bytes.
+ *
+ * Browsers report `naturalWidth` only after decoding, and a decode that has not
+ * finished (or fails on an unusual file) used to leave the editor guessing a
+ * default ratio — which is exactly how a photo ended up squashed. The common
+ * formats store their size in a fixed header, so it can be read synchronously
+ * and reliably: PNG, JPEG, GIF, BMP and WebP.
+ */
+export function imageDimensions(bytes: ArrayBuffer | Uint8Array): ImageSize | null {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const ascii = (offset: number, length: number) =>
+    Array.from({ length }, (_, index) => String.fromCharCode(data[offset + index] ?? 0)).join("");
+
+  if (data.length >= 24 && ascii(0, 8) === "\x89PNG\r\n\x1a\n" && ascii(12, 4) === "IHDR") {
+    const width = view.getUint32(16);
+    const height = view.getUint32(20);
+    return width && height ? { width, height } : null;
+  }
+
+  if (data.length >= 10 && ascii(0, 3) === "GIF") {
+    const width = view.getUint16(6, true);
+    const height = view.getUint16(8, true);
+    return width && height ? { width, height } : null;
+  }
+
+  if (data.length >= 26 && ascii(0, 2) === "BM") {
+    const width = Math.abs(view.getInt32(18, true));
+    const height = Math.abs(view.getInt32(22, true));
+    return width && height ? { width, height } : null;
+  }
+
+  if (data.length >= 30 && ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP") {
+    const chunk = ascii(12, 4);
+    if (chunk === "VP8X") {
+      const width = 1 + (data[24] | (data[25] << 8) | (data[26] << 16));
+      const height = 1 + (data[27] | (data[28] << 8) | (data[29] << 16));
+      return width && height ? { width, height } : null;
+    }
+    if (chunk === "VP8 " && data.length >= 30) {
+      const width = view.getUint16(26, true) & 0x3fff;
+      const height = view.getUint16(28, true) & 0x3fff;
+      return width && height ? { width, height } : null;
+    }
+  }
+
+  // JPEG: walk the segments until a start-of-frame marker.
+  if (data.length >= 4 && data[0] === 0xff && data[1] === 0xd8) {
+    let offset = 2;
+    while (offset + 9 < data.length) {
+      if (data[offset] !== 0xff) {
+        offset += 1;
+        continue;
+      }
+      const marker = data[offset + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        offset += 2;
+        continue;
+      }
+      const length = view.getUint16(offset + 2);
+      if (!length) return null;
+      const isFrame =
+        marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+      if (isFrame) {
+        const height = view.getUint16(offset + 5);
+        const width = view.getUint16(offset + 7);
+        return width && height ? { width, height } : null;
+      }
+      offset += 2 + length;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Largest rectangle with the picture's own proportions that fits inside a box —
+ * the geometry behind CSS `object-fit: contain`. Returning the box itself when
+ * the proportions are unknown keeps the behaviour predictable.
+ *
+ * Used by the exporter so a picture is never stretched, even if the box around
+ * it happened to be: the box is a frame, the picture keeps its shape inside it.
+ */
+export function fitImageInside(
+  boxWidth: number,
+  boxHeight: number,
+  naturalWidth: number,
+  naturalHeight: number,
+): { width: number; height: number } {
+  if (!(naturalWidth > 0) || !(naturalHeight > 0) || !(boxWidth > 0) || !(boxHeight > 0)) {
+    return { width: Math.max(0, boxWidth), height: Math.max(0, boxHeight) };
+  }
+  const scale = Math.min(boxWidth / naturalWidth, boxHeight / naturalHeight);
+  return { width: naturalWidth * scale, height: naturalHeight * scale };
+}
+
 /* ────────────────────────────── freehand ────────────────────────────────── */
 
 export interface StrokeBox {
@@ -806,12 +913,26 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
         if (!element.imageBytes) break;
         const image = await embedImage(doc, element.imageBytes);
         if (!image) break;
-        const imageOrigin = centredOrigin({ x: left, y: pageHeight - top - boxHeight }, centre, rotation);
+        // The box is a frame, not a stretch target: the picture is fitted inside
+        // it with its own proportions, so a squashed frame can never squash the
+        // photo itself.
+        const natural = {
+          width: element.imageWidth || image.width,
+          height: element.imageHeight || image.height,
+        };
+        const fit = fitImageInside(boxWidth, boxHeight, natural.width, natural.height);
+        const offsetX = (boxWidth - fit.width) / 2;
+        const offsetY = (boxHeight - fit.height) / 2;
+        const imageOrigin = centredOrigin(
+          { x: left + offsetX, y: pageHeight - top - offsetY - fit.height },
+          centre,
+          rotation,
+        );
         page.drawImage(image, {
           x: imageOrigin.x,
           y: imageOrigin.y,
-          width: boxWidth,
-          height: boxHeight,
+          width: fit.width,
+          height: fit.height,
           opacity,
           rotate: degrees(-rotation),
         });

@@ -31,7 +31,9 @@ import {
   centredOrigin,
   EDITOR_PAGE_SIZES,
   hexToRgbColor,
+  fitImageInside,
   imageBox,
+  imageDimensions,
   isWinAnsi,
   polygonPath,
   polygonPoints,
@@ -1069,6 +1071,46 @@ async function testEditor() {
   const softPath = roundedPath(shapePoints(100, 100, "star", 5, 0.45), 6);
   check("rounding turns every corner into a curve", (softPath.match(/Q/g) ?? []).length === 10);
   check("a huge radius cannot fold a star", !/NaN|Infinity/.test(roundedPath(shapePoints(40, 40, "star", 8, 0.4), 500)));
+
+  // Image dimensions are read from the file header itself, so placement never
+  // depends on a decode finishing first.
+  const png = new Uint8Array(33);
+  png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52], 0);
+  new DataView(png.buffer).setUint32(16, 4032);
+  new DataView(png.buffer).setUint32(20, 3024);
+  check(
+    "a PNG's size comes from its header",
+    JSON.stringify(imageDimensions(png)) === '{"width":4032,"height":3024}',
+    JSON.stringify(imageDimensions(png)),
+  );
+
+  // SOI, an APP0 segment of 16 bytes (so the next marker lands at 20), then SOF0.
+  const jpeg = new Uint8Array(60);
+  jpeg.set([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10], 0);
+  jpeg.set([0xff, 0xc0, 0x00, 0x11, 0x08], 20); // SOF0, segment length 17, precision 8
+  const jpegView = new DataView(jpeg.buffer);
+  jpegView.setUint16(25, 1080); // height = offset + 5
+  jpegView.setUint16(27, 1920); // width  = offset + 7
+  check(
+    "a JPEG's size comes from its start-of-frame",
+    JSON.stringify(imageDimensions(jpeg)) === '{"width":1920,"height":1080}',
+    JSON.stringify(imageDimensions(jpeg)),
+  );
+  check("an unknown format reports nothing", imageDimensions(new Uint8Array([1, 2, 3, 4])) === null);
+
+  // The export fits the picture inside its frame, so a wrong frame cannot stretch it.
+  const contained = fitImageInside(200, 200, 1600, 900);
+  check(
+    "a wide picture fits a square frame without stretching",
+    Math.abs(contained.width - 200) < 1e-9 && Math.abs(contained.height - 112.5) < 1e-9,
+    `${contained.width} x ${contained.height}`,
+  );
+  const tallFit = fitImageInside(300, 100, 900, 1600);
+  check("a tall picture fits a wide frame without stretching", Math.abs(tallFit.height - 100) < 1e-9 && tallFit.width < 100);
+  check(
+    "an unknown size is left alone",
+    fitImageInside(120, 80, 0, 0).width === 120 && fitImageInside(120, 80, 0, 0).height === 80,
+  );
 
   // A placed image keeps its own proportions.
   const wideBox = imageBox(1600, 900, 595.28, 841.89);
