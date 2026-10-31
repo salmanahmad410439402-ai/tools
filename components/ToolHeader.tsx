@@ -30,8 +30,8 @@ export function ToolHeader({
 
   if (focused) {
     return (
-      <div className="sticky top-[68px] z-30 -mx-1 flex items-center gap-2 rounded-xl border border-line bg-page/90 px-2.5 py-1.5 backdrop-blur-xl">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+      <div className="sticky top-[68px] z-30 -mx-1 flex items-center gap-2 rounded-xl border border-line bg-page px-2.5 py-1.5">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
           <ToolIcon name={icon} className="h-3.5 w-3.5" />
         </span>
         <h1 className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] text-body">{h1}</h1>
@@ -50,13 +50,13 @@ export function ToolHeader({
   return (
     <header className="max-w-2xl">
       <div className="flex items-center gap-2.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-surface text-body">
           <ToolIcon name={icon} className="h-4.5 w-4.5" />
         </span>
-        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-brand-600">Free {kind} tool</p>
+        <p className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-subtle">Free {kind} tool</p>
       </div>
 
-      <h1 className="mt-3 text-[28px] font-extrabold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[36px]">
+      <h1 className="mt-3 text-[28px] font-bold leading-[1.16] tracking-[-0.022em] text-ink sm:text-[36px]">
         {h1}
       </h1>
       <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-body">{tagline}</p>

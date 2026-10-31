@@ -129,7 +129,7 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/80 bg-page/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-line bg-page/92 backdrop-blur-md">
       <div className="container-page flex h-[68px] items-center gap-3">
         <Logo />
 
@@ -138,7 +138,7 @@ export function Header() {
             <button
               type="button"
               className={cn(
-                "flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-[14.5px] font-semibold text-body transition-colors hover:bg-primary/10 hover:text-ink",
+                "flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 text-[14.5px] font-semibold text-body transition-colors hover:bg-surface hover:text-ink",
                 menuOpen && "bg-surface text-ink",
               )}
               aria-expanded={menuOpen}
@@ -160,7 +160,7 @@ export function Header() {
                       >
                         <ToolIcon name="FileText" className="h-4 w-4" />
                         PDF tools
-                        <span className="rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
+                        <span className="rounded-full bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-subtle ring-1 ring-line">
                           {pdfGroups.reduce((total, entry) => total + entry.items.length, 0)}
                         </span>
                       </Link>
@@ -175,7 +175,7 @@ export function Header() {
                                 <li key={tool.slug}>
                                   <Link
                                     href={`/${tool.slug}/`}
-                                    className="block rounded-lg px-2 py-1.5 text-[13.5px] font-medium text-body transition-colors hover:bg-primary/10 hover:text-brand-700"
+                                    className="block rounded-lg px-2 py-1.5 text-[13.5px] font-medium text-body transition-colors hover:bg-surface hover:text-ink"
                                   >
                                     {tool.name}
                                   </Link>
@@ -201,7 +201,7 @@ export function Header() {
                             <li key={tool.slug}>
                               <Link
                                 href={`/${tool.slug}/`}
-                                className="block rounded-lg px-2 py-2 text-[13.5px] font-medium text-body transition-colors hover:bg-primary/10 hover:text-brand-700"
+                                className="block rounded-lg px-2 py-2 text-[13.5px] font-medium text-body transition-colors hover:bg-surface hover:text-ink"
                               >
                                 {tool.name}
                               </Link>
@@ -234,7 +234,7 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-h-[40px] items-center rounded-lg px-3 text-[14.5px] font-semibold transition-colors hover:bg-primary/10 hover:text-ink",
+                "flex min-h-[40px] items-center rounded-lg px-3 text-[14.5px] font-semibold transition-colors hover:bg-surface hover:text-ink",
                 pathname.startsWith(item.href) ? "text-ink" : "text-body",
               )}
             >
@@ -292,7 +292,7 @@ export function Header() {
             <div className="mt-4 space-y-5 border-t border-line pt-4">
               {pdfGroups.map(({ group, items }) => (
                 <div key={group.key}>
-                  <p className="px-3 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600">
+                  <p className="px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-subtle">
                     PDF · {group.label}
                   </p>
                   <ul className="mt-1 grid gap-0.5">
@@ -308,7 +308,7 @@ export function Header() {
               ))}
               {otherCategories.map(({ category, items }) => (
                 <div key={category.slug}>
-                  <p className="px-3 text-[11.5px] font-bold uppercase tracking-[0.12em] text-brand-600">
+                  <p className="px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-subtle">
                     {category.name}
                   </p>
                   <ul className="mt-1 grid gap-0.5">
@@ -398,7 +398,7 @@ export function Header() {
                     index === activeIndex ? "bg-brand-50" : "hover:bg-surface",
                   )}
                 >
-                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-raised text-brand-600 ring-1 ring-line">
+                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface text-body ring-1 ring-line">
                     <ToolIcon name={tools.find((tool) => `/${tool.slug}/` === entry.href)?.icon ?? "FileText"} className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">

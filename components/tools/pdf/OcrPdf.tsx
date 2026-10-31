@@ -241,7 +241,7 @@ export function OcrPdf() {
         />
       ) : (
         <div className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
             <ScanText className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">

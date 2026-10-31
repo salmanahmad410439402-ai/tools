@@ -55,7 +55,7 @@ export function CookieNotice() {
       <div
         role="region"
         aria-labelledby="cookie-notice-title"
-        className="glass-panel pointer-events-auto relative mx-auto w-full max-w-4xl animate-fade-up rounded-[20px] p-5 pr-12 shadow-[0_28px_80px_-32px_rgba(0,0,0,0.9)] sm:p-6 sm:pr-14"
+        className="glass-panel pointer-events-auto relative mx-auto w-full max-w-4xl animate-fade-up rounded-card p-5 pr-12 shadow-lift sm:p-6 sm:pr-14"
       >
         <button
           type="button"

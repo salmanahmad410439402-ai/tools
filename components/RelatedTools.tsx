@@ -25,7 +25,7 @@ export function RelatedTools({ slugs, guideSlugs = [] }: { slugs: string[]; guid
             href={`/${tool!.slug}/`}
             className="card-hover group flex items-start gap-3 rounded-xl border border-line bg-raised p-4"
           >
-            <span className="card-icon grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-brand-600">
+            <span className="card-icon grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
               <ToolIcon name={tool!.icon} className="h-4 w-4" />
             </span>
             <span>

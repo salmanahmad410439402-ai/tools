@@ -80,7 +80,7 @@ export function GuideArticle({ guide }: { guide: Guide }) {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
           <article className="min-w-0">
             <header className="max-w-prose">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-600">
+              <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {guide.readingMinutes} min read ·{" "}
                 {new Date(guide.date).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -88,7 +88,7 @@ export function GuideArticle({ guide }: { guide: Guide }) {
                   year: "numeric",
                 })}
               </p>
-              <h1 className="mt-3 text-[30px] font-extrabold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[38px]">
+              <h1 className="mt-3 text-[30px] font-bold leading-[1.14] tracking-[-0.025em] text-ink sm:text-[38px]">
                 {guide.title}
               </h1>
               <p className="mt-3 text-[16.5px] leading-relaxed text-body">{guide.excerpt}</p>

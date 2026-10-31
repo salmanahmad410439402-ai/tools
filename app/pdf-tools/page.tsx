@@ -83,7 +83,7 @@ export default function PdfToolsPage() {
             <ToolIcon name="FileText" className="h-3.5 w-3.5" />
             {items.length} PDF tools
           </p>
-          <h1 className="mt-3 text-[30px] font-extrabold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
+          <h1 className="mt-3 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-ink sm:text-[40px]">
             {category.heading}
           </h1>
           <div className="mt-3 space-y-2.5 text-[15.5px] leading-relaxed text-body">

@@ -865,7 +865,7 @@ export function ImageToPdf({ input }: { input?: "jpg" | "png" | "webp" } = {}) {
                   {compressing === level ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Minus className="h-3.5 w-3.5 text-brand-500" aria-hidden="true" />
+                    <Minus className="h-3.5 w-3.5 text-subtle" aria-hidden="true" />
                   )}
                   Compress — {profile.label}
                 </span>

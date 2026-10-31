@@ -200,7 +200,7 @@ export function ScanToPdf() {
     <ToolFrame labelledBy="tool-title">
       {!cameraOn ? (
         <div className="rounded-2xl border-2 border-dashed border-line bg-surface/60 p-6 text-center sm:p-8">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-raised text-brand-600 shadow-card ring-1 ring-line">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-body">
             <Camera className="h-6 w-6" aria-hidden="true" />
           </span>
           <p className="mt-3 text-[15.5px] font-semibold text-ink">Scan a document with your camera</p>

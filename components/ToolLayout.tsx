@@ -52,7 +52,7 @@ export function ToolLayout({ tool, crumbs }: { tool: Tool; crumbs: Crumb[] }) {
                 <ol className="mt-4 grid gap-3 sm:grid-cols-2">
                   {tool.steps.map((step, index) => (
                     <li key={step.title} className="glass-panel p-4">
-                      <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-50 text-[12.5px] font-bold text-brand-700 ring-1 ring-brand-100">
+                      <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-[12.5px] font-bold text-body">
                         {index + 1}
                       </span>
                       <p className="mt-2.5 text-[14px] font-semibold text-ink">{step.title}</p>

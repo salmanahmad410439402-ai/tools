@@ -21,7 +21,7 @@ export function Footer() {
               Free PDF and image tools that open, change and save your files on your own device.
               No account, no watermark, no upload.
             </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-[12.5px] font-medium text-body">
+            <p className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-[12.5px] font-medium text-body">
               <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
               Files are processed in your browser
             </p>

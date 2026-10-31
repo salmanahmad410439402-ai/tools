@@ -112,7 +112,7 @@ export function MergePdf() {
             {items.map((item, index) => (
               <li key={item.id} className="flex items-center gap-2 rounded-xl border border-line bg-raised p-2 pl-3">
                 <span className="w-5 shrink-0 text-center text-[11.5px] font-semibold text-subtle">{index + 1}</span>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">

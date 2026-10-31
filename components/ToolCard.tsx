@@ -13,14 +13,14 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="card-icon grid h-11 w-11 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-brand-600">
+        <span className="card-icon grid h-11 w-11 place-items-center rounded-xl border border-line bg-surface text-body">
           <ToolIcon name={tool.icon} className="h-5 w-5" />
         </span>
         <span className="flex items-center gap-1.5">
           {tool.isNew && (
             <span className="pill-emerald uppercase tracking-wide">New</span>
           )}
-          <span className="pill-sky uppercase tracking-wide">Free</span>
+          <span className="pill uppercase tracking-wide">Free</span>
         </span>
       </div>
 
@@ -52,7 +52,7 @@ export function ToolCard({ tool, className, compact = false }: { tool: Tool; cla
             </span>
           ))}
         </span>
-        <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand-600">
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-body">
           Open
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
         </span>

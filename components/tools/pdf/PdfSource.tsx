@@ -41,7 +41,7 @@ export function PdfSource({
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-line bg-raised p-3">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-line bg-surface text-body">
         <FileText className="h-5 w-5" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
@@ -121,7 +121,7 @@ export function PageSelection({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={pageCount ? `all ${pageCount} pages` : "all pages"}
-        className="h-11 w-full rounded-xl border border-line bg-raised px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15"
+        className="h-11 w-full rounded-xl border border-line bg-raised px-3 text-[14px] text-ink shadow-inset outline-none transition-colors placeholder:text-subtle focus:border-brand-400 focus:ring-2 focus:ring-primary/20"
       />
       <p className="mt-1 text-[11.5px] text-subtle">Leave blank for every page, or type a range such as 2-5, 8.</p>
     </div>
