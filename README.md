@@ -143,6 +143,7 @@ No file ever leaves the tab. Libraries are loaded lazily so the first paint stay
 | Word `.docx` parsing | `mammoth` 1.13.0 (BSD-2-Clause) | only on the Word to PDF page |
 | Excel `.xlsx` reading | `xlsx` 0.18.5 (Apache-2.0) | only when a workbook is selected |
 | Unicode PDF text | bundled `DejaVu Sans` (public-domain licence, `public/fonts/LICENSE.txt`) | only when non-WinAnsi characters appear |
+| Editor font library | 27 families from Google Fonts via `@fontsource/*` 5.3.0 (SIL OFL 1.1, notices in `public/fonts/library/README.md`) | a family's files are fetched only when the editor shows or exports that family |
 | BMP / TIFF / GIF / PPM / SVG / ICO output | local encoders in `lib/images/codecs.ts` | tiny, bundled |
 | Embedding the Unicode font | `@pdf-lib/fontkit` 1.1.1 (MIT) | first time text needs a glyph outside WinAnsi |
 | QR encoding | `qrcode-generator` 2.0.4 (MIT, no runtime deps) | only on the QR page |
@@ -645,6 +646,13 @@ launch (Chrome, Safari iOS, Firefox, Edge):
 11. **PDF editor (the creator)** — this is the largest widget on the site, so walk it end to end:
    start a blank A4 document and add three pages; place text (type, change family, size, bold,
    italic, alignment and line spacing), a rectangle, an ellipse, a triangle, a line and an arrow;
+   open the font picker and confirm it lists 30 choices in seven groups, that every row is drawn in
+   its own typeface, that search finds "script" and "garamond", and that picking Great Vibes or
+   Caveat renders on the page in that face — then export and open the PDF in Acrobat/Preview to
+   confirm the same face is embedded (the text must look identical, not fall back to Helvetica).
+   Pick a one-weight script font and confirm Bold/Italic are disabled with a reason. Put a Cyrillic
+   word in a Latin-only family and confirm the export still prints it and the result note names the
+   family that was swapped;
    draw a freehand stroke; insert a PNG logo and resize it by a corner handle. Open every colour
    field and confirm the system colour wheel opens, that a pasted hex code applies, that a swatch
    applies, and that "No colour" clears a fill. Drag an element, nudge it with the arrow keys,

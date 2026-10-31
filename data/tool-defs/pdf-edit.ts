@@ -517,8 +517,8 @@ export const pdfEditTools: Tool[] = [
         text: "Objects are placed exactly where you put them; text does not reflow around an image and nothing is re-laid out. Interactive form fields are not filled, and existing pages are not rotated or cropped here.",
       },
       {
-        title: "Fonts are the twelve built-in ones plus DejaVu",
-        text: "Sans, serif and mono map to the standard PDF fonts (Helvetica, Times, Courier) in four styles each. Text outside Latin-1 automatically switches to the bundled DejaVu Sans, which has no italic or bold-italic — so italic is dropped rather than faked for those scripts.",
+        title: "Thirty fonts, all embedded for real",
+        text: "Twenty-seven families — sans, serif, slab, script, handwriting, display and monospace — sit alongside Helvetica, Times and Courier. The family you pick is embedded in the PDF as a subset, so it looks the same on any computer; a family that only ships one weight turns bold or italic off rather than faking a slant. The library covers Latin characters; text in Cyrillic, Greek, Hebrew, Arabic and other scripts switches to the bundled DejaVu Sans, which has no italic or bold-italic face.",
       },
       {
         title: "Images must be PNG or JPEG",

@@ -6,7 +6,7 @@
  *   node --experimental-strip-types scripts/smoke-test.mjs
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
@@ -14,6 +14,14 @@ import { PDFArray, PDFDocument, PDFName, PDFRawStream, StandardFonts, degrees } 
 import { buildImagePdf, computePlacement, PAGE_SIZES } from "../lib/pdf/image-to-pdf.ts";
 import { encodeBmp, encodeTiff, encodeGif, encodeIco, encodePpm, encodeSvg } from "../lib/images/codecs.ts";
 import { clampToCanvasLimits } from "../lib/images/index.ts";
+import {
+  FONT_CATEGORIES,
+  LIBRARY_FONTS,
+  libraryFont,
+  resolveStyle,
+  supportsBold,
+  supportsItalic,
+} from "../lib/pdf/font-library.ts";
 import {
   addPageNumbers,
   addTextWatermark,
@@ -1148,7 +1156,151 @@ async function testEditor() {
   check("a freehand stroke exports", penPdf.elements === 1 && penPdf.dropped === 0);
 }
 
+/* ──────────────────────── editor font library ─────────────────────── */
+
+async function testFontLibrary() {
+  check("the font library ships 27 families", LIBRARY_FONTS.length === 27, `${LIBRARY_FONTS.length}`);
+  check("every font id is unique", new Set(LIBRARY_FONTS.map((font) => font.id)).size === LIBRARY_FONTS.length);
+  check(
+    "font ids cannot shadow a built-in family",
+    !LIBRARY_FONTS.some((font) => ["sans", "serif", "mono"].includes(font.id)),
+  );
+  check(
+    "every category offers at least one family",
+    FONT_CATEGORIES.every((category) => LIBRARY_FONTS.some((font) => font.category === category.id)),
+    FONT_CATEGORIES.filter((category) => !LIBRARY_FONTS.some((font) => font.category === category.id))
+      .map((category) => category.id)
+      .join(","),
+  );
+  // Every script and handwriting face is present, and every family can draw
+  // plain text: regular is the one style that must always exist.
+  check("every family has a regular face", LIBRARY_FONTS.every((font) => font.styles.includes("regular")));
+
+  const missing = [];
+  for (const font of LIBRARY_FONTS) {
+    for (const style of font.styles) {
+      for (const extension of ["ttf", "woff2"]) {
+        const file = new URL(`../public/fonts/library/${font.id}/${style}.${extension}`, import.meta.url);
+        if (!existsSync(file)) missing.push(`${font.id}/${style}.${extension}`);
+      }
+    }
+  }
+  check("every registered face exists on disk as ttf and woff2", missing.length === 0, missing.join(", "));
+
+  // Style fallback: one-weight faces must never invent a bold.
+  check(
+    "a one-weight script font falls back to its regular file",
+    resolveStyle(libraryFont("great-vibes"), true, true) === "regular",
+  );
+  check(
+    "a full family keeps bold italic",
+    resolveStyle(libraryFont("playfair-display"), true, true) === "boldItalic",
+  );
+  check(
+    "the UI knows which families have no bold or italic",
+    supportsBold("great-vibes") === false && supportsItalic("great-vibes") === false && supportsBold("inter") === true,
+  );
+
+  // The generated preview CSS must match the registry, or the editor would
+  // preview a family the exporter cannot embed.
+  const css = readFileSync(new URL("../app/font-library.css", import.meta.url), "utf8");
+  check(
+    "every family has a preview @font-face rule",
+    LIBRARY_FONTS.every((font) => css.includes(`font-family: 'FC ${font.label}';`)),
+  );
+  check(
+    "the preview points at the same files the exporter embeds",
+    LIBRARY_FONTS.every((font) => css.includes(`url('/fonts/library/${font.id}/regular.woff2')`)),
+  );
+
+  // Real embedding. In Node we serve /fonts/… from public/ so the exporter's
+  // fetch path is exercised for real, not stubbed out.
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => new Response(readFileSync(new URL(`../public${String(url)}`, import.meta.url)));
+  try {
+    const styled = await renderEditorPdf({
+      source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+      elements: [
+        { id: "s", kind: "text", pageIndex: 0, x: 0.1, y: 0.1, width: 0.7, height: 0.1, text: "Wedding invitation", fontFamily: "great-vibes", fontSize: 28, fill: "#111827" },
+        { id: "p", kind: "text", pageIndex: 0, x: 0.1, y: 0.3, width: 0.7, height: 0.1, text: "Quarterly report", fontFamily: "playfair-display", bold: true, fontSize: 20, fill: "#111827" },
+        { id: "u", kind: "text", pageIndex: 0, x: 0.1, y: 0.5, width: 0.7, height: 0.1, text: "Привет мир", fontFamily: "playfair-display", fontSize: 16, fill: "#111827" },
+      ],
+    });
+    const styledDoc = await PDFDocument.load(styled.bytes);
+    check("script and serif text export", styled.elements === 3 && styledDoc.getPageCount() === 1);
+    check(
+      "a library font that cannot draw the text is reported, not silently blank",
+      styled.substituted.join(",") === "Playfair Display",
+      styled.substituted.join(",") || "(none)",
+    );
+    // The font program is a compressed subset inside an object stream, so the
+    // proof is the size difference against the same text in a built-in font.
+    const plain = await renderEditorPdf({
+      source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+      elements: [
+        { id: "s", kind: "text", pageIndex: 0, x: 0.1, y: 0.1, width: 0.7, height: 0.1, text: "Wedding invitation", fontSize: 28, fill: "#111827" },
+      ],
+    });
+    check(
+      "the PDF carries an embedded font program",
+      styled.bytes.length > plain.bytes.length * 2,
+      `${plain.bytes.length} → ${styled.bytes.length} bytes`,
+    );
+
+    // The embedded file is really the chosen family: its metrics differ from
+    // Helvetica for the same string.
+    const scratch = await PDFDocument.create();
+    const fontkitModule = await import("@pdf-lib/fontkit");
+    scratch.registerFontkit(fontkitModule.default ?? fontkitModule);
+    const scriptFont = await scratch.embedFont(readFileSync(new URL("../public/fonts/library/great-vibes/regular.ttf", import.meta.url)), {
+      subset: true,
+    });
+    const helvetica = await scratch.embedFont(StandardFonts.Helvetica);
+    check(
+      "the embedded script font measures differently from Helvetica",
+      Math.abs(scriptFont.widthOfTextAtSize("Wedding", 28) - helvetica.widthOfTextAtSize("Wedding", 28)) > 2,
+      `${scriptFont.widthOfTextAtSize("Wedding", 28).toFixed(1)} vs ${helvetica.widthOfTextAtSize("Wedding", 28).toFixed(1)}`,
+    );
+
+    // Every registered family must actually embed: one document with a text
+    // box per family, so a face that breaks pdf-lib's subsetter fails loudly
+    // instead of quietly falling back in production.
+    const everyFamily = await renderEditorPdf({
+      source: { kind: "blank", pages: 1, size: "a3", orientation: "portrait" },
+      elements: LIBRARY_FONTS.map((font, index) => ({
+        id: `f-${font.id}`,
+        kind: "text",
+        pageIndex: 0,
+        x: 0.05,
+        y: 0.02 + index * 0.032,
+        width: 0.9,
+        height: 0.03,
+        text: `${font.label} 0123`,
+        fontFamily: font.id,
+        fontSize: 12,
+        fill: "#111827",
+      })),
+    });
+    check("all 27 families draw in one document", everyFamily.elements === LIBRARY_FONTS.length, `${everyFamily.elements}`);
+    check("no family silently falls back", everyFamily.substituted.length === 0, everyFamily.substituted.join(","));
+    check("the all-fonts document opens", (await PDFDocument.load(everyFamily.bytes)).getPageCount() === 1);
+
+    // Latin-only families must drop to the Unicode font instead of exporting
+    // empty boxes — and say so.
+    const cyrillic = await renderEditorPdf({
+      source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+      elements: [
+        { id: "c", kind: "text", pageIndex: 0, x: 0.1, y: 0.1, width: 0.8, height: 0.2, text: "Привет мир", fontFamily: "caveat", fontSize: 18, fill: "#111827" },
+      ],
+    });
+    check("non-Latin text in a Latin-only family still prints", cyrillic.substituted.join(",") === "Caveat");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
 await testEditor();
+await testFontLibrary();
 
 /* ─────────────────────── pdf passwords (protect / unlock) ───────────────── */
 

@@ -16,7 +16,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
-import { getFontPair } from "./fonts.ts";
+import { fontCovers, getFontPair, registerFontkit } from "./fonts.ts";
+import { fontFileUrl, libraryFont, resolveStyle, type FontFamily, type FontStyleKey, type LibraryFontId } from "./font-library.ts";
 import { loadPdfDocument, savePdf, verifyPdf } from "./core.ts";
 
 export type EditorElementKind =
@@ -34,7 +35,7 @@ export type EditorElementKind =
   | "draw"
   | "image";
 
-export type FontFamily = "sans" | "serif" | "mono";
+export type { FontFamily };
 export type TextAlign = "left" | "center" | "right";
 
 export interface EditorPoint {
@@ -124,6 +125,11 @@ export interface RenderResult {
   elements: number;
   /** Elements skipped because their page no longer exists. */
   dropped: number;
+  /**
+   * Library families the exporter had to swap for a built-in or Unicode font —
+   * only happens when a box holds characters the family cannot draw.
+   */
+  substituted: string[];
 }
 
 /* ────────────────────────────── colour ──────────────────────────────────── */
@@ -137,7 +143,7 @@ export function hexToRgbColor(hex: string) {
 
 /* ─────────────────────────────── fonts ──────────────────────────────────── */
 
-const STANDARD: Record<FontFamily, Record<"regular" | "bold" | "italic" | "boldItalic", StandardFonts>> = {
+const STANDARD: Record<"sans" | "serif" | "mono", Record<"regular" | "bold" | "italic" | "boldItalic", StandardFonts>> = {
   sans: {
     regular: StandardFonts.Helvetica,
     bold: StandardFonts.HelveticaBold,
@@ -158,43 +164,114 @@ const STANDARD: Record<FontFamily, Record<"regular" | "bold" | "italic" | "boldI
   },
 };
 
-/** The built-in fonts cover WinAnsi only; anything else needs the bundled font. */
+/** The built-in fonts cover WinAnsi only; anything else needs a bundled font. */
 export function isWinAnsi(text: string): boolean {
   return /^[\u0000-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20AC\u2122]*$/.test(text);
+}
+
+/**
+ * Library font files, fetched once per session.
+ *
+ * A family is only downloaded when a document actually uses it, so opening the
+ * editor costs nothing and the picker lists 27 families without a 4 MB page
+ * weight. Failures are evicted so a retry can succeed after a network blip.
+ */
+const libraryBytes = new Map<string, Promise<Uint8Array>>();
+
+function loadLibraryFont(id: LibraryFontId, style: FontStyleKey): Promise<Uint8Array> {
+  const key = `${id}/${style}`;
+  const cached = libraryBytes.get(key);
+  if (cached) return cached;
+  const pending = fetch(fontFileUrl(id, style))
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`${id} could not be loaded.`);
+      return new Uint8Array(await response.arrayBuffer());
+    })
+    .catch((error: unknown) => {
+      libraryBytes.delete(key);
+      throw error;
+    });
+  libraryBytes.set(key, pending);
+  return pending;
+}
+
+export interface FontChoice {
+  font: PDFFont;
+  /** True when a real font file was embedded rather than a PDF standard font. */
+  embedded: boolean;
+  /** Name of the requested family when it could not be used, else null. */
+  fallbackFrom: string | null;
 }
 
 class FontBook {
   private doc: PDFDocument;
   private cache = new Map<string, PDFFont>();
+  /** Families that had to be swapped out, reported back to the UI. */
+  readonly fallbacks = new Set<string>();
 
   constructor(doc: PDFDocument) {
     this.doc = doc;
   }
 
-  async get(element: EditorElement): Promise<{ font: PDFFont; unicode: boolean }> {
-    const text = element.text ?? "";
-    const family = element.fontFamily ?? "sans";
-    const unicode = !isWinAnsi(text);
-
-    if (unicode) {
-      // DejaVu Sans is bundled; it has no italic, so italic is dropped rather
-      // than faked. The page says so in its limits.
-      const key = `unicode-${element.bold ? "bold" : "regular"}`;
-      const cached = this.cache.get(key);
-      if (cached) return { font: cached, unicode: true };
-      const pair = await getFontPair(this.doc, text);
-      const font = element.bold ? pair.bold : pair.regular;
-      this.cache.set(key, font);
-      return { font, unicode: true };
-    }
-
-    const variant = element.bold && element.italic ? "boldItalic" : element.bold ? "bold" : element.italic ? "italic" : "regular";
-    const key = `${family}-${variant}`;
+  private async standard(family: "sans" | "serif" | "mono", element: EditorElement): Promise<PDFFont> {
+    const variant: "regular" | "bold" | "italic" | "boldItalic" =
+      element.bold && element.italic ? "boldItalic" : element.bold ? "bold" : element.italic ? "italic" : "regular";
+    const key = `std-${family}-${variant}`;
     const cached = this.cache.get(key);
-    if (cached) return { font: cached, unicode: false };
+    if (cached) return cached;
     const font = await this.doc.embedFont(STANDARD[family][variant]);
     this.cache.set(key, font);
-    return { font, unicode: false };
+    return font;
+  }
+
+  private async unicodePair(element: EditorElement, text: string): Promise<PDFFont> {
+    const key = `unicode-${element.bold ? "bold" : "regular"}`;
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+    // DejaVu Sans is bundled; it has no italic, so italic is dropped rather
+    // than faked. The page says so in its limits.
+    const pair = await getFontPair(this.doc, text);
+    const font = element.bold ? pair.bold : pair.regular;
+    this.cache.set(key, font);
+    return font;
+  }
+
+  async get(element: EditorElement): Promise<FontChoice> {
+    const text = element.text ?? "";
+    const requested = element.fontFamily ?? "sans";
+    const library = libraryFont(requested);
+
+    if (library) {
+      const style = resolveStyle(library, Boolean(element.bold), Boolean(element.italic));
+      const key = `lib-${library.id}-${style}`;
+      try {
+        // A library family is only used when its file can draw every character
+        // in the box. Otherwise the text would export as blank glyphs.
+        if (!isWinAnsi(text)) throw new Error("outside the subset");
+        const bytes = await loadLibraryFont(library.id, style);
+        if (!(await fontCovers(bytes, text))) throw new Error("missing glyphs");
+        let font = this.cache.get(key);
+        if (!font) {
+          await registerFontkit(this.doc);
+          font = await this.doc.embedFont(bytes, { subset: true });
+          this.cache.set(key, font);
+        }
+        return { font, embedded: true, fallbackFrom: null };
+      } catch {
+        this.fallbacks.add(library.label);
+        if (isWinAnsi(text)) {
+          return { font: await this.standard("sans", element), embedded: false, fallbackFrom: library.label };
+        }
+        return { font: await this.unicodePair(element, text), embedded: true, fallbackFrom: library.label };
+      }
+    }
+
+    if (!isWinAnsi(text)) {
+      return { font: await this.unicodePair(element, text), embedded: true, fallbackFrom: null };
+    }
+
+    const family = (requested === "serif" || requested === "mono" ? requested : "sans") as "sans" | "serif" | "mono";
+    return { font: await this.standard(family, element), embedded: false, fallbackFrom: null };
   }
 }
 
@@ -715,6 +792,7 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
   const pageCount = doc.getPageCount();
   let drawn = 0;
   let dropped = 0;
+  const substituted = new Set<string>();
 
   for (const element of request.elements) {
     if (element.pageIndex < 0 || element.pageIndex >= pageCount) {
@@ -944,7 +1022,8 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
         const text = (element.text ?? "").trim();
         if (!text) break;
         const size = Math.max(4, element.fontSize ?? 14);
-        const { font } = await fonts.get(element);
+        const { font, fallbackFrom } = await fonts.get(element);
+        if (fallbackFrom) substituted.add(fallbackFrom);
         const lineHeight = size * (element.lineHeight ?? 1.3);
         const { lines, widths } = wrapText(text, font, size, boxWidth, element.wrap !== false);
         const colour = stroke ?? fill ?? rgb(0, 0, 0);
@@ -984,7 +1063,7 @@ export async function renderEditorPdf(request: RenderRequest): Promise<RenderRes
 
   const bytes = await savePdf(doc);
   await verifyPdf(bytes, pageCount);
-  return { bytes, pages: pageCount, elements: drawn, dropped };
+  return { bytes, pages: pageCount, elements: drawn, dropped, substituted: Array.from(substituted) };
 }
 
 /** Milliseconds of work we expect per element — used for a rough progress bar. */

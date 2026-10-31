@@ -4,16 +4,17 @@
   "private": true,
   "description": "Free PDF and image tools that run privately in your browser.",
   "scripts": {
-    "predev": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs",
+    "predev": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs && npm run sync:fonts",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/copy-ocr-assets.mjs && npm run sync:fonts",
     "build": "next build",
     "start": "node scripts/serve.mjs",
     "validate": "node --experimental-strip-types scripts/validate-content.ts",
     "test": "node --experimental-strip-types scripts/smoke-test.mjs",
     "check": "npm run typecheck && npm run validate && npm test",
     "typecheck": "tsc --noEmit",
-    "sync:ocr": "node scripts/copy-ocr-assets.mjs"
+    "sync:ocr": "node scripts/copy-ocr-assets.mjs",
+    "sync:fonts": "node --experimental-strip-types scripts/build-font-css.ts"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "^2.11.1",

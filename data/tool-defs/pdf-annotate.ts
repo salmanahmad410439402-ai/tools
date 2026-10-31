@@ -32,7 +32,7 @@ export const pdfAnnotateTools: Tool[] = [
       },
       {
         title: "Real type controls",
-        text: "Three font families, sizes from 4 to 200 pt, bold, italic, three alignments and adjustable line spacing, plus sixteen swatches, a hex field and the system colour wheel for the colour.",
+        text: "Thirty fonts — sans, serif, slab, script, handwriting, display and monospace — with sizes from 4 to 200 pt, bold, italic, three alignments and adjustable line spacing, plus sixteen swatches, a hex field and the system colour wheel for the colour.",
       },
       {
         title: "Page-by-page precision",

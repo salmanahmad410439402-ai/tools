@@ -51,6 +51,8 @@ import { makePreviewUrl, revokeResults, type ResultFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
 import { useAutoFocus, useToolFocus } from "@/components/ToolFocusShell";
 import { Field, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
+import { FontPicker, fontStyleNote } from "./editor/FontPicker";
+import { supportsBold, supportsItalic } from "@/lib/pdf/font-library";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
 import {
@@ -132,6 +134,16 @@ interface Style {
   italic: boolean;
   align: TextAlign;
   lineHeight: number;
+}
+
+/** Keeps the default-style preview honest for families without a bold/italic file. */
+function applyFontStyle(style: Style, family: FontFamily): Style {
+  return {
+    ...style,
+    fontFamily: family,
+    bold: supportsBold(family) ? style.bold : false,
+    italic: supportsItalic(family) ? style.italic : false,
+  };
 }
 
 const DEFAULT_STYLE: Style = {
@@ -525,6 +537,22 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     if (!selected) return;
     record(historyKey);
     setElements((current) => current.map((element) => (element.id === selected.id ? { ...element, ...patch } : element)));
+  };
+
+  /**
+   * Changing family also clears the styles the new family has no file for, so
+   * the PDF never contains a faux-bold or obliqued script font.
+   */
+  const changeFont = (family: FontFamily) => {
+    if (!selected) return;
+    updateSelected(
+      {
+        fontFamily: family,
+        bold: supportsBold(family) ? Boolean(selected.bold) : false,
+        italic: supportsItalic(family) ? Boolean(selected.italic) : false,
+      },
+      "font",
+    );
   };
 
   const removeSelected = () => {
@@ -1075,7 +1103,11 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
           originalSize: blank ? undefined : file?.size,
           note: `${result.pages} page${result.pages === 1 ? "" : "s"} · ${result.elements} object${
             result.elements === 1 ? "" : "s"
-          } drawn${result.dropped ? ` · ${result.dropped} skipped` : ""}`,
+          } drawn${result.dropped ? ` · ${result.dropped} skipped` : ""}${
+            result.substituted.length
+              ? ` · ${result.substituted.join(", ")} swapped for a font that covers those characters`
+              : ""
+          }`,
         },
       ]);
       track("tool_completed", { tool: toolSlug, elements: result.elements, pages: result.pages });
@@ -1726,27 +1758,19 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                     className="w-full resize-y rounded-lg border border-line bg-raised px-2 py-1.5 text-[12px] leading-relaxed text-ink outline-none focus:border-brand-400"
                   />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <Field label="Font" htmlFor="el-font">
-                      <select
-                        id="el-font"
-                        className="h-9 w-full rounded-lg border border-line bg-raised px-2 text-[12px] text-ink"
-                        value={selected.fontFamily ?? "sans"}
-                        onChange={(event) => updateSelected({ fontFamily: event.target.value as FontFamily }, "font")}
-                      >
-                        <option value="sans">Sans</option>
-                        <option value="serif">Serif</option>
-                        <option value="mono">Mono</option>
-                      </select>
-                    </Field>
-                    <NumberField
-                      label="Size (pt)"
-                      value={selected.fontSize ?? 14}
-                      min={4}
-                      max={200}
-                      onChange={(value) => updateSelected({ fontSize: value }, "size")}
-                    />
-                  </div>
+                  <FontPicker
+                    htmlFor="el-font"
+                    value={selected.fontFamily ?? "sans"}
+                    onChange={changeFont}
+                    hint={fontStyleNote(selected.fontFamily) ?? undefined}
+                  />
+                  <NumberField
+                    label="Size (pt)"
+                    value={selected.fontSize ?? 14}
+                    min={4}
+                    max={200}
+                    onChange={(value) => updateSelected({ fontSize: value }, "size")}
+                  />
 
                   <div className="flex flex-wrap items-center gap-1">
                     {[10, 12, 14, 18, 24, 36].map((size) => (
@@ -1768,10 +1792,22 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <ToggleButton active={Boolean(selected.bold)} onClick={() => updateSelected({ bold: !selected.bold }, "bold")} label="Bold">
+                    <ToggleButton
+                      active={Boolean(selected.bold)}
+                      disabled={!supportsBold(selected.fontFamily)}
+                      title={supportsBold(selected.fontFamily) ? "Bold" : "This font has no bold file"}
+                      onClick={() => updateSelected({ bold: !selected.bold }, "bold")}
+                      label="Bold"
+                    >
                       B
                     </ToggleButton>
-                    <ToggleButton active={Boolean(selected.italic)} onClick={() => updateSelected({ italic: !selected.italic }, "italic")} label="Italic">
+                    <ToggleButton
+                      active={Boolean(selected.italic)}
+                      disabled={!supportsItalic(selected.fontFamily)}
+                      title={supportsItalic(selected.fontFamily) ? "Italic" : "This font has no italic file"}
+                      onClick={() => updateSelected({ italic: !selected.italic }, "italic")}
+                      label="Italic"
+                    >
                       <span className="italic">I</span>
                     </ToggleButton>
                     {(["left", "center", "right"] as TextAlign[]).map((align) => (
@@ -2045,23 +2081,29 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
               </div>
               {(tool === "text" || tool === "select") && (
                 <>
-                  <Field label="Font" htmlFor="style-font">
-                    <select
-                      id="style-font"
-                      className="h-9 w-full rounded-lg border border-line bg-raised px-2 text-[12px] text-ink"
-                      value={style.fontFamily}
-                      onChange={(event) => setStyle((current) => ({ ...current, fontFamily: event.target.value as FontFamily }))}
-                    >
-                      <option value="sans">Sans</option>
-                      <option value="serif">Serif</option>
-                      <option value="mono">Mono</option>
-                    </select>
-                  </Field>
+                  <FontPicker
+                    htmlFor="style-font"
+                    value={style.fontFamily}
+                    onChange={(family) => setStyle((current) => applyFontStyle(current, family))}
+                    hint={fontStyleNote(style.fontFamily) ?? undefined}
+                  />
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <ToggleButton active={style.bold} onClick={() => setStyle((current) => ({ ...current, bold: !current.bold }))} label="Bold">
+                    <ToggleButton
+                      active={style.bold}
+                      disabled={!supportsBold(style.fontFamily)}
+                      title={supportsBold(style.fontFamily) ? "Bold" : "This font has no bold file"}
+                      onClick={() => setStyle((current) => ({ ...current, bold: !current.bold }))}
+                      label="Bold"
+                    >
                       B
                     </ToggleButton>
-                    <ToggleButton active={style.italic} onClick={() => setStyle((current) => ({ ...current, italic: !current.italic }))} label="Italic">
+                    <ToggleButton
+                      active={style.italic}
+                      disabled={!supportsItalic(style.fontFamily)}
+                      title={supportsItalic(style.fontFamily) ? "Italic" : "This font has no italic file"}
+                      onClick={() => setStyle((current) => ({ ...current, italic: !current.italic }))}
+                      label="Italic"
+                    >
                       <span className="italic">I</span>
                     </ToggleButton>
                     {(["left", "center", "right"] as TextAlign[]).map((align) => (
