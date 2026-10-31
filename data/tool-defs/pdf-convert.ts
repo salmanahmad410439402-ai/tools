@@ -35,8 +35,8 @@ export const pdfConvertTools: Tool[] = [
         text: "Pages come out in the order shown in the list. Drag a thumbnail to move it, remove one with its bin icon, and the PDF follows the list exactly.",
       },
       {
-        title: "Optional re-compression",
-        text: "For email and web uploads, switch to “smaller file” and set a quality level. That re-encodes each page and can cut a photo batch by 60–80%, at the cost of some detail.",
+        title: "Compress only if you need to",
+        text: "The finished PDF is measured before you download it. If it is too heavy for an upload form, compress it in place — balanced or smallest — and compare the two sizes side by side. Nothing is re-uploaded and the original file stays available.",
       },
       {
         title: "No upload at any point",
@@ -49,22 +49,22 @@ export const pdfConvertTools: Tool[] = [
         text: "Drag them onto the page or click to browse. Multiple files are added to the same document in one go.",
       },
       {
-        title: "Put them in order",
-        text: "Drag thumbnails until the first page is first. The numbering in the list is the numbering in the PDF.",
+        title: "Put them in order and on pages",
+        text: "Drag thumbnails until the first page is first. The numbering in the list is the numbering in the PDF. One JPG per page is the default; switch to two or four to fit several photos on a sheet, and each one is fitted inside its own cell without cropping.",
       },
       {
         title: "Choose page size and margin",
         text: "A4 is the default and right for most documents; pick fit-to-image if the page should be exactly the photo's proportions with no white space.",
       },
       {
-        title: "Create and download",
-        text: "Press Create PDF, check the page count in the result line, and download. Repeat with the same photos at a different size without re-uploading anything.",
+        title: "Create, weigh and download",
+        text: "Press Create PDF. The result states the page count and the exact file size, then offers to compress the file if it is heavier than you expected. Download the sized-down copy or keep the original.",
       },
     ],
     limits: [
       {
-        title: "One image per page",
-        text: "Each JPG becomes a full page. Putting two photos on one sheet is not supported; the tool deliberately keeps this predictable.",
+        title: "Grid pages keep the whole photo",
+        text: "With two or four photos on a sheet, each is scaled to fit its own cell and centred, so a portrait shot in a landscape cell leaves white space instead of being cropped. The gutter between cells is fixed at about 3 mm.",
       },
       {
         title: "Huge camera files are heavy",
@@ -143,7 +143,7 @@ export const pdfConvertTools: Tool[] = [
       "Convert PNG images into one PDF in your browser. Lossless, transparency handled, page size and margins under your control. No upload, no sign-up.",
     h1: "PNG to PDF — Turn PNG Images Into a Document",
     intro: [
-      "PNGs are the format of screenshots, exported UI, charts and logos: sharp edges, flat colour and often a transparent background. This page turns them into a single PDF, one image per page, with the page size and margins you choose.",
+      "PNGs are the format of screenshots, exported UI, charts and logos: sharp edges, flat colour and often a transparent background. This page turns them into a single PDF — one, two or four screenshots per page — with the page size, orientation and margins you choose.",
       "PNG is lossless, so the converter embeds the image data directly. Text in a screenshot stays as crisp as the screenshot itself — subject, of course, to the resolution you captured it at.",
     ],
     bullets: [
@@ -183,7 +183,7 @@ export const pdfConvertTools: Tool[] = [
       },
       {
         title: "Create the PDF",
-        text: "Press Create PDF and download. The result states the page count so you can confirm every image made it in.",
+        text: "Press Create PDF. The result states the page count and the file size, and offers to compress the file before you download if it is larger than you expected.",
       },
     ],
     limits: [
@@ -311,7 +311,7 @@ export const pdfConvertTools: Tool[] = [
       },
       {
         title: "Create and download",
-        text: "Press Create PDF and save the file. The result line confirms the page count.",
+        text: "Press Create PDF and save the file. The result line confirms the page count and the size, and you can compress the file on the spot if it needs to be smaller.",
       },
     ],
     limits: [

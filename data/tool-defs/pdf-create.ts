@@ -619,8 +619,12 @@ export const pdfCreateTools: Tool[] = [
         text: "Photos are embedded without re-compression. Turn on 'smaller file' to convert them to JPEG at a chosen quality when you need a lighter attachment.",
       },
       {
-        title: "Batch convert and ZIP",
-        text: "Every PDF you build in a session is listed with its size and a download button; grab them all as a ZIP when you have several documents to send.",
+        title: "One, two or four pictures per page",
+        text: "For documents, keep one picture per sheet. For photos, ID copies and contact sheets, put two or four on a page — each is fitted inside its own cell with the aspect ratio intact, never cropped or stretched.",
+      },
+      {
+        title: "Compress after you see the size",
+        text: "The finished PDF is weighed before you commit to it. If it is too heavy for an upload form, compress it in place and compare the two sizes side by side; nothing is re-uploaded and the original stays downloadable.",
       },
       {
         title: "No upload, no watermark, no limit",
@@ -630,19 +634,19 @@ export const pdfCreateTools: Tool[] = [
     steps: [
       {
         title: "Add your images",
-        text: "Drag them in, click to browse, or paste from the clipboard. JPG, PNG, WebP, GIF, BMP and HEIC files are accepted; each one becomes a page.",
+        text: "Drag them in, click to browse, or paste from the clipboard. JPG, PNG, WebP, GIF, BMP and HEIC files are accepted, and you can keep adding more after the first batch.",
       },
       {
-        title: "Set the order and options",
-        text: "Reorder thumbnails by dragging, delete anything you added by mistake, then pick page size, orientation, margin and image quality.",
+        title: "Arrange the pages",
+        text: "The list order is the page order. Drag a picture, or use the arrows, to move it up or down — crossing a page break moves it onto the next sheet. Choose one, two or four pictures per page; the page cards regroup instantly so you can see exactly what each sheet will hold.",
       },
       {
-        title: "Convert",
-        text: "Press Create PDF. The tool reports how many pages were written and the final file size as soon as it is ready.",
+        title: "Create the PDF",
+        text: "Pick the page size, orientation, margin and image quality, then press Create PDF. The tool tells you how many pages it wrote and what the finished file weighs.",
       },
       {
-        title: "Download and check a page",
-        text: "Download the PDF and flip through it once in your viewer. For scanned documents, confirm the smallest text is still readable at the margin you chose.",
+        title: "Decide on the size, then download",
+        text: "If the file is heavier than your upload form allows, compress it right there — balanced or smallest — and the tool shows the before and after size. Download the compressed copy, or keep the original if the saving is not worth it.",
       },
     ],
     limits: [
@@ -704,11 +708,11 @@ export const pdfCreateTools: Tool[] = [
       },
       {
         q: "Can I reduce the PDF size after converting?",
-        a: "Yes. Turn on the 'smaller file' option before converting, or run the finished PDF through the PDF compressor to hit a specific target size.",
+        a: "Yes — and the tool asks. By default JPEG stays JPEG and PNG stays PNG, so quality is unchanged when the PDF is built. Once it is built the tool reports the exact size and offers two compression levels: balanced (2400 px long edge, JPEG 78 %) and smallest (1600 px, JPEG 58 %). You see the before and after size before downloading, and the original stays available if the saving is too small to matter.",
       },
       {
-        q: "Are the images compressed when embedded?",
-        a: "By default no: JPEG stays JPEG and PNG stays PNG, so quality is unchanged. The optional quality setting re-encodes images as JPEG and is the only lossy path.",
+        q: "Can I put two or four photos on one page?",
+        a: "Yes. The arrange step has a 1 / 2 / 4 pictures per page switch. Two pictures stack on the sheet and four make a 2 × 2 grid, each fitted into its own cell with the margins and gutter respected. Nothing is cropped — a portrait photo on a landscape grid cell keeps its proportions and leaves white space.",
       },
       {
         q: "Does it work on iOS and Android?",

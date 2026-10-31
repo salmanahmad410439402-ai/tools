@@ -592,9 +592,13 @@ The sandbox this was built in has no browser, so canvas/Web Worker paths were ve
 review plus `npm test` for the DOM-free engine parts. Please run this on a real device before
 launch (Chrome, Safari iOS, Firefox, Edge):
 
-1. **Image to PDF** — 1 photo, 10 photos, a HEIC photo, a transparent PNG, a 20 MB JPEG.
-   Check page count, order, A4/Letter/fit, 0/10/40 mm margins, and that the PDF opens in
-   Acrobat + Preview + iOS Files.
+1. **Image to PDF** — walk the four-step flow: 1 photo, 10 photos, a HEIC photo, a transparent PNG, a 20 MB JPEG.
+   On the arrange step confirm the page cards regroup when you switch 1 / 2 / 4 pictures per page, that dragging
+   and the arrows move a picture across a page break, and that a portrait photo in a landscape grid cell keeps its
+   proportions. On the setup step check A4/Letter/A5/fit, orientation, 0/10/40 mm margins. After Create PDF the
+   result must state the exact size — then press each compression level and confirm the before/after figure, that
+   "Keep the original" still downloads the first file, and that a file which cannot shrink says so rather than
+   handing over something larger. Open the PDF in Acrobat + Preview + iOS Files.
 2. **Compress PDF** — 1-page PDF, 100-page PDF, 20 MB scan, password-protected PDF (should warn),
    corrupt file (should explain, not crash). Verify Light keeps text selectable, Strong does not,
    and that the before/after sizes are honest.

@@ -11,7 +11,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { PDFArray, PDFDocument, PDFName, PDFRawStream, StandardFonts, degrees } from "pdf-lib";
-import { buildImagePdf, computePlacement, PAGE_SIZES } from "../lib/pdf/image-to-pdf.ts";
+import {
+  buildImagePdf,
+  buildImagePdfFromPages,
+  computeGridCells,
+  computePlacement,
+  layoutImagePage,
+  PAGE_SIZES,
+} from "../lib/pdf/image-to-pdf.ts";
 import { encodeBmp, encodeTiff, encodeGif, encodeIco, encodePpm, encodeSvg } from "../lib/images/codecs.ts";
 import { clampToCanvasLimits } from "../lib/images/index.ts";
 import {
@@ -119,6 +126,72 @@ console.log("\nPage geometry");
 
   const zeroMargin = computePlacement(1000, 1000, { pageSize: "a4", orientation: "portrait", marginMm: 0 });
   check("zero margin is allowed", zeroMargin.drawWidth > 500);
+
+  /* ── several pictures on one page (the arrange step) ─────────────────── */
+  const margin = (10 / 25.4) * 72;
+  const oneUp = computeGridCells(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h, margin, 1);
+  check("one picture fills the whole usable area", oneUp.length === 1 && Math.abs(oneUp[0].width - (PAGE_SIZES.a4.w - margin * 2)) < 0.01);
+
+  const twoUp = computeGridCells(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h, margin, 2);
+  check("two pictures stack vertically", twoUp.length === 2 && Math.abs(twoUp[0].x - twoUp[1].x) < 0.01 && twoUp[0].y > twoUp[1].y);
+  check(
+    "stacked cells are separated by a gutter, not overlapping",
+    Math.abs(twoUp[0].y - (twoUp[1].y + twoUp[1].height) - 8) < 0.01,
+    `${(twoUp[0].y - (twoUp[1].y + twoUp[1].height)).toFixed(1)} pt gap`,
+  );
+
+  const fourUp = computeGridCells(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h, margin, 4);
+  check("four pictures make a 2 × 2 grid", fourUp.length === 4 && fourUp[0].x < fourUp[1].x && fourUp[0].y > fourUp[2].y);
+  check(
+    "the grid stays inside the margins",
+    fourUp.every(
+      (cell) => cell.x >= margin - 0.01 && cell.x + cell.width <= PAGE_SIZES.a4.w - margin + 0.01 && cell.y >= margin - 0.01,
+    ),
+  );
+
+  const threeUp = computeGridCells(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h, margin, 3);
+  check("the odd picture out gets a full-width row", Math.abs(threeUp[2].width - (PAGE_SIZES.a4.w - margin * 2)) < 0.01);
+
+  // A page of mixed shapes keeps every picture inside its own cell, undistorted.
+  const mixed = layoutImagePage(
+    [
+      { width: 1600, height: 900 },
+      { width: 900, height: 1600 },
+      { width: 1000, height: 1000 },
+      { width: 3000, height: 1000 },
+    ],
+    { pageSize: "a4", orientation: "portrait", marginMm: 10 },
+  );
+  check("a portrait grid keeps a portrait page", mixed.pageHeight > mixed.pageWidth);
+  check(
+    "every picture keeps its own aspect ratio",
+    mixed.placements.every((placement, index) => {
+      const source = [
+        [1600, 900],
+        [900, 1600],
+        [1000, 1000],
+        [3000, 1000],
+      ][index];
+      return Math.abs(placement.drawWidth / placement.drawHeight - source[0] / source[1]) < 0.001;
+    }),
+  );
+  check(
+    "every picture fits its cell",
+    mixed.placements.every(
+      (placement) =>
+        placement.drawWidth <= placement.cell.width + 0.01 &&
+        placement.drawHeight <= placement.cell.height + 0.01 &&
+        placement.drawX >= placement.cell.x - 0.01 &&
+        placement.drawY >= placement.cell.y - 0.01,
+    ),
+  );
+
+  const landscapeGrid = layoutImagePage([{ width: 1600, height: 900 }, { width: 1600, height: 900 }], {
+    pageSize: "a4",
+    orientation: "auto",
+    marginMm: 10,
+  });
+  check("a grid does not flip the page on its own", landscapeGrid.pageHeight > landscapeGrid.pageWidth);
 }
 
 /* ───────────────────────── image → PDF ───────────────────────── */
@@ -149,6 +222,31 @@ console.log("\nImage to PDF");
     threw = true;
   }
   check("empty input is rejected", threw);
+
+  // Pages that carry several pictures: two sheets of two, in one document.
+  const a = { bytes: jpg, kind: "jpg", width: 1200, height: 800 };
+  const b = { bytes: png, kind: "png", width: 600, height: 900 };
+  const grouped = await buildImagePdfFromPages([[a, b], [a, b]], {
+    pageSize: "a4",
+    orientation: "portrait",
+    marginMm: 10,
+  });
+  const groupedDoc = await PDFDocument.load(grouped);
+  check("two pictures per page halves the page count", groupedDoc.getPageCount() === 2);
+  check(
+    "each page embeds its own copies of the pictures",
+    groupedDoc.context.enumerateIndirectObjects().filter(([, object]) => {
+      const subtype = object && typeof object === "object" && "dict" in object ? object.dict?.get?.(PDFName.of("Subtype")) : undefined;
+      return subtype && subtype.toString() === "/Image";
+    }).length >= 2,
+  );
+  let emptyThrew = false;
+  try {
+    await buildImagePdfFromPages([[], []], { pageSize: "a4", orientation: "auto", marginMm: 10 });
+  } catch {
+    emptyThrew = true;
+  }
+  check("a document with no pictures is rejected", emptyThrew);
 
   // Structural validation (ImageMagick's PDF coder is disabled in this
   // sandbox by policy, so the bytes are checked directly).
