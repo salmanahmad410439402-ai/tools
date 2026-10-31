@@ -27,12 +27,12 @@ export const pdfAnnotateTools: Tool[] = [
     ],
     bullets: [
       {
-        title: "Click to place, type to write",
-        text: "Type your text in the field, click on the page, and it lands there. Place as many separate notes as you need, each with its own position.",
+        title: "Click to place, type where it lands",
+        text: "Click where the text should go and type straight onto the page, in a box that grows with the words. Double-click any text box later to change what it says — nothing is flattened until you export.",
       },
       {
-        title: "Colour and size control",
-        text: "Five colours including red for corrections, and a size field from 8 to 40 pt so a footnote and a headline both look deliberate.",
+        title: "Real type controls",
+        text: "Three font families, sizes from 4 to 200 pt, bold, italic, three alignments and adjustable line spacing, plus sixteen swatches, a hex field and the system colour wheel for the colour.",
       },
       {
         title: "Page-by-page precision",
@@ -93,8 +93,8 @@ export const pdfAnnotateTools: Tool[] = [
         text: "The export is a new file, so your source stays clean. Still, check the result on the page you edited before sending it onwards.",
       },
       {
-        title: "Place one text box per line, not per paragraph",
-        text: "Because placed text does not wrap, a three-line note needs three placements or a shorter note. Sizing the text to match the document — usually 10 or 11 pt — and starting each line manually gives a result that looks typeset rather than stamped on.",
+        title: "Match the type around it",
+        text: "A note looks pasted-on when it is the wrong size. Body text in most PDFs is 10 or 11 pt, so start there and nudge until the height of your letters matches the line beside them. Long notes wrap inside the box, so drag the box wide enough for the break you want.",
       },
     ],
     faqs: [

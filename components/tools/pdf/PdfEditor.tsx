@@ -32,6 +32,8 @@ import { PDFDocument } from "pdf-lib";
 import {
   EDITOR_PAGE_SIZES,
   renderEditorPdf,
+  strokeBox,
+  textBoxHeight,
   type EditorElement,
   type EditorElementKind,
   type FontFamily,
@@ -46,7 +48,7 @@ import { useAutoFocus, useToolFocus } from "@/components/ToolFocusShell";
 import { Field, Notice, ProgressBar, ResultsPanel, ToolFrame, selectClass } from "../kit";
 import { PdfSource, usePdfInfo } from "./PdfSource";
 import { usePageThumbs } from "./usePageThumbs";
-import { ColorField, ElementView, NumberField, SliderField, ToggleButton } from "./editor/ui";
+import { ColorField, ElementView, InlineTextEditor, NumberField, SliderField, ToggleButton } from "./editor/ui";
 
 type Tool = "select" | EditorElementKind;
 
@@ -116,6 +118,21 @@ interface DragState {
   moved: boolean;
 }
 
+/** Human names for the inspector header and the objects list. */
+const KIND_LABELS: Record<EditorElementKind, string> = {
+  text: "Text",
+  rect: "Rectangle",
+  roundrect: "Rounded box",
+  ellipse: "Ellipse",
+  triangle: "Triangle",
+  line: "Line",
+  arrow: "Arrow",
+  highlight: "Highlight",
+  whiteout: "White-out",
+  draw: "Drawing",
+  image: "Image",
+};
+
 /** Zoom stops. 1 is fit-to-width; the text on the page scales with it. */
 const ZOOM_LEVELS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -145,6 +162,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const [tool, setTool] = useState<Tool>(initialTool);
   const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
   const [draft, setDraft] = useState<EditorElement | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [toolSearch, setToolSearch] = useState("");
   const [imageBytes, setImageBytes] = useState<{ bytes: ArrayBuffer; url: string } | null>(null);
 
@@ -159,6 +177,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const [docTitle, setDocTitle] = useState("");
 
   const drag = useRef<DragState | null>(null);
+  /** Absolute (page-space) points of the stroke being drawn right now. */
+  const strokePoints = useRef<{ x: number; y: number }[]>([]);
   const lastRecord = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -266,6 +286,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     setPageSizes([]);
     setElements([]);
     setSelectedId(null);
+    setEditingId(null);
     setError(null);
     setPast([]);
     setFuture([]);
@@ -355,7 +376,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         case "text":
           return {
             ...base,
-            text: "New text",
+            text: "",
             fontSize: style.fontSize,
             fontFamily: style.fontFamily,
             bold: style.bold,
@@ -390,6 +411,14 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     setSelectedId(element.id);
   };
 
+  /** Starts typing in an existing text box, as one undoable step. */
+  const beginEdit = (id: string) => {
+    pushHistory();
+    setSelectedId(id);
+    setTool("select");
+    setEditingId(id);
+  };
+
   const updateSelected = (patch: Partial<EditorElement>, historyKey: string) => {
     if (!selected) return;
     record(historyKey);
@@ -399,6 +428,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const removeSelected = () => {
     if (!selected) return;
     pushHistory();
+    if (editingId === selected.id) setEditingId(null);
     setElements((current) => current.filter((element) => element.id !== selected.id));
     setSelectedId(null);
   };
@@ -451,10 +481,21 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     }
 
     if (tool === "text") {
-      const width = 0.34;
-      const height = Math.min(0.5, Math.max(0.05, (style.fontSize * 3) / (pageSizes[activePage]?.height || 842)));
-      addElement(elementDefaults("text", { x: clamp01(start.x), y: clamp01(start.y), width, height }));
+      const pageHeight = pageSizes[activePage]?.height ?? 842;
+      const pageWidth = pageSizes[activePage]?.width ?? 595;
+      const width = Math.min(0.6, Math.max(0.22, 260 / pageWidth));
+      // Room for two lines at the current size plus a comfortable margin, so the
+      // first keystroke is never clipped by the box it lives in.
+      const height = textBoxHeight(style.fontSize, style.lineHeight, pageHeight);
+      const element = elementDefaults("text", {
+        x: Math.min(clamp01(start.x), 1 - width),
+        y: Math.min(clamp01(start.y), 1 - height),
+        width,
+        height,
+      });
+      addElement(element);
       setTool("select");
+      setEditingId(element.id);
       return;
     }
 
@@ -470,12 +511,28 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
     if (tool === "draw") {
       drag.current = { mode: "draw", origin: start, moved: false };
-      setDraft(elementDefaults("draw", { x: start.x, y: start.y, width: 0, height: 0 }));
+      // Capture keeps the stroke alive when the pointer leaves the page, so a
+      // long line does not stop at the edge of the sheet.
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        /* unsupported pointer type — the plain handlers still work */
+      }
+      strokePoints.current = [start];
+      setDraft({
+        ...elementDefaults("draw", { x: start.x, y: start.y, width: 0, height: 0 }),
+        points: [{ x: 0, y: 0 }],
+      });
       return;
     }
 
     if (SHAPE_TOOLS.has(tool)) {
       drag.current = { mode: "create", origin: start, moved: false };
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
       setDraft(elementDefaults(tool, { x: start.x, y: start.y, width: 0, height: 0 }));
     }
   };
@@ -503,9 +560,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
     if (state.mode === "draw") {
       state.moved = true;
-      setDraft((draftElement) =>
-        draftElement ? { ...draftElement, points: [...(draftElement.points ?? []), current] } : draftElement,
-      );
+      strokePoints.current = [...strokePoints.current, current];
+      const { points, ...box } = strokeBox(strokePoints.current);
+      setDraft((draftElement) => (draftElement ? { ...draftElement, ...box, points } : draftElement));
       return;
     }
 
@@ -568,7 +625,26 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
     if ((state.mode === "create" || state.mode === "draw") && finished) {
       if (state.mode === "draw") {
-        if ((finished.points?.length ?? 0) > 2) addElement(finished);
+        const drawn = strokePoints.current;
+        strokePoints.current = [];
+        // A tap with the pen leaves a dot; a stroke keeps the size it was drawn.
+        if (drawn.length > 1) {
+          const { points, ...box } = strokeBox(drawn);
+          addElement({ ...finished, ...box, points });
+        } else if (drawn.length === 1) {
+          const dot = drawn[0];
+          addElement({
+            ...finished,
+            x: Math.max(0, Math.min(1, dot.x)),
+            y: Math.max(0, Math.min(1, dot.y)),
+            width: 0.006,
+            height: 0.006,
+            points: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          });
+        }
         return;
       }
       if (finished.width < 0.01 || finished.height < 0.01) {
@@ -591,6 +667,12 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const startMove = (event: React.PointerEvent, element: EditorElement) => {
     event.stopPropagation();
     setSelectedId(element.id);
+    // With the text tool in hand, clicking existing text edits it — creating a
+    // second empty box on top of the first one helps nobody.
+    if (tool === "text" && element.kind === "text") {
+      beginEdit(element.id);
+      return;
+    }
     if (tool !== "select") return;
     drag.current = { mode: "move", id: element.id, origin: point(event), element, moved: false };
   };
@@ -770,6 +852,65 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     : null;
   const aspect = pageSize ? pageSize.height / pageSize.width : activeThumb ? activeThumb.height / activeThumb.width : 1.414;
 
+  /* ── inline text editing ──────────────────────────────────────────────── */
+  // Typing happens on the page, in a box that matches the printed text — font,
+  // size, weight, alignment and colour all come from the element. The HTML text
+  // is never copied straight into the PDF: the element's `text` is updated as
+  // you type and the exporter lays it out again, which is why the preview and
+  // the export agree.
+  const stopEditing = () => {
+    if (editingId) {
+      const element = elements.find((entry) => entry.id === editingId);
+      // An empty text box has nothing to show and nothing to export.
+      if (element && element.kind === "text" && !(element.text ?? "").trim()) {
+        setElements((current) => current.filter((entry) => entry.id !== editingId));
+        setSelectedId(null);
+      }
+    }
+    setEditingId(null);
+  };
+
+  const editing = editingId ? elements.find((element) => element.id === editingId && element.kind === "text") ?? null : null;
+
+  const inlineEditor = editing ? (
+    <div
+      key={editing.id}
+      className="absolute"
+      style={{
+        left: `${editing.x * 100}%`,
+        top: `${editing.y * 100}%`,
+        width: `${editing.width * 100}%`,
+        minHeight: `${editing.height * 100}%`,
+        transform: editing.rotation ? `rotate(${editing.rotation}deg)` : undefined,
+        opacity: editing.opacity ?? 1,
+      }}
+    >
+      <InlineTextEditor
+        element={editing}
+        scale={scale}
+        onInput={(text) =>
+          setElements((current) => current.map((entry) => (entry.id === editing.id ? { ...entry, text } : entry)))
+        }
+        onGrow={(heightPx) => {
+          const pageHeight = pageSizes[activePage]?.height ?? 842;
+          const rendered = pageHeight * scale;
+          if (!rendered) return;
+          const needed = Math.min(1, (heightPx + 4) / rendered);
+          if (needed <= editing.height + 0.002) return;
+          setElements((current) =>
+            current.map((entry) =>
+              entry.id === editing.id ? { ...entry, height: Math.min(1 - entry.y, Math.max(entry.height, needed)) } : entry,
+            ),
+          );
+        }}
+        onDone={stopEditing}
+      />
+      <span className="pointer-events-none mt-1 block text-[10px] font-semibold uppercase tracking-wide text-white/60">
+        Esc or click outside to finish
+      </span>
+    </div>
+  ) : null;
+
   if (results.length) {
     return (
       <ToolFrame labelledBy="tool-title">
@@ -905,7 +1046,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
       <div className="grid gap-4 lg:grid-cols-[200px_1fr_240px]">
         {/* Tools */}
-        <div className="order-2 lg:order-1">
+        <div className="lg:order-1">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle" aria-hidden="true" />
             <input
@@ -969,7 +1110,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         </div>
 
         {/* Stage */}
-        <div className="order-1 lg:order-2">
+        <div className="lg:order-2">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <div
               className="inline-flex items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5"
@@ -1042,7 +1183,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   onPointerDown={onStagePointerDown}
                   onPointerMove={onStagePointerMove}
                   onPointerUp={onStagePointerUp}
-                  onPointerLeave={onStagePointerUp}
+                  onPointerCancel={onStagePointerUp}
+                  onPointerLeave={(event) => {
+                    // While the stage holds pointer capture, leaving its box
+                    // must not end the stroke — that is the whole point of it.
+                    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) return;
+                    onStagePointerUp();
+                  }}
                   className="relative w-full touch-none select-none overflow-hidden rounded bg-white shadow-card"
                   style={{ aspectRatio: `1 / ${aspect}`, cursor: tool === "select" ? "default" : tool === "text" ? "text" : "crosshair" }}
                 >
@@ -1056,20 +1203,23 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   )}
 
                   {pageElements.map((element) => (
-                    <div
+                    <ElementView
                       key={element.id}
-                      onPointerDown={(event) => startMove(event, element)}
-                      className="absolute"
-                      style={{
-                        left: `${element.x * 100}%`,
-                        top: `${element.y * 100}%`,
-                        width: `${element.width * 100}%`,
-                        height: `${element.height * 100}%`,
+                      element={element.id === editingId ? { ...element, text: "" } : element}
+                      scale={scale}
+                      selected={element.id === selectedId}
+                      interactive
+                      onPointerDown={
+                        tool === "select" || tool === "text" ? (event) => startMove(event, element) : undefined
+                      }
+                      onDoubleClick={(event) => {
+                        if (element.kind !== "text" || tool !== "select") return;
+                        event.stopPropagation();
+                        beginEdit(element.id);
                       }}
-                    >
-                      <ElementView element={element} scale={scale} selected={element.id === selectedId} interactive={false} />
-                    </div>
+                    />
                   ))}
+                  {inlineEditor}
 
                   {selected && (
                     <>
@@ -1105,6 +1255,18 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
               </div>
             </div>
           </div>
+
+          <p className="mt-2 text-[11.5px] leading-relaxed text-subtle">
+            {tool === "select"
+              ? "Drag to move, corner handles to resize, double-click text to type in it, arrow keys to nudge."
+              : tool === "text"
+                ? "Click the page and type straight onto it. Esc or a click outside finishes."
+                : tool === "draw"
+                  ? "Draw at any size — the stroke keeps the size and thickness you drew it with."
+                  : SHAPE_TOOLS.has(tool)
+                    ? "Click for a default size, or drag the exact box you want."
+                    : "Choose an image in the tool panel, then click the page to place it."}
+          </p>
 
           {/* page strip */}
           <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -1172,7 +1334,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
           {selected ? (
             <>
               <div className="flex items-center justify-between gap-1">
-                <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-subtle">{selected.kind}</p>
+                <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-subtle">
+                  {KIND_LABELS[selected.kind]}
+                </p>
                 <div className="flex items-center gap-1">
                   <ToggleButton active={false} onClick={() => reorder("up")} label="Bring forward">
                     <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1191,18 +1355,27 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
               {selected.kind === "text" && (
                 <>
-                  <div>
-                    <label htmlFor="el-text" className="mb-1 block text-[12px] font-semibold text-ink">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="el-text" className="text-[12px] font-semibold text-ink">
                       Text
                     </label>
-                    <textarea
-                      id="el-text"
-                      value={selected.text ?? ""}
-                      onChange={(event) => updateSelected({ text: event.target.value }, "text")}
-                      rows={4}
-                      className="w-full resize-y rounded-lg border border-line bg-raised px-2 py-1.5 text-[12px] leading-relaxed text-ink outline-none focus:border-brand-400"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => beginEdit(selected.id)}
+                      className="inline-flex items-center gap-1 rounded-md border border-line bg-raised px-2 py-0.5 text-[10.5px] font-semibold text-body transition-colors hover:border-primary/45 hover:text-brand-600"
+                    >
+                      <Type className="h-3 w-3" aria-hidden="true" />
+                      Edit on page
+                    </button>
                   </div>
+                  <textarea
+                    id="el-text"
+                    value={selected.text ?? ""}
+                    onChange={(event) => updateSelected({ text: event.target.value }, "text")}
+                    rows={3}
+                    placeholder="Type here, or press “Edit on page” and type where it will appear"
+                    className="w-full resize-y rounded-lg border border-line bg-raised px-2 py-1.5 text-[12px] leading-relaxed text-ink outline-none focus:border-brand-400"
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
                     <Field label="Font" htmlFor="el-font">
@@ -1226,7 +1399,26 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                     />
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {[10, 12, 14, 18, 24, 36].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => updateSelected({ fontSize: size }, "size")}
+                        aria-pressed={(selected.fontSize ?? 14) === size}
+                        className={cn(
+                          "rounded-md border px-1.5 py-1 text-[10.5px] font-semibold tabular-nums transition-colors",
+                          (selected.fontSize ?? 14) === size
+                            ? "border-primary/45 bg-primary/10 text-brand-700"
+                            : "border-line bg-raised text-body hover:border-primary/30",
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <ToggleButton active={Boolean(selected.bold)} onClick={() => updateSelected({ bold: !selected.bold }, "bold")} label="Bold">
                       B
                     </ToggleButton>
@@ -1337,7 +1529,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                 {tool === "select"
                   ? "Pick a tool on the left, then click or drag on the page. Select an object to edit it."
                   : tool === "text"
-                    ? "Click the page to place a text box, then type here."
+                    ? "Click the page and type straight onto it — the box grows with your text. These settings apply to the next box."
                     : SHAPE_TOOLS.has(tool)
                       ? "Click the page for a default size, or drag to draw the exact box."
                       : "Draw on the page with the mouse or a finger."}
@@ -1348,9 +1540,82 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                 <NumberField label="Outline" value={style.strokeWidth} min={0} max={24} step={0.5} suffix="pt" onChange={(value) => setStyle((current) => ({ ...current, strokeWidth: value }))} />
                 <NumberField label="Text size" value={style.fontSize} min={4} max={200} step={1} suffix="pt" onChange={(value) => setStyle((current) => ({ ...current, fontSize: value }))} />
               </div>
+              {(tool === "text" || tool === "select") && (
+                <>
+                  <Field label="Font" htmlFor="style-font">
+                    <select
+                      id="style-font"
+                      className="h-9 w-full rounded-lg border border-line bg-raised px-2 text-[12px] text-ink"
+                      value={style.fontFamily}
+                      onChange={(event) => setStyle((current) => ({ ...current, fontFamily: event.target.value as FontFamily }))}
+                    >
+                      <option value="sans">Sans</option>
+                      <option value="serif">Serif</option>
+                      <option value="mono">Mono</option>
+                    </select>
+                  </Field>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <ToggleButton active={style.bold} onClick={() => setStyle((current) => ({ ...current, bold: !current.bold }))} label="Bold">
+                      B
+                    </ToggleButton>
+                    <ToggleButton active={style.italic} onClick={() => setStyle((current) => ({ ...current, italic: !current.italic }))} label="Italic">
+                      <span className="italic">I</span>
+                    </ToggleButton>
+                    {(["left", "center", "right"] as TextAlign[]).map((align) => (
+                      <ToggleButton
+                        key={align}
+                        active={style.align === align}
+                        onClick={() => setStyle((current) => ({ ...current, align }))}
+                        label={`Align ${align}`}
+                      >
+                        <span className="text-[11px] font-semibold">{align === "left" ? "L" : align === "center" ? "C" : "R"}</span>
+                      </ToggleButton>
+                    ))}
+                  </div>
+                </>
+              )}
               <SliderField label="Opacity" value={Math.round(style.opacity * 100)} onChange={(value) => setStyle((current) => ({ ...current, opacity: value / 100 }))} format={(value) => `${value}%`} />
             </>
           )}
+
+          <div className="border-t border-line pt-3">
+            <p className="mb-1.5 flex items-center justify-between text-[12px] font-semibold text-ink">
+              On this page
+              <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">{pageElements.length}</span>
+            </p>
+            {pageElements.length ? (
+              <ul className="max-h-40 space-y-1 overflow-y-auto pr-0.5">
+                {[...pageElements].reverse().map((element) => (
+                  <li key={element.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(element.id);
+                        setTool("select");
+                      }}
+                      onDoubleClick={() => {
+                        if (element.kind !== "text") return;
+                        beginEdit(element.id);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-1.5 rounded-md border px-1.5 py-1 text-left text-[11px] transition-colors",
+                        element.id === selectedId
+                          ? "border-primary/45 bg-primary/10 text-brand-700"
+                          : "border-line bg-raised text-body hover:border-primary/30",
+                      )}
+                    >
+                      <span className="shrink-0 font-semibold">{KIND_LABELS[element.kind]}</span>
+                      <span className="min-w-0 flex-1 truncate text-subtle">
+                        {element.kind === "text" ? element.text || "(empty)" : ""}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[11px] leading-snug text-subtle">Nothing on this page yet.</p>
+            )}
+          </div>
 
           <div className="border-t border-line pt-3">
             <label htmlFor="doc-title" className="mb-1 block text-[12px] font-semibold text-ink">

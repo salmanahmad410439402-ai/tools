@@ -505,7 +505,10 @@ in Step 2, because they belong in the same PDF menu.
   offers twelve tools — select, text, image, rectangle, rounded box, ellipse, triangle, line,
   arrow, highlight, white-out and pen — with a searchable palette, a full colour wheel/hex/swatch
   picker, opacity, rotation, layer order, undo/redo and a page strip for adding, duplicating,
-  reordering and deleting pages. The stage zooms from 50 % to 300 % with fit-width (buttons or
+  reordering and deleting pages. Text is typed directly on the page in a box that grows with the
+  words and is re-opened by double-clicking it (or with "Edit on page" in the inspector); the pen
+  keeps the size and thickness it was drawn with rather than snapping to a default box. The stage
+  zooms from 50 % to 300 % with fit-width (buttons or
   Ctrl/⌘ plus − + 0) and scrolls inside its frame instead of stretching the page, and opening a
   document — here and in every tool with a page preview — collapses the sidebar and the page header
   into one sticky line, so the working area gets the full width; "Exit full-width view" brings the
@@ -540,7 +543,8 @@ in Step 2, because they belong in the same PDF menu.
 - **Scan to PDF** captures camera frames into the page: no OCR, no auto-crop, no de-skew. Cameras
   require https and a permission grant, so the file picker is always offered as well.
 - **Add Text / Highlight / Draw / Add Shapes** all open the same editor with a different tool
-  preselected. They draw into the page — they never rewrite existing text, and a highlight or a
+  preselected, so text you type there can be re-opened and restyled with the editor's full
+  inspector (family, size, weight, alignment, colour). They draw into the page — they never rewrite existing text, and a highlight or a
   shape over text is not redaction. DejaVu Sans covers the fallback ranges for non-Latin-1 text but
   ships without italic or bold-italic faces, so italic is dropped rather than faked for those
   scripts.
@@ -634,9 +638,13 @@ launch (Chrome, Safari iOS, Firefox, Edge):
    field and confirm the system colour wheel opens, that a pasted hex code applies, that a swatch
    applies, and that "No colour" clears a fill. Drag an element, nudge it with the arrow keys,
    rotate it past 90°, change opacity, send it backward and forward, duplicate it and delete it.
-   Then open a PDF instead: add an inserted page, duplicate a page with its objects, reorder pages,
-   delete one, and confirm the thumbnail strip follows. Use Ctrl+Z / Ctrl+Shift+Z through all of
-   the above. Export and open the result in Acrobat, Preview and iOS Files: text must be
+   Type on the page with the Text tool and confirm the caret sits where the printed text will, that
+   the box grows instead of clipping, that Esc/click-outside finishes, and that double-clicking the
+   box (and "Edit on page") reopens it for editing; an empty box must disappear when you leave it.
+   Draw a large freehand squiggle and a small tick and confirm both keep their drawn size, then
+   resize a drawing by its corner handle. Then open a PDF instead: add an inserted page, duplicate a
+   page with its objects, reorder pages, delete one, and confirm the thumbnail strip follows. Use
+   Ctrl+Z / Ctrl+Shift+Z through all of the above. Export and open the result in Acrobat, Preview and iOS Files: text must be
    selectable, shapes must be in the same place as the preview, and the page order must match the
    strip. Also test on a phone: the palette, inspector and page strip must all be reachable at
    360 px without horizontal scroll, and drawing must work with a finger.

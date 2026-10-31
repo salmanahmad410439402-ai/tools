@@ -26,7 +26,16 @@ import {
   writeMetadata,
 } from "../lib/pdf/ops.ts";
 import { renderBlocksToPdf } from "../lib/pdf/text-pdf.ts";
-import { EDITOR_PAGE_SIZES, hexToRgbColor, isWinAnsi, renderEditorPdf, rotatePoint, wrapText } from "../lib/pdf/editor.ts";
+import {
+  EDITOR_PAGE_SIZES,
+  hexToRgbColor,
+  isWinAnsi,
+  renderEditorPdf,
+  rotatePoint,
+  strokeBox,
+  textBoxHeight,
+  wrapText,
+} from "../lib/pdf/editor.ts";
 import { looksEncrypted, protectPdf, unlockPdf } from "../lib/pdf/security.ts";
 import { buildDocx } from "../lib/convert/docx-write.ts";
 import { buildXlsx, safeSheetName } from "../lib/convert/xlsx-write.ts";
@@ -931,6 +940,45 @@ async function testEditor() {
   check("non-Latin text still produces a valid PDF", (await PDFDocument.load(unicodeDoc.bytes)).getPageCount() === 1);
 
   check("hex colours accept three digits", hexToRgbColor("#0f8") !== undefined);
+
+  // Freehand strokes keep the size they were drawn at.
+  const squiggle = [
+    { x: 0.2, y: 0.3 },
+    { x: 0.29, y: 0.34 },
+    { x: 0.4, y: 0.31 },
+    { x: 0.51, y: 0.42 },
+    { x: 0.6, y: 0.5 },
+  ];
+  const boxed = strokeBox(squiggle);
+  check(
+    "a stroke keeps its own width and height",
+    Math.abs(boxed.width - 0.4) < 1e-9 && Math.abs(boxed.height - 0.2) < 1e-9,
+    `${boxed.width} x ${boxed.height}`,
+  );
+  check("the stroke box starts at its top-left point", boxed.x === 0.2 && boxed.y === 0.3);
+  check(
+    "stroke points are re-based inside the box",
+    boxed.points[0].x === 0 && boxed.points[0].y === 0 && Math.abs(boxed.points[4].x - 1) < 1e-9,
+    JSON.stringify(boxed.points[4]),
+  );
+  const flatLine = strokeBox([{ x: 0.1, y: 0.5 }, { x: 0.9, y: 0.5 }]);
+  check("a straight stroke still gets a usable box", flatLine.width > 0.7 && flatLine.height > 0 && flatLine.height < 0.01);
+
+  // A new text box is tall enough for the first lines that will be typed.
+  const a4Height = EDITOR_PAGE_SIZES.a4.height;
+  const heights = [10, 18, 48].map((size) => textBoxHeight(size, 1.3, a4Height) * a4Height);
+  check(
+    "a new text box fits at least two lines",
+    heights.every((px, index) => px >= [10, 18, 48][index] * 1.3 * 2),
+    heights.map((px) => Math.round(px)).join(","),
+  );
+
+  // A freehand element built from the stroke box keeps its size on export.
+  const penPdf = await renderEditorPdf({
+    source: { kind: "blank", pages: 1, size: "a4", orientation: "portrait" },
+    elements: [{ id: "pen", kind: "draw", pageIndex: 0, ...boxed, stroke: "#111827", strokeWidth: 2 }],
+  });
+  check("a freehand stroke exports", penPdf.elements === 1 && penPdf.dropped === 0);
 }
 
 await testEditor();
