@@ -221,6 +221,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
   const [docTitle, setDocTitle] = useState("");
 
   const drag = useRef<DragState | null>(null);
+  /** The draft as it stands *now*; `draft` state is only for rendering. */
+  const draftRef = useRef<EditorElement | null>(null);
   /** Absolute (page-space) points of the stroke being drawn right now. */
   const strokePoints = useRef<{ x: number; y: number }[]>([]);
   const lastRecord = useRef<{ key: string; at: number }>({ key: "", at: 0 });
@@ -464,6 +466,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     [activePage, imageBytes, style],
   );
 
+  /** Keeps the ref and the render state in step. */
+  const putDraft = (next: EditorElement | null | ((current: EditorElement | null) => EditorElement | null)) => {
+    const value = typeof next === "function" ? next(draftRef.current) : next;
+    draftRef.current = value;
+    setDraft(value);
+  };
+
   const addElement = (element: EditorElement) => {
     pushHistory();
     setElements((current) => [...current, element]);
@@ -531,6 +540,10 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
   const onStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!documentOpen) return;
+    // Finishing an edit must not depend on a blur event arriving: if focus was
+    // never taken (or the browser kept it elsewhere) the editor would otherwise
+    // stay open and keep the selection frame hidden.
+    if (editingId) stopEditing();
     const start = point(event);
     setError(null);
 
@@ -540,6 +553,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
     }
 
     if (tool === "text") {
+      // Stop the browser's default mousedown/pointerdown behaviour, which moves
+      // focus (and would blur the editor the instant it opens).
+      event.preventDefault();
       const pageHeight = pageSizes[activePage]?.height ?? 842;
       const pageWidth = pageSizes[activePage]?.width ?? 595;
       const width = Math.min(0.6, Math.max(0.22, 260 / pageWidth));
@@ -558,7 +574,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         text: PLACEHOLDER_TEXT,
       };
       addElement(element);
-      setTool("select");
+      // The Text tool stays in hand, like a design app: click again for another
+      // box instead of having to pick the tool back up. Escape returns to Select.
       setEditingId(element.id);
       return;
     }
@@ -583,7 +600,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         /* unsupported pointer type — the plain handlers still work */
       }
       strokePoints.current = [start];
-      setDraft({
+      putDraft({
         ...elementDefaults("draw", { x: start.x, y: start.y, width: 0, height: 0 }),
         points: [{ x: 0, y: 0 }],
       });
@@ -597,7 +614,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       } catch {
         /* ignore */
       }
-      setDraft(elementDefaults(tool, { x: start.x, y: start.y, width: 0, height: 0 }));
+      putDraft(elementDefaults(tool, { x: start.x, y: start.y, width: 0, height: 0 }));
     }
   };
 
@@ -622,7 +639,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         dy = (Math.sign(dy) || 1) * (side / pageH);
       }
 
-      setDraft((draftElement) =>
+      putDraft((draftElement) =>
         draftElement
           ? {
               ...draftElement,
@@ -640,7 +657,7 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
       state.moved = true;
       strokePoints.current = [...strokePoints.current, current];
       const { points, ...box } = strokeBox(strokePoints.current);
-      setDraft((draftElement) => (draftElement ? { ...draftElement, ...box, points } : draftElement));
+      putDraft((draftElement) => (draftElement ? { ...draftElement, ...box, points } : draftElement));
       return;
     }
 
@@ -763,9 +780,11 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
 
   const onStagePointerUp = () => {
     const state = drag.current;
-    const finished = draft;
+    // The ref, not the state: pointerdown/move/up can land in one batch, and a
+    // freshly drawn shape must survive that.
+    const finished = draftRef.current;
     drag.current = null;
-    setDraft(null);
+    putDraft(null);
     if (!state) return;
 
     if ((state.mode === "create" || state.mode === "draw") && finished) {
@@ -1415,7 +1434,9 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                         tool === "select" || tool === "text" ? (event) => startMove(event, element) : undefined
                       }
                       onDoubleClick={(event) => {
-                        if (element.kind !== "text" || tool !== "select") return;
+                        // Double-click means "edit these words" whatever tool is
+                        // in hand — the same reflex as any design app.
+                        if (element.kind !== "text") return;
                         event.stopPropagation();
                         beginEdit(element.id);
                       }}
@@ -1442,12 +1463,16 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                           key={corner}
                           role="presentation"
                           onPointerDown={(event) => startResize(event, selected, corner)}
+                          // Centred on the corner so the handle sits on the
+                          // shape's edge rather than outside it.
+                          style={{
+                            left: corner === "nw" || corner === "sw" ? "0%" : "100%",
+                            top: corner === "nw" || corner === "ne" ? "0%" : "100%",
+                          }}
                           className={cn(
-                            "pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-brand-500 bg-white shadow-sm",
-                            corner === "nw" && "-left-1.5 -top-1.5 cursor-nwse-resize",
-                            corner === "ne" && "-right-1.5 -top-1.5 cursor-nesw-resize",
-                            corner === "sw" && "-bottom-1.5 -left-1.5 cursor-nesw-resize",
-                            corner === "se" && "-bottom-1.5 -right-1.5 cursor-nwse-resize",
+                            "pointer-events-auto absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-500 bg-white shadow-sm",
+                            (corner === "nw" || corner === "se") && "cursor-nwse-resize",
+                            (corner === "ne" || corner === "sw") && "cursor-nesw-resize",
                           )}
                         />
                       ))}
