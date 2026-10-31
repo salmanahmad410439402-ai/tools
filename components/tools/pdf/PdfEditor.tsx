@@ -34,6 +34,7 @@ import { PDFDocument } from "pdf-lib";
 import {
   EDITOR_PAGE_SIZES,
   imageBox,
+  imageDimensions,
   renderEditorPdf,
   rotatePoint,
   strokeBox,
@@ -181,8 +182,18 @@ const KIND_LABELS: Record<EditorElementKind, string> = {
 /** Zoom stops. 1 is fit-to-width; the text on the page scales with it. */
 const ZOOM_LEVELS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
-/** Reads an image's natural size so it can be placed without distortion. */
-function imageSize(url: string): Promise<{ width: number; height: number }> {
+/**
+ * The picture's own pixel size.
+ *
+ * The bytes are read first because the header is always there and always
+ * correct; decoding is only a fallback for a format whose header we cannot read.
+ * (A decode that had not finished used to leave the editor guessing a default
+ * ratio, which is how photos ended up stretched.)
+ */
+async function imageSize(bytes: ArrayBuffer, url: string): Promise<{ width: number; height: number }> {
+  const fromBytes = imageDimensions(bytes);
+  if (fromBytes) return fromBytes;
+
   return new Promise((resolve) => {
     const image = new Image();
     image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
@@ -475,7 +486,13 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         case "whiteout":
           return { ...base, fill: "#FFFFFF", stroke: null };
         case "image":
-          return { ...base, imageBytes: imageBytes?.bytes, imageUrl: imageBytes?.url };
+          return {
+            ...base,
+            imageBytes: imageBytes?.bytes,
+            imageUrl: imageBytes?.url,
+            imageWidth: imageBytes?.width,
+            imageHeight: imageBytes?.height,
+          };
         default:
           return { ...base, fill: style.fill, stroke: style.stroke, strokeWidth: style.strokeWidth };
       }
@@ -766,9 +783,10 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
         height = Math.max(minSide, local.y - rect.y);
       }
 
-      // Images keep their own proportions while you drag a corner (hold Alt to
-      // stretch one); everything else follows Shift, like a design app.
-      const keepRatio = element.kind === "image" ? !event.altKey : event.shiftKey;
+      // Images always keep their own proportions while you drag a corner — a
+      // stretched photo is a broken photo, so there is no modifier for it.
+      // Everything else follows Shift, like a design app.
+      const keepRatio = element.kind === "image" ? true : event.shiftKey;
       if (keepRatio && rect.width > 0 && rect.height > 0) {
         const ratio = rect.width / rect.height;
         if (width / ratio >= minSide) {
@@ -1388,7 +1406,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                   if (!picked) return;
                   if (imageBytes) URL.revokeObjectURL(imageBytes.url);
                   const url = makePreviewUrl(picked);
-                  const [bytes, size] = await Promise.all([picked.arrayBuffer(), imageSize(url)]);
+                  const bytes = await picked.arrayBuffer();
+                  const size = await imageSize(bytes, url);
                   setImageBytes({ bytes, url, ...size });
                   setError(null);
                 }}
@@ -1396,8 +1415,8 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
               />
               <p className="mt-1 text-[10.5px] leading-snug text-subtle">
                 {imageBytes
-                  ? `${imageBytes.width || "?"} × ${imageBytes.height || "?"} px — click the page to place it at its own proportions. Drag a corner to resize (hold Alt to stretch).`
-                  : "PNG or JPG. It is placed at its real aspect ratio, never stretched."}
+                  ? `${imageBytes.width || "?"} × ${imageBytes.height || "?"} px — click the page to place it at those proportions. Dragging a corner keeps them.`
+                  : "PNG or JPG. It is placed at its own pixel proportions and stays that way — the frame is never allowed to stretch it."}
               </p>
             </div>
           )}
@@ -1914,20 +1933,24 @@ export function PdfEditor({ initialTool = "text", toolSlug = "pdf-editor" }: { i
                 <div className="rounded-lg border border-line bg-raised p-2">
                   <p className="text-[11px] font-semibold text-ink">Proportions are locked</p>
                   <p className="mt-1 text-[10.5px] leading-snug text-subtle">
-                    Drag a corner to resize without stretching. Hold Alt while dragging if you really want to distort
-                    it.
+                    A drag always scales the picture evenly, and the export fits it inside its frame at its own
+                    proportions — a photo can never come out squashed.
                   </p>
                   <button
                     type="button"
-                    onClick={async () => {
-                      const url = selected.imageUrl;
-                      if (!url) return;
-                      const size = await imageSize(url);
-                      if (!size.width || !size.height) return;
+                    onClick={() => {
                       const pageW = pageSizes[activePage]?.width ?? 595.28;
                       const pageH = pageSizes[activePage]?.height ?? 841.89;
-                      const height = Math.min(1 - selected.y, (selected.width * pageW * (size.height / size.width)) / pageH);
-                      updateSelected({ height }, "image-fit");
+                      const natural = {
+                        width: selected.imageWidth ?? 0,
+                        height: selected.imageHeight ?? 0,
+                      };
+                      if (!natural.width || !natural.height) return;
+                      const boxWidthPt = selected.width * pageW;
+                      const height = Math.min(1 - selected.y, (boxWidthPt * (natural.height / natural.width)) / pageH);
+                      // Keep the same centre while the frame becomes its true shape.
+                      const centreY = selected.y + selected.height / 2;
+                      updateSelected({ y: Math.max(0, centreY - height / 2), height }, "image-fit");
                     }}
                     className="mt-2 w-full rounded-md border border-line bg-surface px-2 py-1 text-[10.5px] font-semibold text-body transition-colors hover:border-primary/45 hover:text-brand-600"
                   >
